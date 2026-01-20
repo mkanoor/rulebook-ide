@@ -1,0 +1,23 @@
+{
+  "_comment": "Example settings for Ansible Rulebook Editor",
+  "_note": "These settings are stored in browser localStorage with key 'rulebook-editor-settings'",
+  "_instructions": "Copy and modify this, then paste into browser console: localStorage.setItem('rulebook-editor-settings', JSON.stringify({...}))",
+
+  "wsUrl": "ws://localhost",
+  "wsPort": 5555,
+  "ansibleRulebookPath": "/Users/YOUR_USERNAME/path/to/ansible-rulebook/venv/bin/ansible-rulebook",
+  "workingDirectory": "",
+  "heartbeat": 0,
+  "ngrokApiToken": "YOUR_NGROK_TOKEN_HERE",
+  "autoShowJsonExplorer": false,
+
+  "_field_descriptions": {
+    "wsUrl": "WebSocket server URL (usually ws://localhost)",
+    "wsPort": "WebSocket server port (default: 5555)",
+    "ansibleRulebookPath": "Full path to ansible-rulebook executable (find with: which ansible-rulebook)",
+    "workingDirectory": "Working directory for ansible-rulebook execution (blank = current directory)",
+    "heartbeat": "Heartbeat interval in seconds (0 = disabled)",
+    "ngrokApiToken": "Ngrok API token for cloud tunnels (get from https://dashboard.ngrok.com/api)",
+    "autoShowJsonExplorer": "Automatically show JSON Path Explorer when webhooks are received (true/false)"
+  }
+}

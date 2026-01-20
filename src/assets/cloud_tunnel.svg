@@ -1,0 +1,12 @@
+<svg width="864" height="432" viewBox="0 0 864 432" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Much thicker lines -->
+  <line x1="27" y1="216" x2="216" y2="216" stroke="currentColor" stroke-width="90" stroke-linecap="round"/>
+  <line x1="648" y1="216" x2="837" y2="216" stroke="currentColor" stroke-width="90" stroke-linecap="round"/>
+
+  <!-- Bold cloud outline -->
+  <path d="M 270 270 C 243 270 216 243 216 202.5 C 216 175.5 243 148.5 270 148.5 C 283.5 121.5 310.5 81 364.5 81 C 405 81 432 108 445.5 135 C 459 94.5 486 67.5 540 67.5 C 594 67.5 634.5 108 634.5 162 C 661.5 162 675 189 675 216 C 675 256.5 648 283.5 607.5 283.5 L 270 270 Z"
+        stroke="currentColor"
+        stroke-width="45"
+        fill="none"
+        stroke-linejoin="round"/>
+</svg>
