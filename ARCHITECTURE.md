@@ -342,10 +342,9 @@ Intercept HTTP Server (Port 8080)
 ## File Structure
 
 ```
-rulebook-editor/
+rulebook-ide/
 ├── server/
-│   ├── server.js              # Unified Express + WebSocket server
-│   └── websocket-server.js    # [DEPRECATED] Old standalone server
+│   └── server.js              # Unified Express + WebSocket server
 ├── src/
 │   ├── components/
 │   │   ├── VisualEditor.tsx   # Main editor + execution controls

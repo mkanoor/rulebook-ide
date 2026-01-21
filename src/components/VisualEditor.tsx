@@ -82,7 +82,7 @@ const DEFAULT_SETTINGS: ServerSettings = {
 
 const loadSettings = (): ServerSettings => {
   try {
-    const saved = localStorage.getItem('rulebook-editor-settings');
+    const saved = localStorage.getItem('rulebook-ide-settings');
     if (saved) {
       const parsed = JSON.parse(saved);
       // Validate the settings to ensure they're not corrupted
@@ -90,7 +90,7 @@ const loadSettings = (): ServerSettings => {
           parsed.workingDirectory && parsed.workingDirectory.includes('/bin/')) {
         // Settings appear swapped or corrupted, reset to defaults
         console.warn('Detected corrupted settings, resetting to defaults');
-        localStorage.removeItem('rulebook-editor-settings');
+        localStorage.removeItem('rulebook-ide-settings');
         return DEFAULT_SETTINGS;
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
@@ -103,7 +103,7 @@ const loadSettings = (): ServerSettings => {
 
 const saveSettings = (settings: ServerSettings) => {
   try {
-    localStorage.setItem('rulebook-editor-settings', JSON.stringify(settings));
+    localStorage.setItem('rulebook-ide-settings', JSON.stringify(settings));
   } catch (error) {
     console.error('Failed to save settings:', error);
   }
@@ -478,6 +478,33 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       setRuleThrottleError(null);
     }
   }, [selectedItem, rulesets]);
+
+  // Warn user when closing tab with running execution
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isRunning && executionId) {
+        // Show browser confirmation dialog
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+
+        // Try to send stop message (best effort - may not complete)
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'stop_execution',
+            executionId: executionId
+          }));
+        }
+
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRunning, executionId]);
 
   const addEvent = (type: string, message: string) => {
     setEvents((prev) => [
@@ -2687,57 +2714,59 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </small>
               </div>
 
-              {/* Webhook Forwarding Options */}
-              <div className="form-group" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={forwardWebhooks}
-                    onChange={(e) => {
-                      setForwardWebhooks(e.target.checked);
-                      if (!e.target.checked) {
-                        setForwardToPort(null);
-                      }
-                    }}
-                    disabled={tunnelCreating}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  <span style={{ fontWeight: 600, fontSize: '13px' }}>Forward intercepted webhooks to rulebook</span>
-                </label>
-                <small style={{ color: '#718096', fontSize: '0.85em', display: 'block', marginLeft: '24px', marginBottom: '8px' }}>
-                  When enabled, incoming webhooks will be displayed in JSON Path Explorer AND forwarded to your rulebook's webhook source
-                </small>
-
-                {forwardWebhooks && (
-                  <div style={{ marginLeft: '24px', marginTop: '12px' }}>
-                    <label className="form-label" style={{ fontSize: '12px', marginBottom: '6px' }}>Forward to Webhook Port</label>
-                    <select
-                      className="form-input"
-                      value={forwardToPort || ''}
-                      onChange={(e) => setForwardToPort(e.target.value ? parseInt(e.target.value) : null)}
+              {/* Webhook Forwarding Options - Only show when tunnel doesn't exist */}
+              {!ngrokTunnels.has(cloudTunnelPort) && (
+                <div className="form-group" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={forwardWebhooks}
+                      onChange={(e) => {
+                        setForwardWebhooks(e.target.checked);
+                        if (!e.target.checked) {
+                          setForwardToPort(null);
+                        }
+                      }}
                       disabled={tunnelCreating}
-                      style={{ fontSize: '13px' }}
-                    >
-                      <option value="">Select a webhook source port...</option>
-                      {webhookPorts.map((webhook) => (
-                        <option key={webhook.port} value={webhook.port}>
-                          Port {webhook.port} - {webhook.rulesetName} / {webhook.sourceName}
-                        </option>
-                      ))}
-                    </select>
-                    {webhookPorts.length === 0 && (
-                      <small style={{ color: '#e53e3e', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                        No webhook sources detected in your rulebook. Add a webhook source to enable forwarding.
-                      </small>
-                    )}
-                    {forwardWebhooks && !forwardToPort && webhookPorts.length > 0 && (
-                      <small style={{ color: '#d69e2e', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                        Please select a port to forward webhooks to
-                      </small>
-                    )}
-                  </div>
-                )}
-              </div>
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontWeight: 600, fontSize: '13px' }}>Forward intercepted webhooks to rulebook</span>
+                  </label>
+                  <small style={{ color: '#718096', fontSize: '0.85em', display: 'block', marginLeft: '24px', marginBottom: '8px' }}>
+                    When enabled, incoming webhooks will be displayed in JSON Path Explorer AND forwarded to your rulebook's webhook source
+                  </small>
+
+                  {forwardWebhooks && (
+                    <div style={{ marginLeft: '24px', marginTop: '12px' }}>
+                      <label className="form-label" style={{ fontSize: '12px', marginBottom: '6px' }}>Forward to Webhook Port</label>
+                      <select
+                        className="form-input"
+                        value={forwardToPort || ''}
+                        onChange={(e) => setForwardToPort(e.target.value ? parseInt(e.target.value) : null)}
+                        disabled={tunnelCreating}
+                        style={{ fontSize: '13px' }}
+                      >
+                        <option value="">Select a webhook source port...</option>
+                        {webhookPorts.map((webhook) => (
+                          <option key={webhook.port} value={webhook.port}>
+                            Port {webhook.port} - {webhook.rulesetName} / {webhook.sourceName}
+                          </option>
+                        ))}
+                      </select>
+                      {webhookPorts.length === 0 && (
+                        <small style={{ color: '#e53e3e', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                          No webhook sources detected in your rulebook. Add a webhook source to enable forwarding.
+                        </small>
+                      )}
+                      {forwardWebhooks && !forwardToPort && webhookPorts.length > 0 && (
+                        <small style={{ color: '#d69e2e', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                          Please select a port to forward webhooks to
+                        </small>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Error Display */}
               {tunnelError && (

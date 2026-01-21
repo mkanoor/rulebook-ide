@@ -99,9 +99,10 @@ The editor includes an execution mode that allows you to test your rulebooks wit
 ### Prerequisites
 
 - ansible-rulebook must be installed
-  - By default, the server looks for ansible-rulebook at: `/Users/madhukanoor/devsrc/ansible-rulebook/venv/bin/ansible-rulebook`
-  - You can override this by setting the `ANSIBLE_RULEBOOK_PATH` environment variable
-  - Example: `ANSIBLE_RULEBOOK_PATH=/path/to/ansible-rulebook npm run dev`
+  - The server looks for `ansible-rulebook` in your system PATH by default
+  - You can specify a custom path by setting the `ANSIBLE_RULEBOOK_PATH` environment variable
+  - Example: `ANSIBLE_RULEBOOK_PATH=/path/to/venv/bin/ansible-rulebook npm run dev`
+  - Or add it to your `.env.local` file: `ANSIBLE_RULEBOOK_PATH=/path/to/venv/bin/ansible-rulebook`
 
 ### Using Execution Mode
 
@@ -127,7 +128,7 @@ The editor includes an execution mode that allows you to test your rulebooks wit
 
 ## Cloud Tunnels (External Webhook Access)
 
-The IDE includes a **Cloud Tunnel** feature that allows you to receive webhooks from external sources (like GitHub, GitLab, monitoring systems, etc.) using ngrok. This is perfect for testing webhook-based event sources.
+The IDE includes a **Cloud Tunnel** feature that allows you to receive webhooks from external sources (like GitHub, GitLab, monitoring systems, etc.) using ngrok. This is perfect for testing webhook-based event sources. This is only visible if the ngrok token has been added in **🔧 Settings**
 
 ### Prerequisites
 
@@ -295,9 +296,10 @@ src/
 
 ## Schema Compliance
 
-This editor is based on the official Ansible Rulebook schema:
-- Schema location: `~/devsrc/ansible-rulebook/ansible_rulebook/schema/ruleset_schema.json`
-- Example rulebooks: `~/devsrc/ansible-rulebook/tests/examples/`
+This IDE is based on the official Ansible Rulebook schema:
+- Schema location: `ansible_rulebook/schema/ruleset_schema.json` (in ansible-rulebook repository)
+- Example rulebooks: `tests/examples/` (in ansible-rulebook repository)
+- Repository: [ansible-rulebook](https://github.com/ansible/ansible-rulebook)
 
 ## Technical Stack
 
@@ -349,7 +351,7 @@ This project is provided as-is for use with Ansible Rulebook development.
 
 ## Contributing
 
-Feel free to submit issues or pull requests to improve the editor.
+Feel free to submit issues or pull requests to improve the IDE.
 
 ## Acknowledgments
 

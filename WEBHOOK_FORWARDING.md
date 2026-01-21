@@ -51,7 +51,7 @@ Updated `tunnel_webhook_received` message handler to display:
 ## Backend Implementation Details
 
 ### Files Modified
-- `server/websocket-server.js` - WebSocket server implementation
+- `server/server.js` - Unified Express + WebSocket server
 
 ### Changes Made
 

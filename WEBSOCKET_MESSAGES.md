@@ -340,13 +340,19 @@ The UI highlights rules when they are triggered based on `Action` or `ProcessedE
 
 ## Configuration
 
-The ansible-rulebook path is configurable via environment variable:
+The ansible-rulebook path is configurable via:
 
-```bash
-ANSIBLE_RULEBOOK_PATH=/path/to/ansible-rulebook npm run ws-server
-```
+1. **Settings UI**: Click 🔧 Settings button in the toolbar
+2. **Environment variable**:
+   ```bash
+   ANSIBLE_RULEBOOK_PATH=/path/to/venv/bin/ansible-rulebook npm run dev
+   ```
+3. **.env.local file**:
+   ```bash
+   ANSIBLE_RULEBOOK_PATH=/path/to/venv/bin/ansible-rulebook
+   ```
 
-Default path: `/Users/madhukanoor/devsrc/ansible-rulebook/venv/bin/ansible-rulebook`
+Default: Looks for `ansible-rulebook` in system PATH
 
 ## References
 

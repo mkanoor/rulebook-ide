@@ -169,7 +169,7 @@ Look for the forwarding sequence:
 
 ## Log Locations
 
-- **WebSocket Server Logs**: Terminal where you ran `npm run ws-server`
+- **Server Logs**: Terminal where you ran `npm run dev`
 - **Ansible-Rulebook Logs**: In the Event Log panel in the UI
 - **Browser Console**: F12 → Console tab (for client-side issues)
 
@@ -178,8 +178,8 @@ Look for the forwarding sequence:
 You can test forwarding locally:
 
 ```bash
-# Terminal 1: Start WebSocket server
-npm run ws-server
+# Terminal 1: Start the unified server (if not already running)
+npm run dev
 
 # Terminal 2: Send test webhook to tunnel port
 curl -X POST http://localhost:5556/endpoint \

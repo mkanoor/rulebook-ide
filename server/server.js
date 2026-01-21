@@ -716,6 +716,27 @@ wss.on('connection', (ws, req) => {
           }
           break;
 
+        case 'get_tunnel_state':
+          // Return current tunnel state
+          console.log('Frontend requesting tunnel state...');
+          const tunnels = [];
+          ngrokTunnels.forEach((tunnel, port) => {
+            tunnels.push({
+              port: port,
+              publicUrl: tunnel.url,
+              tunnelId: tunnel.tunnelId,
+              forwardTo: tunnelForwardingConfig.get(port) || null
+            });
+          });
+
+          console.log(`Returning ${tunnels.length} active tunnel(s):`, tunnels.map(t => `port ${t.port} (forward to ${t.forwardTo || 'none'})`).join(', '));
+
+          ws.send(JSON.stringify({
+            type: 'tunnel_state',
+            tunnels: tunnels
+          }));
+          break;
+
         default:
           console.log('Unknown message type:', data.type);
       }

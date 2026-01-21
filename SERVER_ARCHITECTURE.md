@@ -72,7 +72,6 @@ npm start        # Start production server
 ### Files
 
 - **`server/server.js`** - Unified Express + WebSocket server
-- **`server/websocket-server.js`** - [DEPRECATED] Old standalone WebSocket server
 
 ### Environment Variables
 

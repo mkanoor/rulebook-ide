@@ -10,7 +10,7 @@ import './App.css';
 
 function App() {
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('rulebook-editor-theme');
+    const saved = localStorage.getItem('rulebook-ide-theme');
     return saved ? getThemeById(saved) : defaultTheme;
   });
   const [showThemeSelector, setShowThemeSelector] = useState(false);
@@ -71,7 +71,7 @@ function App() {
   useEffect(() => {
     const checkSettings = () => {
       try {
-        const saved = localStorage.getItem('rulebook-editor-settings');
+        const saved = localStorage.getItem('rulebook-ide-settings');
         if (saved) {
           const settings = JSON.parse(saved);
           setHasNgrokToken(!!settings.ngrokApiToken && settings.ngrokApiToken.trim() !== '');
@@ -109,7 +109,7 @@ function App() {
 
   const handleThemeChange = (theme: Theme) => {
     setCurrentTheme(theme);
-    localStorage.setItem('rulebook-editor-theme', theme.id);
+    localStorage.setItem('rulebook-ide-theme', theme.id);
     setShowThemeSelector(false);
     setMessage({ type: 'success', text: `Theme changed to ${theme.name} (${theme.year})` });
     setTimeout(() => setMessage(null), 3000);
@@ -342,7 +342,7 @@ function App() {
       // Check if auto-show is enabled in settings
       let autoShow = false;
       try {
-        const saved = localStorage.getItem('rulebook-editor-settings');
+        const saved = localStorage.getItem('rulebook-ide-settings');
         if (saved) {
           const settings = JSON.parse(saved);
           autoShow = settings.autoShowJsonExplorer || false;
