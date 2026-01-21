@@ -903,7 +903,24 @@ process.on('SIGINT', async () => {
 
   await Promise.all(killPromises);
 
+  // Close all ngrok tunnels
+  console.log('Closing all ngrok tunnels...');
+  const tunnelClosePromises = [];
+  ngrokTunnels.forEach((tunnel, port) => {
+    console.log(`Closing tunnel on port ${port}`);
+    tunnelClosePromises.push(tunnel.listener.close());
+  });
+  await Promise.all(tunnelClosePromises);
+
+  // Close all HTTP servers
+  console.log('Closing all HTTP servers...');
+  httpServers.forEach((httpServer, port) => {
+    console.log(`Closing HTTP server on port ${port}`);
+    httpServer.close();
+  });
+
   server.close(() => {
+    console.log('Server shutdown complete');
     process.exit(0);
   });
 });
