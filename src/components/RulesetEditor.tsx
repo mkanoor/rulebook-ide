@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Ruleset, Source, Rule } from '../types/rulebook';
-import { SourceEditor } from './SourceEditor';
+import { SourceEditorV2 } from './SourceEditorV2';
 import { RuleEditor } from './RuleEditor';
 
 interface RulesetEditorProps {
@@ -32,7 +32,7 @@ export const RulesetEditor: React.FC<RulesetEditorProps> = ({
   };
 
   const handleAddSource = () => {
-    const newSources = [...ruleset.sources, { name: '', range: { limit: 5 } }];
+    const newSources = [...ruleset.sources, {}];
     handleFieldChange('sources', newSources);
   };
 
@@ -165,7 +165,7 @@ export const RulesetEditor: React.FC<RulesetEditorProps> = ({
         </div>
       ) : (
         ruleset.sources.map((source, sourceIndex) => (
-          <SourceEditor
+          <SourceEditorV2
             key={sourceIndex}
             source={source}
             index={sourceIndex}

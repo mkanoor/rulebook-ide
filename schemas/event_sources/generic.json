@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Generic Event Source",
+  "description": "A generic source plugin that allows you to insert custom data",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "const": "eda.builtin.generic",
+      "description": "The type of event source (hidden field)",
+      "default": "eda.builtin.generic"
+    },
+    "payload": {
+      "description": "An array of events that can be used instead of payload_file",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "payload_file": {
+      "type": "string",
+      "description": "A yaml file with an array of events that can be used instead of payload"
+    },
+    "randomize": {
+      "type": "boolean",
+      "description": "Randomize the events in the payload",
+      "default": false
+    },
+    "display": {
+      "type": "boolean",
+      "description": "Display the event data in stdout",
+      "default": false
+    },
+    "timestamp": {
+      "type": "boolean",
+      "description": "Add an event timestamp",
+      "default": false
+    },
+    "time_format": {
+      "type": "string",
+      "description": "The format of event timestamp",
+      "enum": ["local", "iso8601", "epoch"],
+      "default": "local"
+    },
+    "create_index": {
+      "type": "string",
+      "description": "The index to create for each event starts at 0",
+      "default": ""
+    },
+    "startup_delay": {
+      "type": "number",
+      "description": "The number of seconds to wait before injecting events into the queue",
+      "default": 0,
+      "minimum": 0
+    },
+    "event_delay": {
+      "type": "number",
+      "description": "The number of seconds to wait before injecting the next event from the payload",
+      "default": 0,
+      "minimum": 0
+    },
+    "repeat_delay": {
+      "type": "number",
+      "description": "The number of seconds to wait before injecting a repeated event from the payload",
+      "default": 0,
+      "minimum": 0
+    },
+    "loop_delay": {
+      "type": "number",
+      "description": "The number of seconds to wait before inserting the next set of events",
+      "default": 0,
+      "minimum": 0
+    },
+    "shutdown_after": {
+      "type": "number",
+      "description": "The number of seconds to wait before shutting down the plugin",
+      "default": 0,
+      "minimum": 0
+    },
+    "loop_count": {
+      "type": "integer",
+      "description": "The number of times the set of events in the payload should be repeated",
+      "default": 1,
+      "minimum": 1
+    },
+    "repeat_count": {
+      "type": "integer",
+      "description": "The number of times each individual event in the payload should be repeated",
+      "default": 1,
+      "minimum": 1
+    },
+    "blob_size": {
+      "type": "integer",
+      "description": "An arbitrary blob of blob_size bytes to be inserted into every event payload. Default is 0, which does not create a blob",
+      "default": 0,
+      "minimum": 0
+    },
+    "final_payload": {
+      "description": "After all the events have been sent we send the optional final payload which can be used to trigger a shutdown of the rulebook",
+      "oneOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "check_env_vars": {
+      "type": "object",
+      "description": "Optionally check if all the defined env vars are set before generating the events. If any of the env_var is missing or the value doesn't match the source plugin will end with an exception",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": null
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["payload"]
+    },
+    {
+      "required": ["payload_file"]
+    }
+  ]
+}

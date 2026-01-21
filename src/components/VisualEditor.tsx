@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as yaml from 'js-yaml';
-import type { Ruleset } from '../types/rulebook';
+import type { Ruleset, Condition, Action } from '../types/rulebook';
 import { getActionType, getActionsArray } from '../types/rulebook';
+import { VisualSourceEditor } from './VisualSourceEditor';
+import { ConditionEditor } from './ConditionEditor';
+import { validateRulesetArray, formatValidationErrors } from '../utils/schemaValidator';
 import '../styles/VisualEditor.css';
 
 interface VisualEditorProps {
@@ -27,6 +30,7 @@ export interface VisualEditorRef {
   openEventLog: () => void;
   clearEvents: () => void;
   openCloudTunnel: () => void;
+  getSettings: () => ServerSettings;
 }
 
 type SelectedItem =
@@ -51,7 +55,7 @@ interface RuleTrigger {
   triggerCount: number;
 }
 
-interface ServerSettings {
+export interface ServerSettings {
   wsUrl: string;
   wsPort: number;
   ansibleRulebookPath: string;
@@ -60,6 +64,7 @@ interface ServerSettings {
   ngrokApiToken: string;
   autoShowJsonExplorer: boolean;
   jsonPathPrefix: string;
+  templatePath: string;
 }
 
 const DEFAULT_SETTINGS: ServerSettings = {
@@ -71,6 +76,7 @@ const DEFAULT_SETTINGS: ServerSettings = {
   ngrokApiToken: '',
   autoShowJsonExplorer: false,
   jsonPathPrefix: 'event',
+  templatePath: '/templates/default-rulebook.yml',
 };
 
 const loadSettings = (): ServerSettings => {
@@ -110,7 +116,6 @@ export const VisualEditor = forwardRef<VisualEditorRef, VisualEditorProps>(({
   onVersionInfoReceived,
 }, ref) => {
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
-  const [expandedRulesets, setExpandedRulesets] = useState<Set<number>>(new Set([0]));
   const [serverSettings, setServerSettings] = useState<ServerSettings>(loadSettings());
 
   // Execution state
@@ -135,7 +140,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   const [webhookIntervalSeconds, setWebhookIntervalSeconds] = useState(0);
   const [activeWebhookSends, setActiveWebhookSends] = useState<Set<number>>(new Set());
   const webhookAbortRefs = useRef<Map<number, boolean>>(new Map());
-  const [executionSummary, setExecutionSummary] = useState({
+  const [_executionSummary, setExecutionSummary] = useState({
     rulesTriggered: 0,
     eventsProcessed: 0,
     actionsExecuted: 0,
@@ -168,13 +173,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   const [ngrokTunnels, setNgrokTunnels] = useState<Map<number, { url: string; tunnelId: string; forwardTo: number | null }>>(new Map());
   const [testingTunnel, setTestingTunnel] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showTriggerEventModal, setShowTriggerEventModal] = useState(false);
+  const [selectedTrigger, setSelectedTrigger] = useState<RuleTrigger | null>(null);
 
   // Local state for properties panel JSON editing
-  const [sourceType, setSourceType] = useState('');
-  const [sourceArgsText, setSourceArgsText] = useState('{}');
-  const [sourceArgsError, setSourceArgsError] = useState<string | null>(null);
-  const [sourceFiltersText, setSourceFiltersText] = useState('[]');
-  const [sourceFiltersError, setSourceFiltersError] = useState<string | null>(null);
   const [actionConfigText, setActionConfigText] = useState('{}');
   const [actionConfigError, setActionConfigError] = useState<string | null>(null);
   const [ruleThrottleText, setRuleThrottleText] = useState('{}');
@@ -183,6 +185,44 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   const wsRef = useRef<WebSocket | null>(null);
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const webhookFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Validate selectedItem when rulesets change (e.g., when loading a new rulebook)
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    // Check if the selected item still exists in the current rulesets
+    if (selectedItem.rulesetIndex >= rulesets.length) {
+      // Selected ruleset no longer exists
+      setSelectedItem(null);
+      return;
+    }
+
+    const ruleset = rulesets[selectedItem.rulesetIndex];
+
+    if (selectedItem.type === 'source') {
+      if (!ruleset.sources || selectedItem.sourceIndex >= ruleset.sources.length) {
+        // Selected source no longer exists
+        setSelectedItem(null);
+      }
+    } else if (selectedItem.type === 'rule') {
+      if (!ruleset.rules || selectedItem.ruleIndex >= ruleset.rules.length) {
+        // Selected rule no longer exists
+        setSelectedItem(null);
+      }
+    } else if (selectedItem.type === 'action') {
+      if (!ruleset.rules || selectedItem.ruleIndex >= ruleset.rules.length) {
+        // Selected rule no longer exists
+        setSelectedItem(null);
+        return;
+      }
+      const rule = ruleset.rules[selectedItem.ruleIndex];
+      const actionsArray = rule.actions || (rule.action ? [rule.action] : []);
+      if (selectedItem.actionIndex >= actionsArray.length) {
+        // Selected action no longer exists
+        setSelectedItem(null);
+      }
+    }
+  }, [rulesets, selectedItem]);
 
   // Action type definitions with required and optional parameters
   const actionTypes = {
@@ -306,6 +346,9 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       }
       setShowCloudTunnelModal(true);
     },
+    getSettings: () => {
+      return serverSettings;
+    },
   }));
 
   // Notify parent of execution state changes
@@ -409,22 +452,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     }
   }, [rulesets]);
 
-  // Sync source config text when selected item changes
-  useEffect(() => {
-    if (selectedItem?.type === 'source') {
-      const source = rulesets[selectedItem.rulesetIndex].sources[selectedItem.sourceIndex];
-      const { type, args } = getSourceTypeAndArgs(source);
-
-      setSourceType(type);
-      setSourceArgsText(JSON.stringify(args, null, 2));
-      setSourceArgsError(null);
-
-      // Also sync filters
-      const newFiltersText = JSON.stringify(source.filters || [], null, 2);
-      setSourceFiltersText(newFiltersText);
-      setSourceFiltersError(null);
-    }
-  }, [selectedItem, rulesets]);
+  // Source config is now handled by VisualSourceEditor component
 
   // Sync action config text when selected item changes
   useEffect(() => {
@@ -763,6 +791,23 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   };
 
   const confirmStartExecution = () => {
+    // Validate rulesets before execution
+    try {
+      const validationErrors = validateRulesetArray(rulesets);
+      if (validationErrors.length > 0) {
+        const errorMessage = formatValidationErrors(validationErrors);
+        const confirmed = window.confirm(
+          `Validation errors found:\n\n${errorMessage}\n\nDo you want to proceed with execution anyway?`
+        );
+        if (!confirmed) {
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      // Continue with execution even if validation fails
+    }
+
     setShowExecutionModal(false);
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       connectWebSocket();
@@ -1187,16 +1232,6 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     return internalSourceTypes.includes(type);
   };
 
-  const toggleRuleset = (index: number) => {
-    const newExpanded = new Set(expandedRulesets);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedRulesets(newExpanded);
-  };
-
   const handleAddSource = (rulesetIndex: number) => {
     const newRulesets = [...rulesets];
     newRulesets[rulesetIndex].sources.push({
@@ -1315,7 +1350,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       }
     });
 
-    actions.push({ [selectedActionType]: actionConfig });
+    actions.push({ [selectedActionType]: actionConfig } as unknown as Action);
     newRulesets[rulesetIndex].rules[ruleIndex].actions = actions;
     newRulesets[rulesetIndex].rules[ruleIndex].action = undefined;
     onRulesetsChange(newRulesets);
@@ -1363,6 +1398,15 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
   const renderPropertiesPanel = () => {
     if (!selectedItem) {
+      return (
+        <div className="empty-properties">
+          <p>Select an item to edit its properties</p>
+        </div>
+      );
+    }
+
+    // Validate that the selected item still exists
+    if (selectedItem.rulesetIndex >= rulesets.length) {
       return (
         <div className="empty-properties">
           <p>Select an item to edit its properties</p>
@@ -1460,144 +1504,38 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     }
 
     if (selectedItem.type === 'source') {
-      const source = rulesets[selectedItem.rulesetIndex].sources[selectedItem.sourceIndex];
+      const ruleset = rulesets[selectedItem.rulesetIndex];
+      if (!ruleset.sources || selectedItem.sourceIndex >= ruleset.sources.length) {
+        return (
+          <div className="empty-properties">
+            <p>Select an item to edit its properties</p>
+          </div>
+        );
+      }
+      const source = ruleset.sources[selectedItem.sourceIndex];
       return (
-        <div className="properties-content">
-          <h3>Source Properties</h3>
-          <div className="form-group">
-            <label className="form-label">Name (Optional)</label>
-            <input
-              type="text"
-              className="form-input"
-              value={source.name || ''}
-              onChange={(e) => {
-                const newRulesets = [...rulesets];
-                newRulesets[selectedItem.rulesetIndex].sources[
-                  selectedItem.sourceIndex
-                ].name = e.target.value;
-                onRulesetsChange(newRulesets);
-              }}
-              placeholder="my_source_name"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label form-label-required">Source Type</label>
-            <input
-              type="text"
-              className="form-input"
-              value={sourceType}
-              onChange={(e) => {
-                const newType = e.target.value;
-                setSourceType(newType);
-
-                // Rebuild source object with new type
-                const newRulesets = [...rulesets];
-                const { name, filters } = source;
-
-                // Parse current args
-                let args = {};
-                try {
-                  args = JSON.parse(sourceArgsText);
-                } catch {
-                  args = {};
-                }
-
-                // Build new source object
-                const newSource: any = {};
-                if (name) newSource.name = name;
-                if (newType) newSource[newType] = args;
-                if (filters && filters.length > 0) newSource.filters = filters;
-
-                newRulesets[selectedItem.rulesetIndex].sources[selectedItem.sourceIndex] = newSource;
-                onRulesetsChange(newRulesets);
-              }}
-              placeholder="eda.builtin.webhook"
-            />
-            <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-              e.g., eda.builtin.webhook, eda.builtin.kafka, range
-            </small>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Source Args (JSON)</label>
-            <textarea
-              className="form-textarea"
-              value={sourceArgsText}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSourceArgsText(value);
-
-                try {
-                  const parsed = JSON.parse(value);
-                  const newRulesets = [...rulesets];
-                  const { name, filters } = source;
-
-                  // Build new source object with current type and new args
-                  const newSource: any = {};
-                  if (name) newSource.name = name;
-                  if (sourceType) newSource[sourceType] = parsed;
-                  if (filters && filters.length > 0) newSource.filters = filters;
-
-                  newRulesets[selectedItem.rulesetIndex].sources[selectedItem.sourceIndex] = newSource;
-                  onRulesetsChange(newRulesets);
-                  setSourceArgsError(null);
-                } catch (error) {
-                  setSourceArgsError('Invalid JSON format');
-                }
-              }}
-              rows={10}
-              style={sourceArgsError ? { borderColor: '#fc8181', borderWidth: '2px' } : {}}
-              placeholder='{\n  "port": 5000,\n  "host": "0.0.0.0"\n}'
-            />
-            {sourceArgsError && <div className="error-message">{sourceArgsError}</div>}
-            <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-              Configuration arguments for the source type
-            </small>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Filters (JSON Array)</label>
-            <textarea
-              className="form-textarea"
-              value={sourceFiltersText}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSourceFiltersText(value);
-
-                try {
-                  const parsed = JSON.parse(value);
-                  if (Array.isArray(parsed)) {
-                    const newRulesets = [...rulesets];
-                    newRulesets[selectedItem.rulesetIndex].sources[
-                      selectedItem.sourceIndex
-                    ].filters = parsed.length > 0 ? parsed : undefined;
-                    onRulesetsChange(newRulesets);
-                    setSourceFiltersError(null);
-                  } else {
-                    setSourceFiltersError('Must be a JSON array');
-                  }
-                } catch (error) {
-                  setSourceFiltersError('Invalid JSON format');
-                }
-              }}
-              rows={6}
-              style={sourceFiltersError ? { borderColor: '#fc8181', borderWidth: '2px' } : {}}
-            />
-            {sourceFiltersError && <div className="error-message">{sourceFiltersError}</div>}
-          </div>
-          <button
-            className="btn btn-danger"
-            onClick={() =>
-              handleDeleteSource(selectedItem.rulesetIndex, selectedItem.sourceIndex)
-            }
-            style={{ marginTop: '20px' }}
-          >
-            Delete Source
-          </button>
-        </div>
+        <VisualSourceEditor
+          source={source}
+          onChange={(newSource) => {
+            const newRulesets = [...rulesets];
+            newRulesets[selectedItem.rulesetIndex].sources[selectedItem.sourceIndex] = newSource;
+            onRulesetsChange(newRulesets);
+          }}
+          onDelete={() => handleDeleteSource(selectedItem.rulesetIndex, selectedItem.sourceIndex)}
+        />
       );
     }
 
     if (selectedItem.type === 'rule') {
-      const rule = rulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex];
+      const ruleset = rulesets[selectedItem.rulesetIndex];
+      if (!ruleset.rules || selectedItem.ruleIndex >= ruleset.rules.length) {
+        return (
+          <div className="empty-properties">
+            <p>Select an item to edit its properties</p>
+          </div>
+        );
+      }
+      const rule = ruleset.rules[selectedItem.ruleIndex];
       return (
         <div className="properties-content">
           <h3>Rule Properties</h3>
@@ -1632,33 +1570,16 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               Enabled
             </label>
           </div>
-          <div className="form-group">
-            <label className="form-label form-label-required">Condition</label>
-            <textarea
-              className="form-textarea"
-              value={
-                typeof rule.condition === 'object'
-                  ? JSON.stringify(rule.condition, null, 2)
-                  : rule.condition.toString()
-              }
-              onChange={(e) => {
-                const value = e.target.value;
-                const newRulesets = [...rulesets];
-                try {
-                  const parsed = JSON.parse(value);
-                  newRulesets[selectedItem.rulesetIndex].rules[
-                    selectedItem.ruleIndex
-                  ].condition = parsed;
-                } catch {
-                  newRulesets[selectedItem.rulesetIndex].rules[
-                    selectedItem.ruleIndex
-                  ].condition = value;
-                }
-                onRulesetsChange(newRulesets);
-              }}
-              rows={6}
-            />
-          </div>
+          <ConditionEditor
+            condition={rule.condition}
+            onChange={(condition: Condition) => {
+              const newRulesets = [...rulesets];
+              newRulesets[selectedItem.rulesetIndex].rules[
+                selectedItem.ruleIndex
+              ].condition = condition;
+              onRulesetsChange(newRulesets);
+            }}
+          />
           <div className="form-group">
             <label className="form-label">Throttle Configuration (JSON)</label>
             <textarea
@@ -1707,11 +1628,32 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     }
 
     if (selectedItem.type === 'action') {
-      const rule = rulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex];
+      const ruleset = rulesets[selectedItem.rulesetIndex];
+      if (!ruleset.rules || selectedItem.ruleIndex >= ruleset.rules.length) {
+        return (
+          <div className="empty-properties">
+            <p>Select an item to edit its properties</p>
+          </div>
+        );
+      }
+      const rule = ruleset.rules[selectedItem.ruleIndex];
       const actionsArray = getActionsArray(rule);
+      if (selectedItem.actionIndex >= actionsArray.length) {
+        return (
+          <div className="empty-properties">
+            <p>Select an item to edit its properties</p>
+          </div>
+        );
+      }
       const action = actionsArray[selectedItem.actionIndex];
 
-      if (!action) return null;
+      if (!action) {
+        return (
+          <div className="empty-properties">
+            <p>Select an item to edit its properties</p>
+          </div>
+        );
+      }
 
       return (
         <div className="properties-content">
@@ -1944,6 +1886,14 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                             e.stopPropagation();
                             setSelectedItem({ type: 'rule', rulesetIndex, ruleIndex });
                           }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            if (isTriggered && trigger) {
+                              setSelectedTrigger(trigger);
+                              setShowTriggerEventModal(true);
+                            }
+                          }}
+                          title={isTriggered && trigger ? "Double-click to view triggering event" : undefined}
                         >
                           <div className="rule-header-compact">
                             <strong>{rule.name}</strong>
@@ -2443,6 +2393,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </select>
                 <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
                   Prefix used when copying paths from JSON Path Explorer (e.g., "event.user.name" or "event.payload.user.name")
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">New Rulebook Template Path</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={serverSettings.templatePath}
+                  onChange={(e) =>
+                    setServerSettings({ ...serverSettings, templatePath: e.target.value })
+                  }
+                  placeholder="/templates/default-rulebook.yml"
+                />
+                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                  Path to YAML template file used when creating new rulebooks (relative to public folder or absolute URL)
                 </small>
               </div>
             </div>
@@ -3037,6 +3003,83 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               <button
                 className="btn btn-primary"
                 onClick={() => setShowCloudTunnelModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trigger Event Modal */}
+      {showTriggerEventModal && selectedTrigger && (
+        <div className="modal-overlay" onClick={() => setShowTriggerEventModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+            <div className="modal-header">
+              <h2>Rule Trigger Event</h2>
+              <button
+                className="btn btn-small btn-outline"
+                onClick={() => setShowTriggerEventModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div>
+                    <strong>Ruleset:</strong> {selectedTrigger.rulesetName}
+                  </div>
+                  <div>
+                    <strong>Triggers:</strong> {selectedTrigger.triggerCount}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>Rule:</strong> {selectedTrigger.ruleName}
+                </div>
+                {selectedTrigger.actionType && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>Action:</strong> {selectedTrigger.actionType}
+                  </div>
+                )}
+                <div>
+                  <strong>Triggered:</strong> {selectedTrigger.timestamp.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Triggering Event</label>
+                <textarea
+                  className="form-textarea"
+                  value={selectedTrigger.matchingEvent || 'No event data available'}
+                  readOnly
+                  rows={20}
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    backgroundColor: '#f7fafc',
+                    cursor: 'text'
+                  }}
+                />
+                <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                  This is the last event that triggered this rule
+                </small>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (selectedTrigger.matchingEvent) {
+                    navigator.clipboard.writeText(selectedTrigger.matchingEvent);
+                  }
+                }}
+              >
+                📋 Copy Event
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowTriggerEventModal(false)}
               >
                 Close
               </button>

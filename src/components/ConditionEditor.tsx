@@ -1,0 +1,279 @@
+import React, { useState, useEffect } from 'react';
+import type { Condition, AllCondition, AnyCondition, NotAllCondition } from '../types/rulebook';
+import { getConditionType } from '../types/rulebook';
+
+interface ConditionEditorProps {
+  condition: Condition;
+  onChange: (condition: Condition) => void;
+}
+
+type ConditionTypeOption = 'simple' | 'any' | 'all' | 'not_all';
+
+export const ConditionEditor: React.FC<ConditionEditorProps> = ({
+  condition,
+  onChange,
+}) => {
+  const [conditionType, setConditionType] = useState<ConditionTypeOption>(() => {
+    const type = getConditionType(condition);
+    if (type === 'string' || type === 'boolean') return 'simple';
+    return type as ConditionTypeOption;
+  });
+
+  // State for simple condition
+  const [simpleCondition, setSimpleCondition] = useState<string>(() => {
+    if (typeof condition === 'string') return condition;
+    if (typeof condition === 'boolean') return condition.toString();
+    return '';
+  });
+
+  // State for any/all/not_all conditions
+  const [conditions, setConditions] = useState<string[]>(() => {
+    if (typeof condition === 'object') {
+      if ('any' in condition) return condition.any;
+      if ('all' in condition) return condition.all;
+      if ('not_all' in condition) return condition.not_all;
+    }
+    return [''];
+  });
+
+  const [timeout, setTimeout] = useState<string>(() => {
+    if (typeof condition === 'object') {
+      if ('all' in condition && condition.timeout) return condition.timeout;
+      if ('not_all' in condition) return condition.timeout;
+    }
+    return '';
+  });
+
+  // Sync state when condition prop changes (e.g., when loading a new rulebook)
+  useEffect(() => {
+    const type = getConditionType(condition);
+    const newType = (type === 'string' || type === 'boolean') ? 'simple' : type as ConditionTypeOption;
+    setConditionType(newType);
+
+    if (typeof condition === 'string') {
+      setSimpleCondition(condition);
+      setConditions([condition]);
+    } else if (typeof condition === 'boolean') {
+      setSimpleCondition(condition.toString());
+      setConditions([condition.toString()]);
+    } else if (typeof condition === 'object') {
+      if ('any' in condition) {
+        setConditions(condition.any);
+        setTimeout('');
+      } else if ('all' in condition) {
+        setConditions(condition.all);
+        setTimeout(condition.timeout || '');
+      } else if ('not_all' in condition) {
+        setConditions(condition.not_all);
+        setTimeout(condition.timeout);
+      }
+    } else {
+      // Default state for new/empty conditions
+      setSimpleCondition('');
+      setConditions(['']);
+      setTimeout('');
+    }
+  }, [condition]);
+
+  // Update parent when internal state changes
+  const updateCondition = (
+    type: ConditionTypeOption,
+    conds: string[],
+    timeoutValue: string
+  ) => {
+    if (type === 'simple') {
+      // For simple conditions, use the first condition string
+      const value = conds[0] || '';
+      // Try to parse as boolean, otherwise use string
+      if (value === 'true') {
+        onChange(true);
+      } else if (value === 'false') {
+        onChange(false);
+      } else {
+        onChange(value);
+      }
+    } else if (type === 'any') {
+      const anyCondition: AnyCondition = {
+        any: conds.filter(c => c.trim() !== ''),
+      };
+      onChange(anyCondition);
+    } else if (type === 'all') {
+      const allCondition: AllCondition = {
+        all: conds.filter(c => c.trim() !== ''),
+      };
+      if (timeoutValue.trim()) {
+        allCondition.timeout = timeoutValue;
+      }
+      onChange(allCondition);
+    } else if (type === 'not_all') {
+      const notAllCondition: NotAllCondition = {
+        not_all: conds.filter(c => c.trim() !== ''),
+        timeout: timeoutValue || '10 seconds', // Default timeout
+      };
+      onChange(notAllCondition);
+    }
+  };
+
+  const handleConditionTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as ConditionTypeOption;
+    setConditionType(newType);
+
+    // Initialize appropriate state for the new type
+    if (newType === 'simple') {
+      const newConds = [simpleCondition || ''];
+      setConditions(newConds);
+      updateCondition(newType, newConds, timeout);
+    } else if (newType === 'not_all' && !timeout) {
+      // Set default timeout for not_all
+      const newTimeout = '10 seconds';
+      setTimeout(newTimeout);
+      updateCondition(newType, conditions, newTimeout);
+    } else {
+      updateCondition(newType, conditions, timeout);
+    }
+  };
+
+  const handleSimpleConditionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSimpleCondition(value);
+    setConditions([value]);
+    updateCondition(conditionType, [value], timeout);
+  };
+
+  const handleConditionChange = (index: number, value: string) => {
+    const newConditions = [...conditions];
+    newConditions[index] = value;
+    setConditions(newConditions);
+    updateCondition(conditionType, newConditions, timeout);
+  };
+
+  const handleAddCondition = () => {
+    const newConditions = [...conditions, ''];
+    setConditions(newConditions);
+    updateCondition(conditionType, newConditions, timeout);
+  };
+
+  const handleDeleteCondition = (index: number) => {
+    const newConditions = conditions.filter((_, i) => i !== index);
+    // Ensure at least one condition remains
+    if (newConditions.length === 0) {
+      newConditions.push('');
+    }
+    setConditions(newConditions);
+    updateCondition(conditionType, newConditions, timeout);
+  };
+
+  const handleTimeoutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTimeout(value);
+    updateCondition(conditionType, conditions, value);
+  };
+
+  return (
+    <div className="condition-editor">
+      <div className="form-group">
+        <label className="form-label form-label-required">Condition Type</label>
+        <select
+          className="form-input"
+          value={conditionType}
+          onChange={handleConditionTypeChange}
+        >
+          <option value="simple">Simple (single condition)</option>
+          <option value="any">Any (match at least one)</option>
+          <option value="all">All (match all conditions)</option>
+          <option value="not_all">Not All (not all conditions match within timeout)</option>
+        </select>
+        <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+          {conditionType === 'simple' && 'Single condition expression that must be true'}
+          {conditionType === 'any' && 'Match if ANY of the conditions are true'}
+          {conditionType === 'all' && 'Match if ALL conditions are true'}
+          {conditionType === 'not_all' && 'Match if NOT ALL conditions are true within timeout'}
+        </small>
+      </div>
+
+      {conditionType === 'simple' ? (
+        <div className="form-group">
+          <label className="form-label form-label-required">Condition</label>
+          <input
+            type="text"
+            className="form-input"
+            value={simpleCondition}
+            onChange={handleSimpleConditionChange}
+            placeholder="e.g., event.i == 1 or event.status == 'active'"
+          />
+          <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+            Enter a condition expression using event data
+          </small>
+        </div>
+      ) : (
+        <>
+          <div className="form-group">
+            <label className="form-label form-label-required">
+              Conditions ({conditions.length})
+            </label>
+            {conditions.map((cond, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  alignItems: 'center',
+                }}
+              >
+                <input
+                  type="text"
+                  className="form-input"
+                  value={cond}
+                  onChange={(e) => handleConditionChange(index, e.target.value)}
+                  placeholder={`Condition ${index + 1}`}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-danger btn-small"
+                  onClick={() => handleDeleteCondition(index)}
+                  disabled={conditions.length === 1}
+                  style={{ minWidth: '80px' }}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={handleAddCondition}
+              style={{ marginTop: '8px' }}
+            >
+              + Add Condition
+            </button>
+            <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+              Enter condition expressions using event data (e.g., event.alert.code == 1001)
+            </small>
+          </div>
+
+          {(conditionType === 'all' || conditionType === 'not_all') && (
+            <div className="form-group">
+              <label className={`form-label ${conditionType === 'not_all' ? 'form-label-required' : ''}`}>
+                Timeout
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={timeout}
+                onChange={handleTimeoutChange}
+                placeholder="e.g., 10 seconds, 5 minutes, 1 hour"
+                required={conditionType === 'not_all'}
+              />
+              <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                Time duration (e.g., "10 seconds", "5 minutes", "1 hour", "2 days")
+                {conditionType === 'not_all' && ' - Required for not_all conditions'}
+              </small>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};

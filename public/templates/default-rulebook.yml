@@ -1,0 +1,14 @@
+---
+- name: Example Ruleset
+  hosts: all
+  sources:
+    - name: example_source
+      eda.builtin.range:
+        limit: 5
+
+  rules:
+    - name: Example Rule
+      condition: event.i == 1
+      actions:
+        - debug:
+            msg: "Event triggered: {{ event }}"

@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "AWS CloudTrail Event Source",
+  "description": "Receive events from an AWS CloudTrail. Supports all authentication methods supported by boto library.",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "const": "ansible.eda.aws_cloudtrail",
+      "description": "The type of event source (hidden field)",
+      "default": "ansible.eda.aws_cloudtrail"
+    },
+    "access_key": {
+      "type": "string",
+      "description": "Optional AWS access key ID"
+    },
+    "secret_key": {
+      "type": "string",
+      "description": "Optional AWS secret access key"
+    },
+    "session_token": {
+      "type": "string",
+      "description": "Optional STS session token for use with temporary credentials"
+    },
+    "endpoint_url": {
+      "type": "string",
+      "description": "Optional URL to connect to instead of the default AWS endpoints"
+    },
+    "region": {
+      "type": "string",
+      "description": "Optional AWS region to use"
+    },
+    "delay_seconds": {
+      "type": "integer",
+      "description": "The number of seconds to wait between polling",
+      "default": 10,
+      "minimum": 0
+    },
+    "lookup_attributes": {
+      "type": "array",
+      "description": "The optional list of lookup attributes. A lookup attribute is a dictionary containing an AttributeKey (string), which specifies the attribute used to filter returned events, and an AttributeValue (string), which defines the value for the specified AttributeKey",
+      "items": {
+        "type": "object",
+        "properties": {
+          "AttributeKey": {
+            "type": "string",
+            "description": "The attribute used to filter returned events"
+          },
+          "AttributeValue": {
+            "type": "string",
+            "description": "The value for the specified AttributeKey"
+          }
+        },
+        "required": ["AttributeKey", "AttributeValue"]
+      }
+    },
+    "event_category": {
+      "type": "string",
+      "description": "The optional event category to return (e.g. 'insight')"
+    }
+  },
+  "required": []
+}

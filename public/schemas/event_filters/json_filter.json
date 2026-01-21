@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "JSON Filter",
+  "description": "An event filter that filters keys out of events. Includes override excludes. This is useful to exclude information from events that is not needed by the rule engine",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.json_filter",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.json_filter"
+    },
+    "exclude_keys": {
+      "type": ["array", "null"],
+      "description": "A list of strings or patterns to remove. The values must be a full path in top-to-bottom order to the keys to be filtered",
+      "items": {
+        "type": "string"
+      },
+      "default": null
+    },
+    "include_keys": {
+      "type": ["array", "null"],
+      "description": "A list of strings or patterns to keep even if it matches exclude_keys patterns. The values must be a full path in top-to-bottom order to the keys to be filtered",
+      "items": {
+        "type": "string"
+      },
+      "default": null
+    }
+  }
+}

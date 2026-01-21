@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Insert Meta Info",
+  "description": "An event filter that sets the source name and type in the event meta field. This filter is automatically added to every source and adds the received_at iso8601 UTC datetime stamp to every event",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.insert_meta_info",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.insert_meta_info"
+    },
+    "source_name": {
+      "type": "string",
+      "description": "The name of the source where the event originated from"
+    },
+    "source_type": {
+      "type": "string",
+      "description": "The type of the source"
+    }
+  },
+  "required": ["source_name", "source_type"]
+}

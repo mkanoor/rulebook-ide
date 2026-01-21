@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "No Operation",
+  "description": "An event filter that does nothing to the input. Returns the event unchanged",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.noop",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.noop"
+    }
+  }
+}

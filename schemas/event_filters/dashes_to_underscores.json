@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Dashes to Underscores",
+  "description": "An event filter that changes dashes in keys to underscores. For instance, the key X-Y becomes the new key X_Y",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.dashes_to_underscores",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.dashes_to_underscores"
+    },
+    "overwrite": {
+      "type": "boolean",
+      "description": "Overwrite the values if there is a collision with a new key",
+      "default": true
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Webhook Event Source",
+  "description": "An ansible-rulebook event source module for receiving events via a webhook. The message must be a valid JSON object",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "const": "eda.builtin.webhook",
+      "description": "The type of event source (hidden field)",
+      "default": "eda.builtin.webhook"
+    },
+    "host": {
+      "type": "string",
+      "description": "The hostname to listen to",
+      "default": "0.0.0.0"
+    },
+    "port": {
+      "type": ["string", "integer"],
+      "description": "The TCP port to listen to"
+    },
+    "token": {
+      "type": "string",
+      "description": "The optional authentication token expected from client"
+    },
+    "certfile": {
+      "type": "string",
+      "description": "The optional path to a certificate file to enable TLS support"
+    },
+    "keyfile": {
+      "type": "string",
+      "description": "The optional path to a key file to be used together with certfile"
+    },
+    "password": {
+      "type": "string",
+      "description": "The optional password to be used when loading the certificate chain"
+    },
+    "cafile": {
+      "type": "string",
+      "description": "The optional path to a file containing CA certificates used to validate clients' certificates"
+    },
+    "capath": {
+      "type": "string",
+      "description": "The optional path to a directory containing CA certificates. Provide either cafile or capath to enable mTLS support"
+    },
+    "hmac_secret": {
+      "type": "string",
+      "description": "The optional HMAC secret used to verify the payload from the client"
+    },
+    "hmac_algo": {
+      "type": "string",
+      "description": "The optional HMAC algorithm used to calculate the payload hash. See your python's hashlib.algorithms_available set for available options",
+      "default": "sha256"
+    },
+    "hmac_header": {
+      "type": "string",
+      "description": "The optional HMAC header sent by the client with the payload signature",
+      "default": "x-hub-signature-256"
+    },
+    "hmac_format": {
+      "type": "string",
+      "description": "The optional HMAC signature format",
+      "enum": ["hex", "base64"],
+      "default": "hex"
+    }
+  },
+  "required": ["port"]
+}

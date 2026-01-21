@@ -5,6 +5,7 @@ import { RulesetEditor } from './components/RulesetEditor';
 import { VisualEditor, type VisualEditorRef, type ExecutionState } from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
+import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
 import './App.css';
 
 type ViewMode = 'form' | 'visual';
@@ -155,26 +156,74 @@ function App() {
     setRulesets([...rulesets, newRuleset]);
   };
 
-  const handleExportYAML = () => {
+  const handleExportYAML = async () => {
     try {
+      // Validate rulesets before exporting
+      try {
+        const validationErrors = validateRulesetArray(rulesets);
+        if (validationErrors.length > 0) {
+          const errorMessage = formatValidationErrors(validationErrors);
+          const confirmed = window.confirm(
+            `Validation errors found:\n\n${errorMessage}\n\nDo you want to export anyway?`
+          );
+          if (!confirmed) {
+            return;
+          }
+        }
+      } catch (validationError) {
+        console.error('Validation error:', validationError);
+        // Continue with export even if validation fails
+      }
+
       const yamlStr = yaml.dump(rulesets, {
         indent: 2,
         lineWidth: -1,
         noRefs: true,
       });
 
-      const blob = new Blob([yamlStr], { type: 'text/yaml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'rulebook.yml';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Use File System Access API if available
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: currentFilename || 'rulebook.yml',
+            types: [
+              {
+                description: 'YAML Files',
+                accept: {
+                  'text/yaml': ['.yml', '.yaml'],
+                },
+              },
+            ],
+          });
 
-      setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
-      setTimeout(() => setMessage(null), 3000);
+          const writable = await handle.createWritable();
+          await writable.write(yamlStr);
+          await writable.close();
+
+          setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
+          setTimeout(() => setMessage(null), 3000);
+        } catch (err) {
+          // User cancelled or error occurred
+          if ((err as Error).name !== 'AbortError') {
+            throw err;
+          }
+          // User cancelled, don't show error
+        }
+      } else {
+        // Fallback to download method for browsers without File System Access API
+        const blob = new Blob([yamlStr], { type: 'text/yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentFilename || 'rulebook.yml';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
+        setTimeout(() => setMessage(null), 3000);
+      }
     } catch (error) {
       setMessage({
         type: 'error',
@@ -218,22 +267,51 @@ function App() {
     }
   };
 
-  const handleNewRulebook = () => {
+  const handleNewRulebook = async () => {
     if (
       rulesets.length === 0 ||
       window.confirm('This will clear the current rulebook. Continue?')
     ) {
-      setRulesets([
-        {
-          name: 'New Ruleset',
-          hosts: 'all',
-          sources: [],
-          rules: [],
-        },
-      ]);
-      setCurrentFilename(null);
-      setMessage({ type: 'success', text: 'New rulebook created!' });
-      setTimeout(() => setMessage(null), 3000);
+      try {
+        // Get template path from settings
+        const settings = visualEditorRef.current?.getSettings();
+        const templatePath = settings?.templatePath || '/templates/default-rulebook.yml';
+
+        // Load template
+        const response = await fetch(templatePath);
+        if (!response.ok) {
+          throw new Error(`Failed to load template: ${response.statusText}`);
+        }
+
+        const templateContent = await response.text();
+        const parsedTemplate = yaml.load(templateContent) as Ruleset[];
+
+        if (!Array.isArray(parsedTemplate)) {
+          throw new Error('Invalid template format: expected an array of rulesets');
+        }
+
+        setRulesets(parsedTemplate);
+        setCurrentFilename(null);
+        setMessage({ type: 'success', text: 'New rulebook created from template!' });
+        setTimeout(() => setMessage(null), 3000);
+      } catch (error) {
+        console.error('Failed to load template:', error);
+        // Fallback to empty rulebook if template fails
+        setRulesets([
+          {
+            name: 'New Ruleset',
+            hosts: 'all',
+            sources: [],
+            rules: [],
+          },
+        ]);
+        setCurrentFilename(null);
+        setMessage({
+          type: 'error',
+          text: `Template load failed, created empty rulebook: ${error instanceof Error ? error.message : String(error)}`
+        });
+        setTimeout(() => setMessage(null), 5000);
+      }
     }
   };
 

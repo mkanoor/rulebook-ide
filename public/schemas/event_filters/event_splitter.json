@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Event Splitter",
+  "description": "An event filter that splits an event payload which has several events bundled inside. Useful for sources like Prometheus and Big Panda that send collections of events",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.event_splitter",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.event_splitter"
+    },
+    "splitter_key": {
+      "type": "string",
+      "description": "The key in the payload that has an array (list) of events. You can use dotted notation to specify the key path (e.g., topkey1.key2.key3)"
+    },
+    "attributes_key_map": {
+      "type": "object",
+      "description": "Optional field to augment the event with data from parent nodes in the event payload. The map contains the attribute name to add in the event and the value is the key path from the event payload",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": null
+    },
+    "extras": {
+      "type": "object",
+      "description": "Optional field to augment the event with static data defined as key:value object",
+      "additionalProperties": true,
+      "default": null
+    },
+    "raise_error": {
+      "type": "boolean",
+      "description": "Raise an error and stop the rulebook if the splitter_key is missing",
+      "default": false
+    }
+  },
+  "required": ["splitter_key"]
+}

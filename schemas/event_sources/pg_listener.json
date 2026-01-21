@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "PostgreSQL Pub/Sub Listener",
+  "description": "An ansible-rulebook event source plugin for reading events from pg_pub_sub",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "const": "eda.builtin.pg_listener",
+      "description": "The type of event source (hidden field)",
+      "default": "eda.builtin.pg_listener"
+    },
+    "dsn": {
+      "type": "string",
+      "description": "The connection string/dsn for Postgres as supported by psycopg/libpq. Either dsn or postgres_params is required"
+    },
+    "postgres_params": {
+      "type": "object",
+      "description": "The parameters for the pg connection as they are supported by psycopg/libpq. Either dsn or postgres_params is required",
+      "additionalProperties": true,
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Database server host"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Database server port"
+        },
+        "dbname": {
+          "type": "string",
+          "description": "Database name"
+        },
+        "user": {
+          "type": "string",
+          "description": "Database user"
+        },
+        "password": {
+          "type": "string",
+          "description": "Database password"
+        }
+      }
+    },
+    "channels": {
+      "type": "array",
+      "description": "The list of channels to listen",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["channels"],
+  "oneOf": [
+    {
+      "required": ["dsn", "channels"]
+    },
+    {
+      "required": ["postgres_params", "channels"]
+    }
+  ]
+}

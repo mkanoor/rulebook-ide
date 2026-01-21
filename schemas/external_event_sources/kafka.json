@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Kafka Event Source",
+  "description": "Receive events via a kafka topic",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "const": "ansible.eda.kafka",
+      "description": "The type of event source (hidden field)",
+      "default": "ansible.eda.kafka"
+    },
+    "host": {
+      "type": "string",
+      "description": "The host where the kafka topic is hosted"
+    },
+    "port": {
+      "type": "string",
+      "description": "The port where the kafka server is listening"
+    },
+    "cafile": {
+      "type": "string",
+      "description": "The optional certificate authority file path containing certificates used to sign kafka broker certificates"
+    },
+    "certfile": {
+      "type": "string",
+      "description": "The optional client certificate file path containing the client certificate, as well as CA certificates needed to establish the certificate's authenticity"
+    },
+    "keyfile": {
+      "type": "string",
+      "description": "The optional client key file path containing the client private key"
+    },
+    "password": {
+      "type": "string",
+      "description": "The optional password to be used when loading the certificate chain"
+    },
+    "check_hostname": {
+      "type": "boolean",
+      "description": "Enable SSL hostname verification",
+      "default": true
+    },
+    "verify_mode": {
+      "type": "string",
+      "description": "Whether to try to verify other peers' certificates and how to behave if verification fails",
+      "enum": ["CERT_NONE", "CERT_OPTIONAL", "CERT_REQUIRED"],
+      "default": "CERT_REQUIRED"
+    },
+    "encoding": {
+      "type": "string",
+      "description": "Message encoding scheme",
+      "default": "utf-8"
+    },
+    "topic": {
+      "type": "string",
+      "description": "The kafka topic. topic, topics, and topic_pattern are mutually exclusive"
+    },
+    "topics": {
+      "type": "array",
+      "description": "The kafka topics. topic, topics, and topic_pattern are mutually exclusive",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topic_pattern": {
+      "type": "string",
+      "description": "The kafka topic pattern. It must be a valid regex. topic, topics, and topic_pattern are mutually exclusive. AIOKafkaConsumer performs periodic metadata refreshes in the background and will notice when new partitions are added to one of the subscribed topics or when a new topic matching a subscribed regex is created"
+    },
+    "metadata_max_age_ms": {
+      "type": "integer",
+      "description": "The period of time in milliseconds for forcing a refresh of metadata. It configures how soon a topic or partition change is detected",
+      "default": 300000
+    },
+    "group_id": {
+      "type": ["string", "null"],
+      "description": "A kafka group id",
+      "default": null
+    },
+    "offset": {
+      "type": "string",
+      "description": "Where to automatically reset the offset",
+      "enum": ["latest", "earliest"],
+      "default": "latest"
+    },
+    "security_protocol": {
+      "type": "string",
+      "description": "Protocol used to communicate with brokers",
+      "enum": ["PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"],
+      "default": "PLAINTEXT"
+    },
+    "sasl_mechanism": {
+      "type": "string",
+      "description": "Authentication mechanism when security_protocol is configured",
+      "enum": ["PLAIN", "GSSAPI", "SCRAM-SHA-256", "SCRAM-SHA-512", "OAUTHBEARER"],
+      "default": "PLAIN"
+    },
+    "sasl_plain_username": {
+      "type": "string",
+      "description": "Username for SASL PLAIN authentication"
+    },
+    "sasl_plain_password": {
+      "type": "string",
+      "description": "Password for SASL PLAIN authentication"
+    },
+    "sasl_kerberos_service_name": {
+      "type": "string",
+      "description": "The service name, default is kafka"
+    },
+    "sasl_kerberos_domain_name": {
+      "type": "string",
+      "description": "The kerberos REALM"
+    },
+    "schema_type": {
+      "type": "string",
+      "description": "Message serialization format",
+      "enum": ["json", "avro"],
+      "default": "json"
+    },
+    "schema_registry_url": {
+      "type": "string",
+      "description": "URL of the Confluent Schema Registry (required when schema_type is 'avro' and use_embedded_schema is false)"
+    },
+    "schema_registry_basic_auth_user": {
+      "type": "string",
+      "description": "Basic auth username for Schema Registry"
+    },
+    "schema_registry_basic_auth_password": {
+      "type": "string",
+      "description": "Basic auth password for Schema Registry"
+    },
+    "use_embedded_schema": {
+      "type": "boolean",
+      "description": "Whether the AVRO schema is embedded in the message payload instead of using Schema Registry",
+      "default": false
+    },
+    "embedded_schema": {
+      "type": "string",
+      "description": "AVRO schema definition (JSON string) when use_embedded_schema is true"
+    }
+  },
+  "required": ["host", "port"],
+  "oneOf": [
+    {
+      "required": ["topic"]
+    },
+    {
+      "required": ["topics"]
+    },
+    {
+      "required": ["topic_pattern"]
+    }
+  ]
+}

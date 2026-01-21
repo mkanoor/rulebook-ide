@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Range Event Source",
+  "description": "An ansible-rulebook event source plugin for generating events with an increasing index i",
+  "properties": {
+    "source_type": {
+      "type": "string",
+      "const": "eda.builtin.range",
+      "description": "The type of event source (hidden field)",
+      "default": "eda.builtin.range"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "The upper limit of the range of the index",
+      "default": 0,
+      "minimum": 0
+    },
+    "delay": {
+      "type": "number",
+      "description": "The delay between events in seconds",
+      "default": 0,
+      "minimum": 0
+    }
+  }
+}

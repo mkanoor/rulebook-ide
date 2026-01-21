@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Normalize Keys",
+  "description": "An event filter that changes keys containing non-alphanumeric or underscore characters to underscores. Consecutive non-alphanumeric characters are coalesced into a single underscore",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.normalize_keys",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.normalize_keys"
+    },
+    "overwrite": {
+      "type": "boolean",
+      "description": "Overwrite the values if there is a collision with a new key",
+      "default": true
+    }
+  }
+}

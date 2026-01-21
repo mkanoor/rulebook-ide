@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { Rule, Action, Condition } from '../types/rulebook';
 import { getConditionType } from '../types/rulebook';
 import { ActionEditor } from './ActionEditor';
+import { ConditionEditor } from './ConditionEditor';
 
 interface RuleEditorProps {
   rule: Rule;
@@ -16,13 +17,6 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
   onChange,
   onDelete,
 }) => {
-  const [conditionJson, setConditionJson] = useState(
-    typeof rule.condition === 'object'
-      ? JSON.stringify(rule.condition, null, 2)
-      : rule.condition.toString()
-  );
-  const [conditionError, setConditionError] = useState<string | null>(null);
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(index, { ...rule, name: e.target.value });
   };
@@ -31,20 +25,8 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
     onChange(index, { ...rule, enabled: e.target.checked });
   };
 
-  const handleConditionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setConditionJson(value);
-
-    try {
-      // Try to parse as JSON first
-      const parsed = JSON.parse(value);
-      setConditionError(null);
-      onChange(index, { ...rule, condition: parsed as Condition });
-    } catch {
-      // If not valid JSON, treat as a string condition
-      setConditionError(null);
-      onChange(index, { ...rule, condition: value });
-    }
+  const handleConditionChange = (condition: Condition) => {
+    onChange(index, { ...rule, condition });
   };
 
   const handleActionChange = (actionIndex: number, action: Action) => {
@@ -111,21 +93,10 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
         </div>
       </div>
 
-      <div className="form-group">
-        <label className="form-label form-label-required">Condition</label>
-        <textarea
-          className="form-textarea"
-          value={conditionJson}
-          onChange={handleConditionChange}
-          placeholder='event.i == 1 or {"all": ["event.i > 0", "event.status == \"active\""]}'
-          rows={4}
-        />
-        {conditionError && <div className="error-message">{conditionError}</div>}
-        <small style={{ color: '#718096', fontSize: '12px' }}>
-          Enter a string condition (e.g., event.i == 1) or JSON object for all/any/not_all
-          conditions
-        </small>
-      </div>
+      <ConditionEditor
+        condition={rule.condition}
+        onChange={handleConditionChange}
+      />
 
       <div className="section-title">
         Actions ({actions.length})

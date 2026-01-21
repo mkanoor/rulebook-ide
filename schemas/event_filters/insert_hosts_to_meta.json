@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Insert Hosts to Meta",
+  "description": "An event filter that extracts hosts from the event data and inserts them to the meta dict. In ansible-rulebook, this will limit an action running on hosts in the meta dict",
+  "properties": {
+    "filter_type": {
+      "type": "string",
+      "const": "eda.builtin.insert_hosts_to_meta",
+      "description": "The type of event filter (hidden field)",
+      "default": "eda.builtin.insert_hosts_to_meta"
+    },
+    "host_path": {
+      "type": ["string", "null"],
+      "description": "The json path inside the event data to find hosts. Do nothing if the key is not present or does not exist in event",
+      "default": null
+    },
+    "path_separator": {
+      "type": "string",
+      "description": "The separator to interpret host_path",
+      "default": "."
+    },
+    "host_separator": {
+      "type": ["string", "null"],
+      "description": "The separator to interpret host string. host_path can point to a string or a list. If it is a single string but contains multiple hosts, use this parameter to delimit the hosts",
+      "default": null
+    },
+    "raise_error": {
+      "type": "boolean",
+      "description": "Whether to raise PathNotExistError if host_path does not exist in the event. It is recommended to turn it on during rulebook development time",
+      "default": false
+    },
+    "log_error": {
+      "type": "boolean",
+      "description": "Whether to log an error message if host_path does not exist in the event. You can turn it off if it is expected to have events not having the host_path to avoid noises in the log",
+      "default": true
+    }
+  }
+}

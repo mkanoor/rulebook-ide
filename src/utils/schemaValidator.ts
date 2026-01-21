@@ -128,3 +128,92 @@ export function formatValidationErrors(errors: ValidationError[]): string {
     })
     .join('\n');
 }
+
+/**
+ * Validates if an object is a valid JSON Schema
+ */
+export function validateJsonSchema(schema: any): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Check if it's an object
+  if (!schema || typeof schema !== 'object') {
+    errors.push('Schema must be an object');
+    return { isValid: false, errors };
+  }
+
+  // Check for required $schema field
+  if (!schema.$schema) {
+    errors.push('Schema must have a $schema property');
+  }
+
+  // Check for type
+  if (!schema.type) {
+    errors.push('Schema must have a type property');
+  }
+
+  // Check for properties if type is object
+  if (schema.type === 'object' && !schema.properties) {
+    errors.push('Object schema must have a properties field');
+  }
+
+  // Validate properties structure
+  if (schema.properties && typeof schema.properties !== 'object') {
+    errors.push('Properties must be an object');
+  }
+
+  // Basic validation of property definitions
+  if (schema.properties) {
+    for (const [key, prop] of Object.entries(schema.properties)) {
+      if (typeof prop !== 'object') {
+        errors.push(`Property '${key}' must be an object`);
+      } else {
+        const propObj = prop as any;
+        if (!propObj.type && !propObj.oneOf && !propObj.anyOf && !propObj.allOf && !propObj.$ref) {
+          errors.push(`Property '${key}' must have a type or schema reference`);
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Loads a JSON schema from a URL or file path
+ */
+export async function loadSchemaFromUrl(url: string): Promise<any> {
+  try {
+    // Check if it's a local file path or a URL
+    const isUrl = url.startsWith('http://') || url.startsWith('https://');
+    const isLocalPath = url.startsWith('/') || url.startsWith('./') || url.startsWith('../');
+
+    if (isUrl) {
+      // Load from URL
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch schema: ${response.statusText}`);
+      }
+      const schema = await response.json();
+      return schema;
+    } else if (isLocalPath) {
+      // Load from local path (relative to public directory)
+      const publicPath = url.startsWith('/') ? url : `/${url}`;
+      const response = await fetch(publicPath);
+      if (!response.ok) {
+        throw new Error(`Failed to load schema from path: ${response.statusText}`);
+      }
+      const schema = await response.json();
+      return schema;
+    } else {
+      throw new Error('Schema URL must start with http://, https://, /, ./, or ../');
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to load schema: ${error.message}`);
+    }
+    throw new Error('Failed to load schema: Unknown error');
+  }
+}
