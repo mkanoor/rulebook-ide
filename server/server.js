@@ -890,39 +890,82 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // Graceful shutdown
+let isShuttingDown = false;
 process.on('SIGINT', async () => {
+  if (isShuttingDown) {
+    console.log('Shutdown already in progress...');
+    return;
+  }
+  isShuttingDown = true;
+
   console.log('Shutting down server...');
 
-  const killPromises = [];
-  executions.forEach((execution, id) => {
-    if (execution.process && execution.process.pid && !execution.process.killed) {
-      console.log(`Killing ansible-rulebook process tree for execution ${id} (PID: ${execution.process.pid})`);
-      killPromises.push(killProcessTree(execution.process.pid, 'SIGTERM'));
-    }
-  });
+  // Set a timeout to force exit if graceful shutdown hangs
+  const forceExitTimeout = setTimeout(() => {
+    console.log('Force exit after timeout');
+    process.exit(1);
+  }, 5000);
 
-  await Promise.all(killPromises);
+  try {
+    // Kill ansible-rulebook processes
+    const killPromises = [];
+    executions.forEach((execution, id) => {
+      if (execution.process && execution.process.pid && !execution.process.killed) {
+        console.log(`Killing ansible-rulebook process tree for execution ${id} (PID: ${execution.process.pid})`);
+        killPromises.push(killProcessTree(execution.process.pid, 'SIGTERM'));
+      }
+    });
+    await Promise.all(killPromises);
 
-  // Close all ngrok tunnels
-  console.log('Closing all ngrok tunnels...');
-  const tunnelClosePromises = [];
-  ngrokTunnels.forEach((tunnel, port) => {
-    console.log(`Closing tunnel on port ${port}`);
-    tunnelClosePromises.push(tunnel.listener.close());
-  });
-  await Promise.all(tunnelClosePromises);
+    // Close all ngrok tunnels
+    console.log('Closing all ngrok tunnels...');
+    const tunnelClosePromises = [];
+    ngrokTunnels.forEach((tunnel, port) => {
+      console.log(`Closing tunnel on port ${port}`);
+      tunnelClosePromises.push(tunnel.listener.close());
+    });
+    await Promise.all(tunnelClosePromises);
+    ngrokTunnels.clear();
 
-  // Close all HTTP servers
-  console.log('Closing all HTTP servers...');
-  httpServers.forEach((httpServer, port) => {
-    console.log(`Closing HTTP server on port ${port}`);
-    httpServer.close();
-  });
+    // Close all HTTP servers on tunnel ports
+    console.log('Closing all HTTP servers...');
+    const httpServerClosePromises = [];
+    httpServers.forEach((httpServer, port) => {
+      console.log(`Closing HTTP server on port ${port}`);
+      httpServerClosePromises.push(
+        new Promise((resolve) => {
+          httpServer.close(() => {
+            console.log(`HTTP server on port ${port} closed`);
+            resolve();
+          });
+        })
+      );
+    });
+    await Promise.all(httpServerClosePromises);
+    httpServers.clear();
 
-  server.close(() => {
-    console.log('Server shutdown complete');
-    process.exit(0);
-  });
+    // Close all WebSocket connections
+    console.log('Closing all WebSocket connections...');
+    wss.clients.forEach((ws) => {
+      ws.close();
+    });
+
+    // Close WebSocket server and main server
+    console.log('Closing WebSocket and HTTP server...');
+    wss.close(() => {
+      console.log('WebSocket server closed');
+    });
+
+    server.close(() => {
+      console.log('Server shutdown complete');
+      clearTimeout(forceExitTimeout);
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    clearTimeout(forceExitTimeout);
+    process.exit(1);
+  }
 });
 
 // Start server
