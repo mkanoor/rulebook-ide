@@ -3006,6 +3006,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 📋 Copy Event
               </button>
               <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (selectedTrigger.matchingEvent && onWebhookReceived) {
+                    try {
+                      const eventData = JSON.parse(selectedTrigger.matchingEvent);
+                      onWebhookReceived(eventData);
+                      setShowTriggerEventModal(false);
+                    } catch (error) {
+                      console.error('Failed to parse event data:', error);
+                    }
+                  }
+                }}
+              >
+                🔍 Explore in JSON Path Explorer
+              </button>
+              <button
                 className="btn btn-primary"
                 onClick={() => setShowTriggerEventModal(false)}
               >
