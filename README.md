@@ -94,7 +94,22 @@ PORT=8080 npm run stop
 
 ## Execution Mode
 
-The editor includes an execution mode that allows you to test your rulebooks with ansible-rulebook in real-time.
+The IDE leverages ansible-rulebook's native WebSocket capabilities to provide real-time testing and monitoring of your rulebooks.
+
+### How It Works
+
+**ansible-rulebook** includes built-in WebSocket support that enables:
+- **Dynamic rulebook loading** - Fetches rulebook content over WebSocket instead of from files
+- **Real-time status reporting** - Streams rule triggers, actions, and events back to the IDE
+- **Remote execution control** - Supports start, stop, and configuration via WebSocket messages
+
+When you click **Start Execution**, the IDE:
+1. Spawns `ansible-rulebook` in `--worker` mode with a WebSocket URL
+2. Sends your rulebook and variables to ansible-rulebook over the WebSocket connection
+3. Receives real-time events as rules fire and actions execute
+4. Displays rule triggers, event data, and execution status in the UI
+
+This architecture allows the IDE to provide immediate feedback without writing temporary files or requiring manual ansible-rulebook invocation.
 
 ### Prerequisites
 
@@ -109,10 +124,10 @@ The editor includes an execution mode that allows you to test your rulebooks wit
 1. Click the **▶️ Execute** button in the toolbar
 2. Optionally, add extra variables in JSON format
 3. Click **Start Execution**
-4. The ansible-rulebook process will be **automatically started** by the server
-   - You'll see a message: "ansible-rulebook automatically launched"
-   - The process output will appear in the event log
-   - A command is displayed for reference (manual execution is not needed)
+4. The ansible-rulebook process will be **automatically started** in worker mode
+   - Command: `ansible-rulebook --worker --id <uuid> --websocket-url ws://localhost:5555`
+   - The process connects to the IDE's WebSocket server
+   - Rulebook and variables are transmitted via WebSocket (no temporary files)
 5. Watch as rules are triggered in real-time:
    - Rules that are triggered will be highlighted in yellow
    - The event log shows all events from ansible-rulebook
@@ -121,8 +136,9 @@ The editor includes an execution mode that allows you to test your rulebooks wit
 ### Features
 
 - **Real-time rule highlighting** - See which rules fire as events come in
-- **Event streaming** - View all events from ansible-rulebook in the log panel
-- **WebSocket communication** - The rulebook is sent to ansible-rulebook via WebSocket
+- **Event streaming** - View all events (Job, Action, ProcessedEvent, etc.) from ansible-rulebook
+- **WebSocket communication** - Uses ansible-rulebook's native `--worker` mode for bidirectional communication
+- **No temporary files** - Rulebook content sent directly via WebSocket
 - **Extra variables** - Pass variables to your rulebook at runtime
 - **Start/Stop control** - Control execution from the UI
 
