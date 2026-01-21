@@ -2,154 +2,59 @@
 
 ## Overview Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          EXTERNAL SERVICES                                   │
-│  ┌────────────────┐        ┌──────────────────────────────────────┐        │
-│  │   GitHub       │        │   Other Webhook Services             │        │
-│  │   GitLab       │   →    │   (AlertManager, Prometheus, etc.)   │   →    │
-│  │   ServiceNow   │        │                                      │        │
-│  └────────────────┘        └──────────────────────────────────────┘        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                         │
-                                         │ HTTP POST (Webhook)
-                                         ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            NGROK CLOUD TUNNEL                                │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │  Public URL: https://xyz123.ngrok.io                               │    │
-│  │  - Accepts webhooks from internet                                  │    │
-│  │  - Routes to local port                                            │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                         │
-                                         │ Forwards to localhost
-                                         ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     LOCALHOST - UNIFIED SERVER (Port 5555)                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │                    Express HTTP Server                              │    │
-│  │                                                                     │    │
-│  │  ┌──────────────────────┐      ┌─────────────────────────────┐   │    │
-│  │  │   DEV MODE:          │      │   PROD MODE:                │   │    │
-│  │  │   Vite Middleware    │      │   Static File Server        │   │    │
-│  │  │   - HMR              │      │   - Serves dist/            │   │    │
-│  │  │   - Fast Refresh     │      │   - Optimized bundles       │   │    │
-│  │  └──────────────────────┘      └─────────────────────────────┘   │    │
-│  │                                                                     │    │
-│  │                    Serves: http://localhost:5555                   │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │                    WebSocket Server                                 │    │
-│  │                                                                     │    │
-│  │  Endpoint: ws://localhost:5555                                     │    │
-│  │                                                                     │    │
-│  │  Handles:                                                          │    │
-│  │  • UI Client connections (React app)                              │    │
-│  │  • Worker connections (ansible-rulebook)                          │    │
-│  │  • Execution control messages                                     │    │
-│  │  • Event streaming (Job, Action, AnsibleEvent, etc.)              │    │
-│  │  • Tunnel management (create/delete)                              │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │                    Backend Logic                                    │    │
-│  │                                                                     │    │
-│  │  • Spawn ansible-rulebook child processes                          │    │
-│  │  • Manage execution lifecycle                                      │    │
-│  │  • Send rulebook + extra vars via WebSocket                        │    │
-│  │  • Process and broadcast events to UI                              │    │
-│  │  • Create/manage ngrok tunnels                                     │    │
-│  │  • Create HTTP intercept servers (see below)                       │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-         │                                    ▲
-         │ Spawns process                     │ WebSocket
-         │                                    │ ws://localhost:5555
-         ▼                                    │
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ANSIBLE-RULEBOOK WORKER PROCESS                           │
-│                                                                              │
-│  Command:                                                                    │
-│  ansible-rulebook --worker --id <UUID> --websocket-url ws://localhost:5555  │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │  • Receives rulebook + extra vars via WebSocket                    │    │
-│  │  • Loads sources (eda.builtin.webhook, kafka, range, etc.)         │    │
-│  │  • Evaluates rules against incoming events                         │    │
-│  │  • Executes actions (run_playbook, debug, post_event, etc.)        │    │
-│  │  • Sends events back via WebSocket:                                │    │
-│  │    - Job events                                                     │    │
-│  │    - AnsibleEvent                                                   │    │
-│  │    - ProcessedEvent                                                 │    │
-│  │    - Action events                                                  │    │
-│  │    - SessionStats (heartbeat)                                       │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │  Webhook Source (if configured):                                   │    │
-│  │  Listens on: http://localhost:<source-port> (e.g., 5643)           │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                         ▲
-                                         │ Forwards webhook
-                                         │ (if forwarding enabled)
-                                         │
-┌─────────────────────────────────────────────────────────────────────────────┐
-│              WEBHOOK INTERCEPT SERVER (Dynamically Created)                  │
-│                                                                              │
-│  Port: <tunnel-port> (e.g., 8080)                                           │
-│  Created by: Unified server when tunnel is created                          │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │  HTTP Server on localhost:<tunnel-port>                            │    │
-│  │                                                                     │    │
-│  │  When webhook arrives:                                             │    │
-│  │  1. Log the webhook (method, URL, headers, payload)                │    │
-│  │  2. Broadcast to UI via WebSocket (tunnel_webhook_received)        │    │
-│  │  3. Display in JSON Path Explorer                                  │    │
-│  │  4. IF forwarding enabled:                                         │    │
-│  │     • Forward to localhost:<forward-port> (e.g., 5643)             │    │
-│  │     • Log forwarding result                                        │    │
-│  │     • Return forwarded response to caller                          │    │
-│  │  5. ELSE:                                                           │    │
-│  │     • Return 200 OK to caller                                      │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "Frontend (React + TypeScript)"
+        UI[User Interface]
+        RE[RulesetEditor]
+        RLE[RuleEditor]
+        AE[ActionEditor]
+        SE[SourceEditor]
+        ME[Monaco Editor]
+        JE[JSON Editor]
 
+        UI --> RE
+        UI --> RLE
+        UI --> AE
+        UI --> SE
+        RE --> ME
+        SE --> JE
+    end
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           REACT FRONTEND (Browser)                           │
-│                                                                              │
-│  URL: http://localhost:5555                                                 │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │  Components:                                                        │    │
-│  │                                                                     │    │
-│  │  ┌───────────────────┐  ┌──────────────────┐  ┌────────────────┐ │    │
-│  │  │  Visual Editor    │  │  Monaco Editor   │  │  Properties    │ │    │
-│  │  │  - Rulesets       │  │  - YAML view     │  │  Panel         │ │    │
-│  │  │  - Sources        │  │  - Syntax HL     │  │  - Settings    │ │    │
-│  │  │  - Rules          │  │                  │  │  - Execution   │ │    │
-│  │  │  - Actions        │  │                  │  │  - Event Log   │ │    │
-│  │  └───────────────────┘  └──────────────────┘  └────────────────┘ │    │
-│  │                                                                     │    │
-│  │  ┌───────────────────┐  ┌──────────────────┐  ┌────────────────┐ │    │
-│  │  │  JSON Path        │  │  Cloud Tunnels   │  │  Webhook       │ │    │
-│  │  │  Explorer         │  │  Manager         │  │  Tester        │ │    │
-│  │  │  - View webhooks  │  │  - Create tunnel │  │  - Send test   │ │    │
-│  │  │  - Copy paths     │  │  - Configure fwd │  │  - View resp   │ │    │
-│  │  └───────────────────┘  └──────────────────┘  └────────────────┘ │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-│  WebSocket connection to: ws://localhost:5555                               │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+    subgraph "Backend Server (Express + Node.js)"
+        WS[WebSocket Server]
+        PM[Process Manager]
+        TM[Tunnel Manager]
+        WH[Webhook Handler]
+
+        WS --> PM
+        WS --> TM
+        WH --> WS
+    end
+
+    subgraph "External Services"
+        AR[Ansible Rulebook Process]
+        NG[ngrok Service]
+
+        AR -.->|stdout/stderr| PM
+    end
+
+    subgraph "External Events"
+        EXT[External Webhooks]
+    end
+
+    UI <-->|WebSocket Messages| WS
+    PM -->|Spawn/Monitor| AR
+    TM <-->|Create Tunnel| NG
+    EXT -->|HTTP POST| NG
+    NG -->|Forward| WH
+    WH -->|Relay Events| AR
+    AR -.->|WebSocket Events| WS
+
+    style UI fill:#61dafb
+    style WS fill:#68a063
+    style AR fill:#ee0000
+    style NG fill:#1f1e37
 ```
 
 ## Component Interactions
