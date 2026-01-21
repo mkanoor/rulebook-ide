@@ -555,6 +555,11 @@ EDA_CONTROLLER_SSL_VERIFY=`);
           type: 'get_ansible_version',
           ansibleRulebookPath: serverSettings.ansibleRulebookPath
         }));
+
+        // Request current ngrok tunnel state to sync with backend
+        ws.send(JSON.stringify({
+          type: 'get_tunnel_state'
+        }));
       };
 
       ws.onmessage = (event) => {
@@ -713,6 +718,25 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 addEvent('Error', errorMsg);
               }
               setTunnelCreating(false);
+              break;
+
+            case 'tunnel_state':
+              // Sync tunnel state from backend
+              if (message.tunnels && Array.isArray(message.tunnels)) {
+                const tunnelMap = new Map<number, { url: string; tunnelId: string; forwardTo: number | null }>();
+                message.tunnels.forEach((tunnel: any) => {
+                  tunnelMap.set(tunnel.port, {
+                    url: tunnel.publicUrl,
+                    tunnelId: tunnel.tunnelId,
+                    forwardTo: tunnel.forwardTo || null
+                  });
+                });
+                setNgrokTunnels(tunnelMap);
+                if (message.tunnels.length > 0) {
+                  console.log('Synced tunnel state from backend:', message.tunnels);
+                  addEvent('System', `Synced ${message.tunnels.length} active tunnel(s) from backend`);
+                }
+              }
               break;
 
             case 'test_tunnel_response':
@@ -2593,12 +2617,27 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         onClose={() => setShowCloudTunnelModal(false)}
         title="☁️ Cloud Tunnel - External Access"
         footer={
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCloudTunnelModal(false)}
-          >
-            Close
-          </button>
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(JSON.stringify({ type: 'get_tunnel_state' }));
+                  addEvent('System', 'Refreshing tunnel state from backend...');
+                }
+              }}
+              disabled={!isConnected}
+              title="Sync tunnel state from backend"
+            >
+              🔄 Refresh State
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowCloudTunnelModal(false)}
+            >
+              Close
+            </button>
+          </>
         }
       >
         <div>
