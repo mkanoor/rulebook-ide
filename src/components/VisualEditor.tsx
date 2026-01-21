@@ -1463,6 +1463,23 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             </select>
           </div>
           <div className="form-group">
+            <label className="form-label">Default Events TTL</label>
+            <input
+              type="text"
+              className="form-input"
+              value={ruleset.default_events_ttl || ''}
+              onChange={(e) => {
+                const newRulesets = [...rulesets];
+                newRulesets[selectedItem.rulesetIndex].default_events_ttl = e.target.value || undefined;
+                onRulesetsChange(newRulesets);
+              }}
+              placeholder="e.g., 2 hours, 30 minutes"
+            />
+            <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+              Time-to-live for events in the session (optional)
+            </small>
+          </div>
+          <div className="form-group">
             <label>
               <input
                 type="checkbox"

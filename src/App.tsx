@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as yaml from 'js-yaml';
 import type { Ruleset } from './types/rulebook';
-import { RulesetEditor } from './components/RulesetEditor';
 import { VisualEditor, type VisualEditorRef, type ExecutionState } from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
 import { Modal } from './components/common/Modal';
@@ -9,10 +8,7 @@ import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './th
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
 import './App.css';
 
-type ViewMode = 'form' | 'visual';
-
 function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('visual');
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('rulebook-editor-theme');
     return saved ? getThemeById(saved) : defaultTheme;
@@ -117,17 +113,6 @@ function App() {
     setShowThemeSelector(false);
     setMessage({ type: 'success', text: `Theme changed to ${theme.name} (${theme.year})` });
     setTimeout(() => setMessage(null), 3000);
-  };
-
-  const handleRulesetChange = (index: number, ruleset: Ruleset) => {
-    const newRulesets = [...rulesets];
-    newRulesets[index] = ruleset;
-    setRulesets(newRulesets);
-  };
-
-  const handleDeleteRuleset = (index: number) => {
-    const newRulesets = rulesets.filter((_, i) => i !== index);
-    setRulesets(newRulesets);
   };
 
   const handleAddRuleset = () => {
@@ -481,7 +466,6 @@ function App() {
         <button
           className="btn btn-outline btn-icon"
           onClick={() => visualEditorRef.current?.openSettings()}
-          disabled={viewMode !== 'visual'}
           title="Server Settings"
         >
           🔧
@@ -519,85 +503,65 @@ function App() {
         </button>
 
         {/* Separator */}
-        {viewMode === 'visual' && <div className="toolbar-separator"></div>}
+        <div className="toolbar-separator"></div>
 
-        {/* Execution Controls - Only visible in Visual mode */}
-        {viewMode === 'visual' && (
-          <>
-            {!executionState.isRunning ? (
-              <button
-                className="btn btn-primary btn-icon"
-                onClick={() => visualEditorRef.current?.startExecution()}
-                title="Start Execution"
-              >
-                ▶
-              </button>
-            ) : (
-              <button
-                className="btn btn-danger btn-icon"
-                onClick={() => visualEditorRef.current?.stopExecution()}
-                title="Stop Execution"
-              >
-                ⏹
-              </button>
-            )}
-            {executionState.hasWebhookPorts && executionState.isRunning && (
-              <button
-                className="btn btn-outline btn-icon"
-                onClick={() => visualEditorRef.current?.openWebhookModal()}
-                title="Send Webhook"
-              >
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }}>
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z" fill="currentColor"></path>
-                </svg>
-              </button>
-            )}
-            <button
-              className="btn btn-outline btn-icon"
-              onClick={() => visualEditorRef.current?.openEventLog()}
-              title={`Show Event Log${executionState.eventCount > 0 ? ` (${executionState.eventCount})` : ''}`}
-            >
-              📋
-            </button>
-            {executionState.eventCount > 0 && (
-              <button
-                className="btn btn-outline btn-icon"
-                onClick={() => visualEditorRef.current?.clearEvents()}
-                title="Clear Event Log"
-              >
-                🗑️
-              </button>
-            )}
-          </>
+        {/* Execution Controls */}
+        {!executionState.isRunning ? (
+          <button
+            className="btn btn-primary btn-icon"
+            onClick={() => visualEditorRef.current?.startExecution()}
+            title="Start Execution"
+          >
+            ▶
+          </button>
+        ) : (
+          <button
+            className="btn btn-danger btn-icon"
+            onClick={() => visualEditorRef.current?.stopExecution()}
+            title="Stop Execution"
+          >
+            ⏹
+          </button>
+        )}
+        {executionState.hasWebhookPorts && executionState.isRunning && (
+          <button
+            className="btn btn-outline btn-icon"
+            onClick={() => visualEditorRef.current?.openWebhookModal()}
+            title="Send Webhook"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }}>
+              <path fillRule="evenodd" clipRule="evenodd" d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z" fill="currentColor"></path>
+            </svg>
+          </button>
+        )}
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={() => visualEditorRef.current?.openEventLog()}
+          title={`Show Event Log${executionState.eventCount > 0 ? ` (${executionState.eventCount})` : ''}`}
+        >
+          📋
+        </button>
+        {executionState.eventCount > 0 && (
+          <button
+            className="btn btn-outline btn-icon"
+            onClick={() => visualEditorRef.current?.clearEvents()}
+            title="Clear Event Log"
+          >
+            🗑️
+          </button>
         )}
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Connection Status - Only visible in Visual mode */}
-          {viewMode === 'visual' && (
-            <div
-              className="status-badge"
-              title={executionState.isConnected ? 'Connected to backend server' : 'Not connected to backend server'}
-              style={{ cursor: 'help' }}
-            >
-              <span className={`status-dot ${executionState.isConnected ? 'connected' : 'disconnected'}`}></span>
-              <span title={executionState.isConnected ? 'Connected to backend server' : 'Not connected to backend server'}>
-                {executionState.isConnected ? '🟢' : '🔴'}
-              </span>
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: '5px', marginRight: '15px' }}>
-            <button
-              className={`btn btn-small ${viewMode === 'visual' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setViewMode('visual')}
-            >
-              📊 Visual
-            </button>
-            <button
-              className={`btn btn-small ${viewMode === 'form' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setViewMode('form')}
-            >
-              📝 Form
-            </button>
+          {/* Connection Status */}
+          <div
+            className="status-badge"
+            title={executionState.isConnected ? 'Connected to backend server' : 'Not connected to backend server'}
+            style={{ cursor: 'help' }}
+          >
+            <span className={`status-dot ${executionState.isConnected ? 'connected' : 'disconnected'}`}></span>
+            <span title={executionState.isConnected ? 'Connected to backend server' : 'Not connected to backend server'}>
+              {executionState.isConnected ? '🟢' : '🔴'}
+            </span>
           </div>
           <span className="badge badge-info">{rulesets.length} Ruleset(s)</span>
           <span className="badge badge-success">
@@ -612,40 +576,14 @@ function App() {
         </div>
       )}
 
-      {viewMode === 'visual' ? (
-        <VisualEditor
-          ref={visualEditorRef}
-          rulesets={rulesets}
-          onRulesetsChange={setRulesets}
-          onExecutionStateChange={setExecutionState}
-          onWebhookReceived={handleWebhookReceived}
-          onVersionInfoReceived={handleVersionInfoReceived}
-        />
-      ) : rulesets.length === 0 ? (
-        <div className="card">
-          <div className="empty-state">
-            <h3>No rulesets defined</h3>
-            <p>Get started by creating a new ruleset or importing an existing YAML file.</p>
-            <button
-              className="btn btn-primary"
-              onClick={handleAddRuleset}
-              style={{ marginTop: '20px' }}
-            >
-              Create First Ruleset
-            </button>
-          </div>
-        </div>
-      ) : (
-        rulesets.map((ruleset, index) => (
-          <RulesetEditor
-            key={index}
-            ruleset={ruleset}
-            index={index}
-            onChange={handleRulesetChange}
-            onDelete={handleDeleteRuleset}
-          />
-        ))
-      )}
+      <VisualEditor
+        ref={visualEditorRef}
+        rulesets={rulesets}
+        onRulesetsChange={setRulesets}
+        onExecutionStateChange={setExecutionState}
+        onWebhookReceived={handleWebhookReceived}
+        onVersionInfoReceived={handleVersionInfoReceived}
+      />
 
       {/* JSON Path Explorer Modal */}
       <Modal
