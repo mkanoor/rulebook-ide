@@ -4,6 +4,7 @@ import type { Ruleset, Condition, Action } from '../types/rulebook';
 import { getActionType, getActionsArray } from '../types/rulebook';
 import { VisualSourceEditor } from './VisualSourceEditor';
 import { ConditionEditor } from './ConditionEditor';
+import { Modal } from './common/Modal';
 import { validateRulesetArray, formatValidationErrors } from '../utils/schemaValidator';
 import '../styles/VisualEditor.css';
 
@@ -1993,19 +1994,28 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       )}
 
       {/* Execution Configuration Modal */}
-      {showExecutionModal && (
-        <div className="modal-overlay" onClick={() => setShowExecutionModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Execution Configuration</h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowExecutionModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+      <Modal
+        isOpen={showExecutionModal}
+        onClose={() => setShowExecutionModal(false)}
+        title="Execution Configuration"
+        footer={
+          <>
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowExecutionModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={confirmStartExecution}
+            >
+              Start Execution
+            </button>
+          </>
+        }
+      >
+        <div>
               <div className="form-group">
                 <label className="form-label">Extra Variables</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -2082,38 +2092,49 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </small>
               </div>
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowExecutionModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={confirmStartExecution}
-              >
-                Start Execution
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Webhook Testing Modal */}
-      {showWebhookModal && webhookPorts.length > 0 && (
-        <div className="modal-overlay" onClick={() => setShowWebhookModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Webhook Testing</h2>
+      {webhookPorts.length > 0 && (
+        <Modal
+          isOpen={showWebhookModal}
+          onClose={() => setShowWebhookModal(false)}
+          title="Webhook Testing"
+          footer={
+            <>
               <button
-                className="btn btn-small btn-outline"
+                className="btn btn-outline"
                 onClick={() => setShowWebhookModal(false)}
+                disabled={selectedWebhookPort !== null && activeWebhookSends.has(selectedWebhookPort)}
               >
-                ✕
+                Close
               </button>
-            </div>
-            <div className="modal-body">
+              {selectedWebhookPort && activeWebhookSends.has(selectedWebhookPort) ? (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => cancelWebhookSending(selectedWebhookPort)}
+                >
+                  Cancel Port {selectedWebhookPort}
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    sendWebhookPayload();
+                    // Don't close modal if sending multiple webhooks
+                    if (webhookRepeatCount <= 1) {
+                      setShowWebhookModal(false);
+                    }
+                  }}
+                  disabled={!selectedWebhookPort}
+                >
+                  Send Webhook{webhookRepeatCount > 1 ? 's' : ''}
+                </button>
+              )}
+            </>
+          }
+        >
+          <div>
               {webhookPorts.length > 1 && (
                 <div className="form-group">
                   <label className="form-label">Select Webhook Port</label>
@@ -2216,55 +2237,37 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </small>
               </div>
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowWebhookModal(false)}
-                disabled={selectedWebhookPort !== null && activeWebhookSends.has(selectedWebhookPort)}
-              >
-                Close
-              </button>
-              {selectedWebhookPort && activeWebhookSends.has(selectedWebhookPort) ? (
-                <button
-                  className="btn btn-danger"
-                  onClick={() => cancelWebhookSending(selectedWebhookPort)}
-                >
-                  Cancel Port {selectedWebhookPort}
-                </button>
-              ) : (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    sendWebhookPayload();
-                    // Don't close modal if sending multiple webhooks
-                    if (webhookRepeatCount <= 1) {
-                      setShowWebhookModal(false);
-                    }
-                  }}
-                  disabled={!selectedWebhookPort}
-                >
-                  Send Webhook{webhookRepeatCount > 1 ? 's' : ''}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Server Settings Modal */}
-      {showSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Server Settings</h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowSettingsModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+      <Modal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        title="Server Settings"
+        footer={
+          <>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setServerSettings(DEFAULT_SETTINGS);
+              }}
+            >
+              Reset to Defaults
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                saveSettings(serverSettings);
+                setShowSettingsModal(false);
+              }}
+            >
+              Save Settings
+            </button>
+          </>
+        }
+      >
+        <div>
               <div className="form-group">
                 <label className="form-label">WebSocket URL</label>
                 <input
@@ -2412,43 +2415,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </small>
               </div>
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-outline"
-                onClick={() => {
-                  setServerSettings(DEFAULT_SETTINGS);
-                }}
-              >
-                Reset to Defaults
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  saveSettings(serverSettings);
-                  setShowSettingsModal(false);
-                }}
-              >
-                Save Settings
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Session Stats Modal */}
-      {showStatsModal && selectedStatsRuleset && (
-        <div className="modal-overlay" onClick={() => setShowStatsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Session Stats: {selectedStatsRuleset}</h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowStatsModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+      {selectedStatsRuleset && (
+        <Modal
+          isOpen={showStatsModal}
+          onClose={() => setShowStatsModal(false)}
+          title={`Session Stats: ${selectedStatsRuleset}`}
+          footer={
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowStatsModal(false)}
+            >
+              Close
+            </button>
+          }
+        >
+          <div>
               {rulesetStats.has(selectedStatsRuleset) ? (
                 <pre style={{
                   background: '#f7fafc',
@@ -2465,32 +2449,33 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 <p>No stats available for this ruleset.</p>
               )}
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowStatsModal(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Add Action Modal */}
-      {showAddActionModal && addActionContext && (
-        <div className="modal-overlay" onClick={() => setShowAddActionModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Add Action</h2>
+      {addActionContext && (
+        <Modal
+          isOpen={showAddActionModal}
+          onClose={() => setShowAddActionModal(false)}
+          title="Add Action"
+          footer={
+            <>
               <button
-                className="btn btn-small btn-outline"
+                className="btn btn-outline"
                 onClick={() => setShowAddActionModal(false)}
               >
-                ✕
+                Cancel
               </button>
-            </div>
-            <div className="modal-body">
+              <button
+                className="btn btn-primary"
+                onClick={handleConfirmAddAction}
+              >
+                Add Action
+              </button>
+            </>
+          }
+        >
+          <div>
               <div className="form-group">
                 <label className="form-label form-label-required">Action Type</label>
                 <select
@@ -2558,22 +2543,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </p>
               )}
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowAddActionModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleConfirmAddAction}
-              >
-                Add Action
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Context Menu */}
@@ -2601,22 +2571,20 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       )}
 
       {/* Cloud Tunnel Modal */}
-      {showCloudTunnelModal && (
-        <div className="modal-overlay" onClick={() => setShowCloudTunnelModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>☁️</span>
-                Cloud Tunnel - External Access
-              </h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowCloudTunnelModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+      <Modal
+        isOpen={showCloudTunnelModal}
+        onClose={() => setShowCloudTunnelModal(false)}
+        title="☁️ Cloud Tunnel - External Access"
+        footer={
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowCloudTunnelModal(false)}
+          >
+            Close
+          </button>
+        }
+      >
+        <div>
               <div style={{ padding: '12px', backgroundColor: '#ebf8ff', borderRadius: '6px', border: '1px solid #4299e1', marginBottom: '20px' }}>
                 <div style={{ fontSize: '13px', color: '#2c5282', marginBottom: '4px' }}>
                   <strong>💡 About Cloud Tunnels</strong>
@@ -2999,32 +2967,37 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </div>
               )}
             </div>
-            <div className="modal-footer">
+      </Modal>
+
+      {/* Trigger Event Modal */}
+      {selectedTrigger && (
+        <Modal
+          isOpen={showTriggerEventModal}
+          onClose={() => setShowTriggerEventModal(false)}
+          title="Rule Trigger Event"
+          size="large"
+          footer={
+            <>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (selectedTrigger.matchingEvent) {
+                    navigator.clipboard.writeText(selectedTrigger.matchingEvent);
+                  }
+                }}
+              >
+                📋 Copy Event
+              </button>
               <button
                 className="btn btn-primary"
-                onClick={() => setShowCloudTunnelModal(false)}
+                onClick={() => setShowTriggerEventModal(false)}
               >
                 Close
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Trigger Event Modal */}
-      {showTriggerEventModal && selectedTrigger && (
-        <div className="modal-overlay" onClick={() => setShowTriggerEventModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
-            <div className="modal-header">
-              <h2>Rule Trigger Event</h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowTriggerEventModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+            </>
+          }
+        >
+          <div>
               <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div>
@@ -3066,26 +3039,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </small>
               </div>
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  if (selectedTrigger.matchingEvent) {
-                    navigator.clipboard.writeText(selectedTrigger.matchingEvent);
-                  }
-                }}
-              >
-                📋 Copy Event
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowTriggerEventModal(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import type { Ruleset } from './types/rulebook';
 import { RulesetEditor } from './components/RulesetEditor';
 import { VisualEditor, type VisualEditorRef, type ExecutionState } from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
+import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
 import './App.css';
@@ -647,47 +648,38 @@ function App() {
       )}
 
       {/* JSON Path Explorer Modal */}
-      {showJsonPathExplorer && (
-        <div className="modal-overlay" onClick={() => setShowJsonPathExplorer(false)}>
-          <div className="modal-content modal-content-large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>JSON Path Explorer</h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowJsonPathExplorer(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
-              <JsonPathExplorer initialJson={webhookPayload || undefined} pathPrefix={jsonPathPrefix} />
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowJsonPathExplorer(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showJsonPathExplorer}
+        onClose={() => setShowJsonPathExplorer(false)}
+        title="JSON Path Explorer"
+        size="large"
+        footer={
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowJsonPathExplorer(false)}
+          >
+            Close
+          </button>
+        }
+      >
+        <JsonPathExplorer initialJson={webhookPayload || undefined} pathPrefix={jsonPathPrefix} />
+      </Modal>
 
       {/* About Modal */}
-      {showAboutModal && (
-        <div className="modal-overlay" onClick={() => setShowAboutModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>About Ansible Rulebook IDE</h2>
-              <button
-                className="btn btn-small btn-outline"
-                onClick={() => setShowAboutModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
+      <Modal
+        isOpen={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+        title="About Ansible Rulebook IDE"
+        footer={
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowAboutModal(false)}
+          >
+            Close
+          </button>
+        }
+      >
+        <div>
               {ansibleVersionInfo ? (
                 <div style={{ fontFamily: 'monospace', fontSize: '13px' }}>
                   <div style={{ marginBottom: '20px' }}>
@@ -778,17 +770,7 @@ function App() {
                 </div>
               )}
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowAboutModal(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }
