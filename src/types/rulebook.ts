@@ -70,8 +70,7 @@ export type Action =
   | PrintEventAction
   | DebugAction
   | NoneAction
-  | ShutdownAction
-  | PgNotifyAction;
+  | ShutdownAction;
 
 export interface RunPlaybookAction {
   run_playbook: {
@@ -192,15 +191,6 @@ export interface ShutdownAction {
   } | null;
 }
 
-export interface PgNotifyAction {
-  pg_notify: {
-    dsn: string;
-    channel: string;
-    event: string | Record<string, unknown>;
-    remove_meta?: boolean;
-  };
-}
-
 // Helper function to get action type
 export function getActionType(action: Action): string {
   if ('run_playbook' in action) return 'run_playbook';
@@ -214,7 +204,6 @@ export function getActionType(action: Action): string {
   if ('debug' in action) return 'debug';
   if ('none' in action) return 'none';
   if ('shutdown' in action) return 'shutdown';
-  if ('pg_notify' in action) return 'pg_notify';
   return 'unknown';
 }
 

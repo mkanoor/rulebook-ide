@@ -24,7 +24,6 @@ A web-based integrated development environment for creating and managing Ansible
   - post_event
   - shutdown
   - none
-  - pg_notify
 - **YAML Import/Export**: Import existing YAML rulebooks and export your work
 - **Live YAML Preview**: View the generated YAML in a separate window
 - **Schema Validation**: Built on the official Ansible Rulebook schema

@@ -24,7 +24,6 @@ const ACTION_TYPES = [
   'post_event',
   'shutdown',
   'none',
-  'pg_notify',
 ];
 
 export const ActionEditor: React.FC<ActionEditorProps> = ({
@@ -99,9 +98,6 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         break;
       case 'none':
         newAction = { none: null };
-        break;
-      case 'pg_notify':
-        newAction = { pg_notify: { dsn: '', channel: '', event: {} } };
         break;
       default:
         newAction = { debug: { msg: '' } };

@@ -49,7 +49,6 @@ export function validateAction(action: unknown): ValidationError[] {
     'debug': 'debug-action',
     'none': 'none-action',
     'shutdown': 'shutdown-action',
-    'pg_notify': 'pg-notify-action',
   };
 
   const schemaKey = schemaMap[actionType];
