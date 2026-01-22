@@ -54,6 +54,8 @@ function App() {
     isRunning: false,
     hasWebhookPorts: false,
     eventCount: 0,
+    binaryFound: false,
+    binaryError: null,
   });
   const [showJsonPathExplorer, setShowJsonPathExplorer] = useState(false);
   const [webhookPayload, setWebhookPayload] = useState<object | null>(null);
@@ -510,7 +512,16 @@ function App() {
           <button
             className="btn btn-primary btn-icon"
             onClick={() => visualEditorRef.current?.startExecution()}
-            title="Start Execution"
+            disabled={!executionState.binaryFound}
+            title={
+              !executionState.binaryFound
+                ? (executionState.binaryError || 'Please set the path of ansible-rulebook in Settings')
+                : 'Start Execution'
+            }
+            style={{
+              opacity: executionState.binaryFound ? 1 : 0.5,
+              cursor: executionState.binaryFound ? 'pointer' : 'not-allowed'
+            }}
           >
             ▶
           </button>

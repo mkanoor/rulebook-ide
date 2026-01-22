@@ -24,6 +24,39 @@ const ngrokTunnels = new Map();
 const httpServers = new Map();
 const tunnelForwardingConfig = new Map(); // Store forwarding configuration per port
 
+// Binary status
+let ansibleBinaryFound = false;
+
+// Check if ansible-rulebook binary exists at given path
+// Returns: { found: boolean, error: string|null, isFullPath: boolean }
+function checkAnsibleBinary(path = 'ansible-rulebook') {
+  return new Promise((resolve) => {
+    const isFullPath = path.includes('/');
+
+    if (!isFullPath) {
+      // It's just a command name, check if it's in PATH
+      exec(`which ${path}`, (error, stdout) => {
+        const found = !error && stdout.trim() !== '';
+        resolve({
+          found,
+          error: found ? null : `Command '${path}' not found in PATH. Please configure the full path in Settings.`,
+          isFullPath: false
+        });
+      });
+    } else {
+      // It's a full path, check if file exists and is executable
+      exec(`test -x "${path}" && echo "exists"`, (error, stdout) => {
+        const found = stdout.trim() === 'exists';
+        resolve({
+          found,
+          error: found ? null : `Binary not found or not executable at: ${path}`,
+          isFullPath: true
+        });
+      });
+    }
+  });
+}
+
 // Helper function to kill a process and all its children
 function killProcessTree(pid, signal = 'SIGTERM') {
   return new Promise((resolve) => {
@@ -221,7 +254,8 @@ if (IS_PRODUCTION) {
   const distPath = join(rootDir, 'dist');
   app.use(express.static(distPath));
 
-  app.get('*', (req, res) => {
+  // Catch-all route for SPA
+  app.use((req, res) => {
     res.sendFile(join(distPath, 'index.html'));
   });
 } else {
@@ -259,6 +293,11 @@ wss.on('connection', (ws, req) => {
           connectionType = 'ui';
           clients.set(clientId, { type: 'ui', ws });
           ws.send(JSON.stringify({ type: 'registered', clientId }));
+          // Send binary status to UI
+          ws.send(JSON.stringify({
+            type: 'binary_status',
+            found: ansibleBinaryFound
+          }));
           break;
 
         case 'Worker':
@@ -451,6 +490,30 @@ wss.on('connection', (ws, req) => {
 
         case 'heartbeat':
           ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
+          break;
+
+        case 'check_binary':
+          // Re-check binary (e.g., after settings update)
+          const pathToCheck = data.ansibleRulebookPath || 'ansible-rulebook';
+          const checkResult = await checkAnsibleBinary(pathToCheck);
+          ansibleBinaryFound = checkResult.found;
+
+          if (checkResult.found) {
+            console.log(`✅ Binary check: ansible-rulebook found at ${pathToCheck}`);
+          } else {
+            console.log(`⚠️  Binary check: ${checkResult.error}`);
+          }
+
+          // Broadcast updated status to all UI clients
+          clients.forEach((client) => {
+            if (client.type === 'ui' && client.ws.readyState === WebSocket.OPEN) {
+              client.ws.send(JSON.stringify({
+                type: 'binary_status',
+                found: checkResult.found,
+                error: checkResult.error
+              }));
+            }
+          });
           break;
 
         case 'get_ansible_version':
@@ -969,7 +1032,7 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`🚀 Ansible Rulebook IDE Server`);
   console.log(`${'='.repeat(80)}`);
@@ -978,4 +1041,15 @@ server.listen(PORT, () => {
   console.log(`   URL: http://localhost:${PORT}`);
   console.log(`   WebSocket: ws://localhost:${PORT}`);
   console.log(`${'='.repeat(80)}\n`);
+
+  // Check for ansible-rulebook binary (initial check uses default command name)
+  const initialCheck = await checkAnsibleBinary();
+  ansibleBinaryFound = initialCheck.found;
+  if (initialCheck.found) {
+    console.log('✅ ansible-rulebook binary found in PATH');
+  } else {
+    console.log('⚠️  ansible-rulebook binary NOT found in PATH');
+    console.log('   Please configure the path in Settings');
+  }
+  console.log('');
 });

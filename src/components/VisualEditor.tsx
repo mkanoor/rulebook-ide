@@ -21,6 +21,8 @@ export interface ExecutionState {
   isRunning: boolean;
   hasWebhookPorts: boolean;
   eventCount: number;
+  binaryFound: boolean;
+  binaryError: string | null;
 }
 
 export interface VisualEditorRef {
@@ -122,6 +124,8 @@ export const VisualEditor = forwardRef<VisualEditorRef, VisualEditorProps>(({
   // Execution state
   const [isConnected, setIsConnected] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [binaryFound, setBinaryFound] = useState(false);
+  const [binaryError, setBinaryError] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [events, setEvents] = useState<ExecutionEvent[]>([]);
   const [triggeredRules, setTriggeredRules] = useState<Map<string, RuleTrigger>>(new Map());
@@ -360,9 +364,11 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         isRunning,
         hasWebhookPorts: webhookPorts.length > 0,
         eventCount: events.length,
+        binaryFound,
+        binaryError,
       });
     }
-  }, [isConnected, isRunning, webhookPorts.length, events.length, onExecutionStateChange]);
+  }, [isConnected, isRunning, webhookPorts.length, events.length, binaryFound, binaryError, onExecutionStateChange]);
 
   // Auto-connect WebSocket on mount
   useEffect(() => {
@@ -577,6 +583,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         setIsConnected(true);
         ws.send(JSON.stringify({ type: 'register_ui' }));
 
+        // Check binary with user's configured path
+        ws.send(JSON.stringify({
+          type: 'check_binary',
+          ansibleRulebookPath: serverSettings.ansibleRulebookPath
+        }));
+
         // Request ansible-rulebook version
         ws.send(JSON.stringify({
           type: 'get_ansible_version',
@@ -595,6 +607,14 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
           switch (message.type) {
             case 'registered':
+              break;
+
+            case 'binary_status':
+              setBinaryFound(message.found);
+              setBinaryError(message.error || null);
+              if (message.error) {
+                addEvent('Error', message.error);
+              }
               break;
 
             case 'ansible_version_response':
@@ -2328,6 +2348,13 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               onClick={() => {
                 saveSettings(serverSettings);
                 setShowSettingsModal(false);
+                // Trigger binary check after settings update
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(JSON.stringify({
+                    type: 'check_binary',
+                    ansibleRulebookPath: serverSettings.ansibleRulebookPath
+                  }));
+                }
               }}
             >
               Save Settings
