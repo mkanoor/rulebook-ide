@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Condition, AllCondition, AnyCondition, NotAllCondition } from '../types/rulebook';
 import { getConditionType } from '../types/rulebook';
+import { validateCondition } from '../conditionValidator';
 
 interface ConditionEditorProps {
   condition: Condition;
@@ -43,6 +44,38 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     }
     return '';
   });
+
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<Map<number, string>>(new Map());
+
+  // Validate a condition string
+  const validateConditionString = (conditionStr: string, index: number) => {
+    if (!conditionStr || conditionStr.trim() === '') {
+      // Clear error for empty conditions
+      setValidationErrors(prev => {
+        const newErrors = new Map(prev);
+        newErrors.delete(index);
+        return newErrors;
+      });
+      return;
+    }
+
+    const result = validateCondition(conditionStr, { friendlyErrors: true });
+
+    if (!result.isValid && result.error) {
+      setValidationErrors(prev => {
+        const newErrors = new Map(prev);
+        newErrors.set(index, result.error!.friendlyMessage || result.error!.message);
+        return newErrors;
+      });
+    } else {
+      setValidationErrors(prev => {
+        const newErrors = new Map(prev);
+        newErrors.delete(index);
+        return newErrors;
+      });
+    }
+  };
 
   // Sync state when condition prop changes (e.g., when loading a new rulebook)
   useEffect(() => {
@@ -138,6 +171,8 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     setSimpleCondition(value);
     setConditions([value]);
     updateCondition(conditionType, [value], timeout);
+    // Validate the condition
+    validateConditionString(value, 0);
   };
 
   const handleConditionChange = (index: number, value: string) => {
@@ -145,6 +180,8 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     newConditions[index] = value;
     setConditions(newConditions);
     updateCondition(conditionType, newConditions, timeout);
+    // Validate the condition
+    validateConditionString(value, index);
   };
 
   const handleAddCondition = () => {
@@ -196,11 +233,28 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
           <label className="form-label form-label-required">Condition</label>
           <input
             type="text"
-            className="form-input"
+            className={`form-input ${validationErrors.has(0) ? 'input-error' : ''}`}
             value={simpleCondition}
             onChange={handleSimpleConditionChange}
             placeholder="e.g., event.i == 1 or event.status == 'active'"
           />
+          {validationErrors.has(0) && (
+            <div style={{
+              color: '#e53e3e',
+              fontSize: '12px',
+              marginTop: '4px',
+              padding: '8px',
+              backgroundColor: '#fff5f5',
+              border: '1px solid #feb2b2',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'start',
+              gap: '6px'
+            }}>
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <span>{validationErrors.get(0)}</span>
+            </div>
+          )}
           <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}>
             Enter a condition expression using event data
           </small>
@@ -212,32 +266,49 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
               Conditions ({conditions.length})
             </label>
             {conditions.map((cond, index) => (
-              <div
-                key={index}
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  marginBottom: '8px',
-                  alignItems: 'center',
-                }}
-              >
-                <input
-                  type="text"
-                  className="form-input"
-                  value={cond}
-                  onChange={(e) => handleConditionChange(index, e.target.value)}
-                  placeholder={`Condition ${index + 1}`}
-                  style={{ flex: 1 }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-danger btn-small"
-                  onClick={() => handleDeleteCondition(index)}
-                  disabled={conditions.length === 1}
-                  style={{ minWidth: '80px' }}
+              <div key={index} style={{ marginBottom: '12px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                  }}
                 >
-                  Delete
-                </button>
+                  <input
+                    type="text"
+                    className={`form-input ${validationErrors.has(index) ? 'input-error' : ''}`}
+                    value={cond}
+                    onChange={(e) => handleConditionChange(index, e.target.value)}
+                    placeholder={`Condition ${index + 1}`}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-small"
+                    onClick={() => handleDeleteCondition(index)}
+                    disabled={conditions.length === 1}
+                    style={{ minWidth: '80px' }}
+                  >
+                    Delete
+                  </button>
+                </div>
+                {validationErrors.has(index) && (
+                  <div style={{
+                    color: '#e53e3e',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    padding: '8px',
+                    backgroundColor: '#fff5f5',
+                    border: '1px solid #feb2b2',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'start',
+                    gap: '6px'
+                  }}>
+                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <span>{validationErrors.get(index)}</span>
+                  </div>
+                )}
               </div>
             ))}
             <button

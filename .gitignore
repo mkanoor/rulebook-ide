@@ -51,3 +51,8 @@ server/config.local.js
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Parser test outputs
+test-results.json
+test-summary.md
+test-output.txt

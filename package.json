@@ -9,7 +9,9 @@
     "start": "NODE_ENV=production node server/server.js",
     "stop": "lsof -ti:${PORT:-5555} | xargs kill -9 2>/dev/null || pkill -f 'node.*server.js' || echo 'No server process found'",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-parser": "npx peggy --format es -o src/condition-parser.js src/condition.peggy",
+    "test-parser": "node test-condition-parser.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -37,6 +39,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "peggy": "^5.0.6",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
