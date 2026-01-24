@@ -146,6 +146,48 @@ function App() {
 
   const handleExportYAML = async () => {
     try {
+      // Check for duplicate ruleset names
+      const rulesetNames = new Map<string, number>();
+      const duplicateRulesets: string[] = [];
+
+      rulesets.forEach((rs, idx) => {
+        const trimmedName = rs.name.trim();
+        if (rulesetNames.has(trimmedName)) {
+          duplicateRulesets.push(`"${trimmedName}" (rulesets #${rulesetNames.get(trimmedName)! + 1} and #${idx + 1})`);
+        } else {
+          rulesetNames.set(trimmedName, idx);
+        }
+      });
+
+      // Check for duplicate rule names within each ruleset
+      const duplicateRules: string[] = [];
+      rulesets.forEach((rs, rsIdx) => {
+        const ruleNames = new Map<string, number>();
+        rs.rules.forEach((rule, ruleIdx) => {
+          const trimmedName = rule.name.trim();
+          if (ruleNames.has(trimmedName)) {
+            duplicateRules.push(`"${trimmedName}" in ruleset "${rs.name}" (rules #${ruleNames.get(trimmedName)! + 1} and #${ruleIdx + 1})`);
+          } else {
+            ruleNames.set(trimmedName, ruleIdx);
+          }
+        });
+      });
+
+      // Show error if there are duplicates
+      if (duplicateRulesets.length > 0 || duplicateRules.length > 0) {
+        let errorMsg = 'Cannot export with duplicate names:\n\n';
+        if (duplicateRulesets.length > 0) {
+          errorMsg += 'Duplicate Ruleset Names:\n' + duplicateRulesets.map(d => `  • ${d}`).join('\n') + '\n\n';
+        }
+        if (duplicateRules.length > 0) {
+          errorMsg += 'Duplicate Rule Names:\n' + duplicateRules.map(d => `  • ${d}`).join('\n') + '\n\n';
+        }
+        errorMsg += 'Please fix these issues before exporting.';
+
+        alert(errorMsg);
+        return;
+      }
+
       // Validate rulesets before exporting
       try {
         const validationErrors = validateRulesetArray(rulesets);
@@ -445,7 +487,7 @@ function App() {
         <button
           className="btn btn-secondary btn-icon"
           onClick={handleAddRuleset}
-          title="Add Ruleset"
+          title="Add a Ruleset - a collection of event sources and rules with conditions and actions"
         >
           ➕
         </button>

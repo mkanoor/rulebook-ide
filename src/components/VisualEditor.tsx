@@ -190,9 +190,51 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   const [ruleThrottleText, setRuleThrottleText] = useState('{}');
   const [ruleThrottleError, setRuleThrottleError] = useState<string | null>(null);
 
+  // Validation state for name uniqueness
+  const [rulesetNameError, setRulesetNameError] = useState<string | null>(null);
+  const [ruleNameError, setRuleNameError] = useState<string | null>(null);
+
   const wsRef = useRef<WebSocket | null>(null);
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const webhookFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Validation functions for name uniqueness
+  const validateRulesetName = (name: string, currentIndex: number): string | null => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return 'Ruleset name cannot be empty';
+    }
+
+    const duplicateIndex = rulesets.findIndex((rs, idx) =>
+      idx !== currentIndex && rs.name.trim() === trimmedName
+    );
+
+    if (duplicateIndex !== -1) {
+      return `Duplicate ruleset name "${trimmedName}" - already used by ruleset #${duplicateIndex + 1}`;
+    }
+
+    return null;
+  };
+
+  const validateRuleName = (name: string, rulesetIndex: number, currentRuleIndex: number): string | null => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return 'Rule name cannot be empty';
+    }
+
+    const ruleset = rulesets[rulesetIndex];
+    if (!ruleset || !ruleset.rules) return null;
+
+    const duplicateIndex = ruleset.rules.findIndex((rule, idx) =>
+      idx !== currentRuleIndex && rule.name.trim() === trimmedName
+    );
+
+    if (duplicateIndex !== -1) {
+      return `Duplicate rule name "${trimmedName}" - already used by rule #${duplicateIndex + 1} in this ruleset`;
+    }
+
+    return null;
+  };
 
   // Validate selectedItem when rulesets change (e.g., when loading a new rulebook)
   useEffect(() => {
@@ -231,6 +273,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       }
     }
   }, [rulesets, selectedItem]);
+
+  // Clear validation errors when selection changes
+  useEffect(() => {
+    setRulesetNameError(null);
+    setRuleNameError(null);
+  }, [selectedItem]);
 
   // Action type definitions with required and optional parameters
   const actionTypes = {
@@ -1531,14 +1579,36 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             <label className="form-label form-label-required">Name</label>
             <input
               type="text"
-              className="form-input"
+              className={`form-input ${rulesetNameError ? 'input-error' : ''}`}
               value={ruleset.name}
               onChange={(e) => {
                 const newRulesets = [...rulesets];
                 newRulesets[selectedItem.rulesetIndex].name = e.target.value;
                 onRulesetsChange(newRulesets);
+
+                // Validate name uniqueness
+                const error = validateRulesetName(e.target.value, selectedItem.rulesetIndex);
+                setRulesetNameError(error);
               }}
+              title="Enter a unique name for this ruleset"
             />
+            {rulesetNameError && (
+              <div style={{
+                color: '#e53e3e',
+                fontSize: '12px',
+                marginTop: '4px',
+                padding: '8px',
+                backgroundColor: '#fff5f5',
+                border: '1px solid #feb2b2',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '6px'
+              }}>
+                <span style={{ flexShrink: 0 }}>⚠️</span>
+                <span>{rulesetNameError}</span>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label form-label-required">Hosts</label>
@@ -1621,6 +1691,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             className="btn btn-danger"
             onClick={() => handleDeleteRuleset(selectedItem.rulesetIndex)}
             style={{ marginTop: '20px' }}
+            title="Permanently delete this ruleset and all its sources and rules"
           >
             Delete Ruleset
           </button>
@@ -1668,15 +1739,37 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             <label className="form-label form-label-required">Name</label>
             <input
               type="text"
-              className="form-input"
+              className={`form-input ${ruleNameError ? 'input-error' : ''}`}
               value={rule.name}
               onChange={(e) => {
                 const newRulesets = [...rulesets];
                 newRulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex].name =
                   e.target.value;
                 onRulesetsChange(newRulesets);
+
+                // Validate name uniqueness within ruleset
+                const error = validateRuleName(e.target.value, selectedItem.rulesetIndex, selectedItem.ruleIndex);
+                setRuleNameError(error);
               }}
+              title="Enter a unique name for this rule within the ruleset"
             />
+            {ruleNameError && (
+              <div style={{
+                color: '#e53e3e',
+                fontSize: '12px',
+                marginTop: '4px',
+                padding: '8px',
+                backgroundColor: '#fff5f5',
+                border: '1px solid #feb2b2',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '6px'
+              }}>
+                <span style={{ flexShrink: 0 }}>⚠️</span>
+                <span>{ruleNameError}</span>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label>
@@ -1745,6 +1838,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             className="btn btn-danger"
             onClick={() => handleDeleteRule(selectedItem.rulesetIndex, selectedItem.ruleIndex)}
             style={{ marginTop: '20px' }}
+            title="Permanently delete this rule, its conditions, and all its actions"
           >
             Delete Rule
           </button>
@@ -1833,6 +1927,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               )
             }
             style={{ marginTop: '20px' }}
+            title="Remove this action from the rule"
           >
             Delete Action
           </button>
@@ -1947,7 +2042,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                             e.stopPropagation();
                             handleAddSource(rulesetIndex);
                           }}
-                          title="Add a new source"
+                          title="Add an Event Source that can receive events from an external Event Bus, Webhook, or other event provider"
                         >
                           + Add Source
                         </button>
@@ -2061,7 +2156,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                                 e.stopPropagation();
                                 handleAddAction(rulesetIndex, ruleIndex);
                               }}
-                              title="Add action"
+                              title="Add an Action that will be triggered when this rule's conditions are met (e.g., debug, run_playbook, post_event)"
                             >
                               +
                             </button>
@@ -2075,6 +2170,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                         e.stopPropagation();
                         handleAddRule(rulesetIndex);
                       }}
+                      title="Add a Rule with conditions and actions that will be triggered when events match"
                     >
                       + Add Rule
                     </button>
@@ -2730,6 +2826,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               handleAddSource(contextMenu.rulesetIndex);
               setContextMenu(null);
             }}
+            title="Add an Event Source that can receive events from an external Event Bus, Webhook, or other event provider"
           >
             + Add Source
           </div>

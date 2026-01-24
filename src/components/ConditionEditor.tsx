@@ -222,6 +222,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
           className="form-input"
           value={conditionType}
           onChange={handleConditionTypeChange}
+          title="Choose how multiple conditions should be evaluated: simple (one condition), any (OR logic), all (AND logic), or not_all (NOT AND logic with timeout)"
         >
           <option value="simple">Simple (single condition)</option>
           <option value="any">Any (match at least one)</option>
@@ -245,6 +246,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
             value={simpleCondition}
             onChange={handleSimpleConditionChange}
             placeholder="e.g., event.i == 1 or event.status == 'active'"
+            title="Enter a condition expression using event properties (e.g., event.i == 1, event.status == 'active')"
           />
           {validationErrors.has(0) && (
             <div style={{
@@ -289,6 +291,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                     onChange={(e) => handleConditionChange(index, e.target.value)}
                     placeholder={`Condition ${index + 1}`}
                     style={{ flex: 1 }}
+                    title="Enter a condition expression using event properties"
                   />
                   <button
                     type="button"
@@ -296,6 +299,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                     onClick={() => handleDeleteCondition(index)}
                     disabled={conditions.length === 1}
                     style={{ minWidth: '80px' }}
+                    title={conditions.length === 1 ? "Cannot delete the last condition" : "Remove this condition from the list"}
                   >
                     Delete
                   </button>
@@ -324,6 +328,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
               className="btn btn-secondary btn-small"
               onClick={handleAddCondition}
               style={{ marginTop: '8px' }}
+              title="Add another condition expression to this list"
             >
               + Add Condition
             </button>
@@ -344,6 +349,9 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                 onChange={handleTimeoutChange}
                 placeholder="e.g., 10 seconds, 5 minutes, 1 hour"
                 required={conditionType === 'not_all'}
+                title={conditionType === 'all'
+                  ? "Optional: Time window to wait for all conditions to be met"
+                  : "Required: Time window to check if not all conditions are met"}
               />
               <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}>
                 Time duration (e.g., "10 seconds", "5 minutes", "1 hour", "2 days")
