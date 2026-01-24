@@ -824,7 +824,7 @@
 /* Event Log Panel */
 .event-log-panel {
   position: fixed;
-  bottom: 0;
+  bottom: 36px; /* Space for footer */
   left: 0;
   right: 0;
   background: white;

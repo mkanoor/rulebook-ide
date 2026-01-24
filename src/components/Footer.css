@@ -1,0 +1,112 @@
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-primary-dark, #764ba2) 100%);
+  color: white;
+  border-top: 2px solid var(--color-primary-dark, #5568d3);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  font-weight: 500;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 36px;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.footer-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.footer-stat-label {
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.footer-stat-value {
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.footer-separator {
+  opacity: 0.4;
+  margin: 0 4px;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  cursor: help;
+  transition: all 0.2s;
+}
+
+.footer-connection-status:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.connection-dot.connected {
+  background: var(--color-success, #48bb78);
+  box-shadow: 0 0 8px var(--color-success, #48bb78);
+}
+
+.connection-dot.disconnected {
+  background: var(--color-error, #fc8181);
+  box-shadow: 0 0 8px var(--color-error, #fc8181);
+}
+
+.connection-text {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Adjust the main app container to account for footer */
+.app {
+  padding-bottom: 40px; /* Space for footer */
+}
+
+/* Adjust Visual Editor to account for footer */
+.visual-editor {
+  margin-bottom: 40px; /* Space for footer */
+}

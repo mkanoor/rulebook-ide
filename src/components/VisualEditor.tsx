@@ -16,6 +16,7 @@ interface VisualEditorProps {
   onExecutionStateChange?: (state: ExecutionState) => void;
   onWebhookReceived?: (payload: unknown) => void;
   onVersionInfoReceived?: (version: string, versionInfo: any) => void;
+  onStatsChange?: (stats: Map<string, any>) => void;
 }
 
 export interface ExecutionState {
@@ -123,6 +124,7 @@ export const VisualEditor = forwardRef<VisualEditorRef, VisualEditorProps>(({
   onExecutionStateChange,
   onWebhookReceived,
   onVersionInfoReceived,
+  onStatsChange,
 }, ref) => {
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
   const [serverSettings, setServerSettings] = useState<ServerSettings>(loadSettings());
@@ -552,6 +554,13 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       setSelectedWebhookPort(null);
     }
   }, [rulesets]);
+
+  // Notify parent component when stats change
+  useEffect(() => {
+    if (onStatsChange) {
+      onStatsChange(rulesetStats);
+    }
+  }, [rulesetStats, onStatsChange]);
 
   // Source config is now handled by VisualSourceEditor component
 

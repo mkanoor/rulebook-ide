@@ -4,6 +4,7 @@ import type { Ruleset } from './types/rulebook';
 import { VisualEditor, type VisualEditorRef, type ExecutionState } from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
 import { HelpModal } from './components/HelpModal';
+import { Footer } from './components/Footer';
 import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
@@ -68,6 +69,7 @@ function App() {
   const [jsonPathPrefix, setJsonPathPrefix] = useState('event');
   const [unreadWebhooks, setUnreadWebhooks] = useState(0);
   const [hasNewWebhook, setHasNewWebhook] = useState(false);
+  const [rulesetStats, setRulesetStats] = useState<Map<string, any>>(new Map());
 
   // Apply theme on mount and when theme changes
   useEffect(() => {
@@ -690,24 +692,6 @@ function App() {
             🗑️
           </button>
         )}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Connection Status */}
-          <div
-            className="status-badge"
-            title={executionState.isConnected ? 'Connected to backend server' : 'Not connected to backend server'}
-            style={{ cursor: 'help' }}
-          >
-            <span className={`status-dot ${executionState.isConnected ? 'connected' : 'disconnected'}`}></span>
-            <span title={executionState.isConnected ? 'Connected to backend server' : 'Not connected to backend server'}>
-              {executionState.isConnected ? '🟢' : '🔴'}
-            </span>
-          </div>
-          <span className="badge badge-info">{rulesets.length} Ruleset(s)</span>
-          <span className="badge badge-success">
-            {rulesets.reduce((sum, rs) => sum + rs.rules.length, 0)} Rule(s)
-          </span>
-        </div>
       </div>
 
       {message && (
@@ -723,6 +707,7 @@ function App() {
         onExecutionStateChange={setExecutionState}
         onWebhookReceived={handleWebhookReceived}
         onVersionInfoReceived={handleVersionInfoReceived}
+        onStatsChange={setRulesetStats}
       />
 
       {/* JSON Path Explorer Modal */}
@@ -854,6 +839,14 @@ function App() {
       <HelpModal
         isOpen={showHelpModal}
         onClose={() => setShowHelpModal(false)}
+      />
+
+      {/* Footer */}
+      <Footer
+        isConnected={executionState.isConnected}
+        rulesetCount={rulesets.length}
+        ruleCount={rulesets.reduce((sum, rs) => sum + rs.rules.length, 0)}
+        rulesetStats={rulesetStats}
       />
     </div>
   );
