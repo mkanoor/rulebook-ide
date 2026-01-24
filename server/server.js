@@ -669,6 +669,43 @@ wss.on('connection', (ws, req) => {
               }));
             }
 
+            // Send ControllerInfo if EDA_CONTROLLER environment variables are set
+            const controllerInfo = {};
+            let hasControllerInfo = false;
+
+            // Check for controller environment variables in execution.envVars
+            if (execution.envVars) {
+              if (execution.envVars.EDA_CONTROLLER_URL) {
+                controllerInfo.url = execution.envVars.EDA_CONTROLLER_URL;
+                hasControllerInfo = true;
+              }
+              if (execution.envVars.EDA_CONTROLLER_TOKEN) {
+                controllerInfo.token = execution.envVars.EDA_CONTROLLER_TOKEN;
+                hasControllerInfo = true;
+              }
+              if (execution.envVars.EDA_CONTROLLER_SSL_VERIFY !== undefined) {
+                controllerInfo.ssl_verify = execution.envVars.EDA_CONTROLLER_SSL_VERIFY;
+                hasControllerInfo = true;
+              }
+              if (execution.envVars.EDA_CONTROLLER_USERNAME) {
+                controllerInfo.username = execution.envVars.EDA_CONTROLLER_USERNAME;
+                hasControllerInfo = true;
+              }
+              if (execution.envVars.EDA_CONTROLLER_PASSWORD) {
+                controllerInfo.password = execution.envVars.EDA_CONTROLLER_PASSWORD;
+                hasControllerInfo = true;
+              }
+            }
+
+            if (hasControllerInfo) {
+              console.log(`Sending ControllerInfo to worker ${executionId}:`,
+                Object.keys(controllerInfo).map(k => k === 'token' || k === 'password' ? `${k}=***` : `${k}=${controllerInfo[k]}`).join(', '));
+              ws.send(JSON.stringify({
+                type: 'ControllerInfo',
+                ...controllerInfo
+              }));
+            }
+
             ws.send(JSON.stringify({
               type: 'EndOfResponse'
             }));
@@ -1351,7 +1388,9 @@ function spawnAnsibleRulebook(executionId) {
     console.log(`Extra CLI arguments for ${executionId}:`, extraArgs.join(' '));
   }
 
-  const processEnv = {
+  // Build environment variables for local execution (venv/custom modes)
+  // These modes inherit the full process environment plus user-defined vars
+  const localProcessEnv = {
     ...process.env,
     ...execution.envVars
   };
@@ -1369,7 +1408,7 @@ function spawnAnsibleRulebook(executionId) {
 
     // Check if collections directory exists
     if (fs.existsSync(collectionsPath)) {
-      processEnv.ANSIBLE_COLLECTIONS_PATH = collectionsPath;
+      localProcessEnv.ANSIBLE_COLLECTIONS_PATH = collectionsPath;
       console.log(`✅ Auto-setting ANSIBLE_COLLECTIONS_PATH for venv installation: ${collectionsPath}`);
 
       // Verify the ansible.eda collection exists
@@ -1416,12 +1455,14 @@ function spawnAnsibleRulebook(executionId) {
       '--network', 'host',
     ];
 
-    // Add environment variables
-    Object.keys(processEnv).forEach(key => {
-      if (key !== 'PATH' && key !== 'HOME') { // Skip system env vars
-        commandArgs.push('-e', `${key}=${processEnv[key]}`);
-      }
-    });
+    // Add environment variables for container mode
+    // Only pass user-defined environment variables, not the full process environment
+    if (execution.envVars && Object.keys(execution.envVars).length > 0) {
+      Object.keys(execution.envVars).forEach(key => {
+        commandArgs.push('-e', `${key}=${execution.envVars[key]}`);
+      });
+      console.log(`Container environment variables: ${Object.keys(execution.envVars).join(', ')}`);
+    }
 
     // Add working directory mount if specified
     if (execution.workingDirectory && execution.workingDirectory.trim()) {
@@ -1451,13 +1492,13 @@ function spawnAnsibleRulebook(executionId) {
 
   console.log(`Working directory: ${execution.workingDirectory || 'current directory'}`);
   console.log(`Environment variables for ${executionId}:`, Object.keys(execution.envVars || {}).join(', ') || 'none');
-  if (processEnv.ANSIBLE_COLLECTIONS_PATH) {
-    console.log(`ANSIBLE_COLLECTIONS_PATH: ${processEnv.ANSIBLE_COLLECTIONS_PATH}`);
+  if (localProcessEnv.ANSIBLE_COLLECTIONS_PATH) {
+    console.log(`ANSIBLE_COLLECTIONS_PATH: ${localProcessEnv.ANSIBLE_COLLECTIONS_PATH}`);
   }
 
   const spawnOptions = {
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: processEnv
+    env: execution.executionMode === 'container' ? process.env : localProcessEnv
   };
 
   if (execution.workingDirectory && execution.workingDirectory.trim() && execution.executionMode !== 'container') {
