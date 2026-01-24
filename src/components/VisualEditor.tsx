@@ -157,6 +157,8 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     actionsExecuted: 0,
   });
   const [showEventLog, setShowEventLog] = useState(false);
+  const [eventLogHeight, setEventLogHeight] = useState(250); // Default height in pixels
+  const [isResizing, setIsResizing] = useState(false);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -457,6 +459,31 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       eventsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [events, showEventLog]);
+
+  // Handle event log resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const newHeight = window.innerHeight - e.clientY;
+      // Constrain height between 100px and 600px
+      const constrainedHeight = Math.max(100, Math.min(600, newHeight));
+      setEventLogHeight(constrainedHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing]);
 
   // Close context menu when clicking elsewhere
   useEffect(() => {
@@ -2201,12 +2228,18 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
       {/* Event Log Panel */}
       {showEventLog && (
-        <div className="event-log-panel">
+        <div className="event-log-panel" style={{ height: `${eventLogHeight}px` }}>
+          <div
+            className="event-log-resize-handle"
+            onMouseDown={() => setIsResizing(true)}
+            title="Drag to resize"
+          />
           <div className="event-log-header">
-            <h3>Event Log</h3>
+            <h3>Event Log ({events.length} events)</h3>
             <button
               className="btn btn-small btn-outline"
               onClick={() => setShowEventLog(false)}
+              title="Close Event Log"
             >
               ✕ Close
             </button>
