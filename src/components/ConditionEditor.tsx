@@ -248,9 +248,21 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         <div className="form-group">
           <label className="form-label form-label-required">
             Condition
-            <small style={{ fontWeight: 'normal', marginLeft: '8px', color: '#718096' }}>
-              (Ctrl+Space for suggestions)
-            </small>
+            <span
+              style={{
+                marginLeft: '8px',
+                fontSize: '12px',
+                color: '#718096',
+                fontWeight: 'normal',
+                padding: '2px 8px',
+                backgroundColor: '#EBF8FF',
+                borderRadius: '4px',
+                border: '1px solid #BEE3F8'
+              }}
+              title="Press Ctrl+Space for intelligent autocomplete suggestions. Suggestions appear automatically as you type."
+            >
+              💡 Autocomplete available
+            </span>
           </label>
           <AutocompleteInput
             value={simpleCondition}
@@ -290,9 +302,21 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
           <div className="form-group">
             <label className="form-label form-label-required">
               Conditions ({conditions.length})
-              <small style={{ fontWeight: 'normal', marginLeft: '8px', color: '#718096' }}>
-                (Ctrl+Space for suggestions)
-              </small>
+              <span
+                style={{
+                  marginLeft: '8px',
+                  fontSize: '12px',
+                  color: '#718096',
+                  fontWeight: 'normal',
+                  padding: '2px 8px',
+                  backgroundColor: '#EBF8FF',
+                  borderRadius: '4px',
+                  border: '1px solid #BEE3F8'
+                }}
+                title="Press Ctrl+Space for intelligent autocomplete suggestions. Suggestions appear automatically as you type."
+              >
+                💡 Autocomplete available
+              </span>
             </label>
             {conditions.map((cond, index) => (
               <div key={index} style={{ marginBottom: '12px' }}>
