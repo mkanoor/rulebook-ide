@@ -772,6 +772,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               setExecutionId(message.executionId);
               setIsRunning(true);
               setEvents([]);
+              setRulesetStats(new Map());
               setTriggeredRules(new Map());
               if (message.autoStarted) {
                 addEvent('System', 'Execution started. ansible-rulebook automatically launched.');
