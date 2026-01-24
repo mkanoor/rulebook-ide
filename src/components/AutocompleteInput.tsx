@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { getAutocompleteSuggestions, AutocompleteSuggestion } from '../utils/conditionAutocomplete';
+import React, { useState, useRef, useEffect } from 'react';
+import type { KeyboardEvent } from 'react';
+import { getAutocompleteSuggestions } from '../utils/conditionAutocomplete';
+import type { AutocompleteSuggestion } from '../utils/conditionAutocomplete';
 import './AutocompleteInput.css';
 
 interface AutocompleteInputProps {

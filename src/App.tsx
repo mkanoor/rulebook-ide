@@ -161,7 +161,7 @@ function App() {
 
       // Check for duplicate rule names within each ruleset
       const duplicateRules: string[] = [];
-      rulesets.forEach((rs, rsIdx) => {
+      rulesets.forEach((rs) => {
         const ruleNames = new Map<string, number>();
         rs.rules.forEach((rule, ruleIdx) => {
           const trimmedName = rule.name.trim();

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import type { Condition, AllCondition, AnyCondition, NotAllCondition } from '../types/rulebook';
 import { getConditionType } from '../types/rulebook';
 import { validateCondition } from '../conditionValidator';
-import { logger } from '../utils/logger';
 import { AutocompleteInput } from './AutocompleteInput';
 
 interface ConditionEditorProps {
@@ -174,14 +173,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     }
   };
 
-  const handleSimpleConditionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSimpleCondition(value);
-    setConditions([value]);
-    updateCondition(conditionType, [value], timeout);
-    // Validate the condition
-    validateConditionString(value, 0);
-  };
+  // Removed handleSimpleConditionChange - now handled inline in AutocompleteInput
 
   const handleConditionChange = (index: number, value: string) => {
     const newConditions = [...conditions];

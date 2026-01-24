@@ -275,7 +275,7 @@ export function getAutocompleteSuggestions(
   cursorPosition: number = input.length
 ): AutocompleteSuggestion[] {
   const beforeCursor = input.substring(0, cursorPosition);
-  const afterCursor = input.substring(cursorPosition);
+  // const afterCursor = input.substring(cursorPosition); // Not used currently
 
   // Get the current word/token being typed
   const currentWord = getCurrentWord(beforeCursor);

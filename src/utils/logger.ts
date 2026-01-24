@@ -9,13 +9,15 @@
  * - NONE: Disable all logging
  */
 
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3,
-  NONE = 4,
-}
+export const LogLevel = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3,
+  NONE: 4,
+} as const;
+
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 class Logger {
   private currentLevel: LogLevel = LogLevel.INFO;
@@ -32,7 +34,8 @@ class Logger {
   setLogLevel(level: LogLevel): void {
     this.currentLevel = level;
     this.saveLogLevel();
-    this.info(`Log level set to: ${LogLevel[level]}`);
+    const levelName = Object.keys(LogLevel).find(key => LogLevel[key as keyof typeof LogLevel] === level) || level;
+    this.info(`Log level set to: ${levelName}`);
   }
 
   /**
@@ -46,7 +49,7 @@ class Logger {
    * Get the current log level as a string
    */
   getLogLevelString(): string {
-    return LogLevel[this.currentLevel];
+    return Object.keys(LogLevel).find(key => LogLevel[key as keyof typeof LogLevel] === this.currentLevel) || String(this.currentLevel);
   }
 
   /**
@@ -67,7 +70,7 @@ class Logger {
     try {
       const saved = localStorage.getItem(this.storageKey);
       if (saved !== null) {
-        const level = parseInt(saved, 10);
+        const level = parseInt(saved, 10) as LogLevel;
         if (!isNaN(level) && level >= LogLevel.DEBUG && level <= LogLevel.NONE) {
           this.currentLevel = level;
         }
