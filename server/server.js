@@ -12,6 +12,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import path from 'path';
+import yaml from 'js-yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1456,8 +1457,49 @@ function spawnAnsibleRulebook(executionId) {
       'run',
       '--rm',
       '-i',
-      '--network', 'host',
     ];
+
+    // Extract webhook ports from the rulebook for port mapping
+    const webhookPorts = new Set();
+    try {
+      const parsed = yaml.load(execution.rulebook);
+      if (Array.isArray(parsed)) {
+        for (const ruleset of parsed) {
+          if (ruleset.sources && Array.isArray(ruleset.sources)) {
+            for (const source of ruleset.sources) {
+              // Check for webhook sources (generic, webhook, alertmanager, etc.)
+              const sourceKeys = Object.keys(source).filter(k => k !== 'name' && k !== 'filters');
+              for (const sourceKey of sourceKeys) {
+                const sourceConfig = source[sourceKey];
+                if (sourceConfig && typeof sourceConfig === 'object' && sourceConfig.port) {
+                  webhookPorts.add(sourceConfig.port);
+                  console.log(`Detected webhook port ${sourceConfig.port} from source ${sourceKey}`);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.log(`Warning: Could not parse rulebook for webhook ports: ${error.message}`);
+    }
+
+    // On macOS (Darwin), use port mapping instead of --network host
+    // On Linux, --network host works correctly
+    const isMacOS = os.platform() === 'darwin';
+
+    if (isMacOS && webhookPorts.size > 0) {
+      // macOS: Use explicit port mappings for webhook sources
+      console.log(`macOS detected: Using port mappings instead of --network host`);
+      webhookPorts.forEach(port => {
+        commandArgs.push('-p', `${port}:${port}`);
+        console.log(`Added port mapping: -p ${port}:${port}`);
+      });
+    } else {
+      // Linux: Use --network host (more efficient and works for all ports)
+      commandArgs.push('--network', 'host');
+      console.log(`Using --network host for container networking`);
+    }
 
     // Add environment variables for container mode
     // Only pass user-defined environment variables, not the full process environment
