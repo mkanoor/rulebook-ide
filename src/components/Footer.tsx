@@ -3,6 +3,7 @@ import './Footer.css';
 
 interface FooterProps {
   isConnected: boolean;
+  isRunning: boolean;
   rulesetCount: number;
   ruleCount: number;
   rulesetStats: Map<string, any>;
@@ -10,29 +11,41 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({
   isConnected,
+  isRunning,
   rulesetCount,
   ruleCount,
   rulesetStats,
 }) => {
   // Aggregate stats across all rulesets
   const aggregatedStats = useMemo<{
-    totalEventsReceived: number;
-    totalEventsTriggered: number;
+    totalEventsProcessed: number;
+    totalEventsMatched: number;
+    totalEventsSuppressed: number;
     lastEventTime: Date | null;
+    lastRuleFired: string | null;
+    lastRuleFiredAt: Date | null;
   }>(() => {
-    let totalEventsReceived = 0;
-    let totalEventsTriggered = 0;
+    let totalEventsProcessed = 0;
+    let totalEventsMatched = 0;
+    let totalEventsSuppressed = 0;
     let lastEventTimeStamp: Date | null = null;
+    let lastRuleFired: string | null = null;
+    let lastRuleFiredAt: Date | null = null;
 
     rulesetStats.forEach((stats) => {
-      // Sum up events received
-      if (stats.numberOfEventsReceived) {
-        totalEventsReceived += stats.numberOfEventsReceived;
+      // Sum up events processed
+      if (stats.eventsProcessed) {
+        totalEventsProcessed += stats.eventsProcessed;
       }
 
-      // Sum up rules triggered (events triggered)
-      if (stats.rulesTriggered) {
-        totalEventsTriggered += stats.rulesTriggered;
+      // Sum up events matched (rules triggered)
+      if (stats.eventsMatched) {
+        totalEventsMatched += stats.eventsMatched;
+      }
+
+      // Sum up events suppressed
+      if (stats.eventsSuppressed) {
+        totalEventsSuppressed += stats.eventsSuppressed;
       }
 
       // Track the most recent event time across all rulesets
@@ -42,12 +55,24 @@ export const Footer: React.FC<FooterProps> = ({
           lastEventTimeStamp = eventTime;
         }
       }
+
+      // Track the most recent rule fired across all rulesets
+      if (stats.lastRuleFiredAt) {
+        const ruleFireTime = new Date(stats.lastRuleFiredAt);
+        if (!lastRuleFiredAt || ruleFireTime > lastRuleFiredAt) {
+          lastRuleFiredAt = ruleFireTime;
+          lastRuleFired = stats.lastRuleFired || null;
+        }
+      }
     });
 
     return {
-      totalEventsReceived,
-      totalEventsTriggered,
+      totalEventsProcessed,
+      totalEventsMatched,
+      totalEventsSuppressed,
       lastEventTime: lastEventTimeStamp,
+      lastRuleFired,
+      lastRuleFiredAt,
     };
   }, [rulesetStats]);
 
@@ -83,13 +108,18 @@ export const Footer: React.FC<FooterProps> = ({
         </span>
         <span className="footer-separator">|</span>
         <span className="footer-stat">
-          <span className="footer-stat-label">Events Received:</span>
-          <span className="footer-stat-value">{aggregatedStats.totalEventsReceived}</span>
+          <span className="footer-stat-label">Events Processed:</span>
+          <span className="footer-stat-value">{aggregatedStats.totalEventsProcessed}</span>
         </span>
         <span className="footer-separator">|</span>
         <span className="footer-stat">
-          <span className="footer-stat-label">Events Triggered:</span>
-          <span className="footer-stat-value">{aggregatedStats.totalEventsTriggered}</span>
+          <span className="footer-stat-label">Events Matched:</span>
+          <span className="footer-stat-value">{aggregatedStats.totalEventsMatched}</span>
+        </span>
+        <span className="footer-separator">|</span>
+        <span className="footer-stat">
+          <span className="footer-stat-label">Events Suppressed:</span>
+          <span className="footer-stat-value">{aggregatedStats.totalEventsSuppressed}</span>
         </span>
         <span className="footer-separator">|</span>
         <span className="footer-stat">
@@ -101,10 +131,38 @@ export const Footer: React.FC<FooterProps> = ({
             {formatEventTime(aggregatedStats.lastEventTime)}
           </span>
         </span>
+        <span className="footer-separator">|</span>
+        <span className="footer-stat">
+          <span className="footer-stat-label">Last Rule Fired:</span>
+          <span
+            className="footer-stat-value footer-rule-name"
+            title={
+              aggregatedStats.lastRuleFired
+                ? `${aggregatedStats.lastRuleFired} at ${aggregatedStats.lastRuleFiredAt?.toLocaleString()}`
+                : 'No rules fired yet'
+            }
+          >
+            {aggregatedStats.lastRuleFired || 'None'}
+          </span>
+          {aggregatedStats.lastRuleFiredAt && (
+            <span className="footer-stat-time">
+              ({formatEventTime(aggregatedStats.lastRuleFiredAt)})
+            </span>
+          )}
+        </span>
       </div>
 
-      {/* Right side - Connection Status */}
+      {/* Right side - Status Indicators */}
       <div className="footer-right">
+        <div
+          className={`footer-execution-status ${isRunning ? 'running' : 'stopped'}`}
+          title={isRunning ? 'Ansible Rulebook is running' : 'Ansible Rulebook is stopped'}
+        >
+          <span className={`execution-dot ${isRunning ? 'running' : 'stopped'}`}></span>
+          <span className="execution-text">
+            {isRunning ? 'Running' : 'Stopped'}
+          </span>
+        </div>
         <div
           className={`footer-connection-status ${isConnected ? 'connected' : 'disconnected'}`}
           title={isConnected ? 'Connected to backend server' : 'Not connected to backend server'}

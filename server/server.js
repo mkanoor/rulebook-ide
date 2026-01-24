@@ -7,8 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { spawn, exec } from 'child_process';
 import ngrok from '@ngrok/ngrok';
 import http from 'http';
+import os from 'os';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -72,6 +75,239 @@ function killProcessTree(pid, signal = 'SIGTERM') {
         console.log(`Process ${pid} already terminated`);
       }
       resolve();
+    });
+  });
+}
+
+// Function to install ansible-rulebook in a private virtual environment
+async function installAnsibleRulebook(ws, collections = []) {
+  const sendProgress = (message) => {
+    console.log(`[Installation] ${message}`);
+    try {
+      ws.send(JSON.stringify({
+        type: 'installation_progress',
+        message
+      }));
+    } catch (error) {
+      console.error(`Error sending progress message: ${error.message}`);
+    }
+  };
+
+  const sendComplete = (success, path = null, error = null) => {
+    ws.send(JSON.stringify({
+      type: 'installation_complete',
+      success,
+      path,
+      error
+    }));
+  };
+
+  return new Promise((resolve) => {
+    // Step 1: Check for python3
+    sendProgress('Checking for python3...');
+
+    exec('which python3', (error, stdout) => {
+      if (error || !stdout.trim()) {
+        const errorMsg = 'python3 not found on system. Please install Python 3 first.';
+        sendProgress(`❌ ${errorMsg}`);
+        sendComplete(false, null, errorMsg);
+        resolve(false);
+        return;
+      }
+
+      const python3Path = stdout.trim();
+      sendProgress(`✅ python3 found at: ${python3Path}`);
+
+      // Step 2: Create temporary directory
+      const tmpDir = os.tmpdir();
+      const venvDir = path.join(tmpDir, `ansible-rulebook-venv-${Date.now()}`);
+
+      sendProgress(`Creating virtual environment at: ${venvDir}`);
+
+      // Step 3: Create virtual environment
+      const venvCreate = spawn(python3Path, ['-m', 'venv', venvDir]);
+
+      venvCreate.stdout.on('data', (data) => {
+        sendProgress(data.toString().trim());
+      });
+
+      venvCreate.stderr.on('data', (data) => {
+        sendProgress(data.toString().trim());
+      });
+
+      venvCreate.on('close', (code) => {
+        if (code !== 0) {
+          const errorMsg = `Failed to create virtual environment (exit code ${code})`;
+          sendProgress(`❌ ${errorMsg}`);
+          sendComplete(false, null, errorMsg);
+          resolve(false);
+          return;
+        }
+
+        sendProgress('✅ Virtual environment created');
+
+        // Step 4: Determine pip and ansible-rulebook paths
+        const isWindows = process.platform === 'win32';
+        const binDir = isWindows ? 'Scripts' : 'bin';
+        const pipPath = path.join(venvDir, binDir, isWindows ? 'pip.exe' : 'pip');
+        const ansibleRulebookPath = path.join(venvDir, binDir, isWindows ? 'ansible-rulebook.exe' : 'ansible-rulebook');
+
+        sendProgress('Upgrading pip...');
+
+        // Step 5: Upgrade pip
+        const pipUpgrade = spawn(pipPath, ['install', '--upgrade', 'pip'], {
+          env: { ...process.env, VIRTUAL_ENV: venvDir }
+        });
+
+        pipUpgrade.stdout.on('data', (data) => {
+          const message = data.toString().trim();
+          if (message) sendProgress(message);
+        });
+
+        pipUpgrade.stderr.on('data', (data) => {
+          const message = data.toString().trim();
+          if (message) sendProgress(message);
+        });
+
+        pipUpgrade.on('close', (code) => {
+          if (code !== 0) {
+            sendProgress('⚠️  pip upgrade failed, continuing anyway...');
+          } else {
+            sendProgress('✅ pip upgraded');
+          }
+
+          // Step 6: Install ansible-core and ansible-rulebook
+          sendProgress('Installing ansible-core and ansible-rulebook (this may take a few minutes)...');
+
+          const installProcess = spawn(pipPath, ['install', 'ansible-core', 'ansible-rulebook'], {
+            env: { ...process.env, VIRTUAL_ENV: venvDir }
+          });
+
+          installProcess.stdout.on('data', (data) => {
+            const message = data.toString().trim();
+            if (message && !message.includes('Requirement already satisfied')) {
+              sendProgress(message);
+            }
+          });
+
+          installProcess.stderr.on('data', (data) => {
+            const message = data.toString().trim();
+            if (message && !message.includes('Requirement already satisfied')) {
+              sendProgress(message);
+            }
+          });
+
+          installProcess.on('close', (code) => {
+            if (code !== 0) {
+              const errorMsg = `Failed to install ansible-rulebook (exit code ${code})`;
+              sendProgress(`❌ ${errorMsg}`);
+              sendComplete(false, null, errorMsg);
+              resolve(false);
+              return;
+            }
+
+            // Step 7: Verify installation
+            fs.access(ansibleRulebookPath, fs.constants.X_OK, (err) => {
+              if (err) {
+                const errorMsg = `ansible-rulebook binary not found at ${ansibleRulebookPath}`;
+                sendProgress(`❌ ${errorMsg}`);
+                sendComplete(false, null, errorMsg);
+                resolve(false);
+                return;
+              }
+
+              sendProgress('✅ ansible-rulebook binary found');
+
+              // Step 8: Install certifi to handle SSL certificates
+              sendProgress('Installing certifi for SSL certificate handling...');
+
+              const certifiInstall = spawn(pipPath, ['install', 'certifi'], {
+                env: { ...process.env, VIRTUAL_ENV: venvDir }
+              });
+
+              certifiInstall.stdout.on('data', (data) => {
+                const message = data.toString().trim();
+                if (message && !message.includes('Requirement already satisfied')) {
+                  sendProgress(message);
+                }
+              });
+
+              certifiInstall.stderr.on('data', (data) => {
+                const message = data.toString().trim();
+                if (message && !message.includes('Requirement already satisfied')) {
+                  sendProgress(message);
+                }
+              });
+
+              certifiInstall.on('close', (certifiCode) => {
+                if (certifiCode !== 0) {
+                  sendProgress('⚠️  certifi installation failed, continuing anyway...');
+                } else {
+                  sendProgress('✅ certifi installed');
+                }
+
+                // Step 9: Install ansible collections (if any specified)
+                const collectionsPath = path.join(venvDir, 'collections');
+
+                if (!collections || collections.length === 0) {
+                  sendProgress('No collections specified, skipping collection installation');
+                  sendProgress(`📦 Installation location: ${venvDir}`);
+                  sendProgress('');
+                  sendComplete(true, ansibleRulebookPath, null);
+                  resolve(true);
+                  return;
+                }
+
+                sendProgress(`Installing ${collections.length} collection(s): ${collections.join(', ')}`);
+                sendProgress(`Collections will be installed to: ${collectionsPath}`);
+
+                const ansibleGalaxyPath = path.join(venvDir, binDir, isWindows ? 'ansible-galaxy.exe' : 'ansible-galaxy');
+
+                // Try with SSL verification disabled to avoid certificate issues
+                const args = ['collection', 'install', ...collections, '-p', collectionsPath, '--ignore-certs'];
+                const galaxyInstall = spawn(ansibleGalaxyPath, args, {
+                  env: {
+                    ...process.env,
+                    VIRTUAL_ENV: venvDir,
+                    ANSIBLE_COLLECTIONS_PATH: collectionsPath,
+                    PYTHONHTTPSVERIFY: '0'
+                  }
+                });
+
+                galaxyInstall.stdout.on('data', (data) => {
+                  const message = data.toString().trim();
+                  if (message) sendProgress(message);
+                });
+
+                galaxyInstall.stderr.on('data', (data) => {
+                  const message = data.toString().trim();
+                  if (message) sendProgress(message);
+                });
+
+                galaxyInstall.on('close', (code) => {
+                  if (code !== 0) {
+                    const errorMsg = `Failed to install collections (exit code ${code})`;
+                    sendProgress(`❌ ${errorMsg}`);
+                    sendComplete(false, null, errorMsg);
+                    resolve(false);
+                    return;
+                  }
+
+                  sendProgress(`✅ Collections installed successfully: ${collections.join(', ')}`);
+                  sendProgress(`📦 Installation location: ${venvDir}`);
+                  sendProgress(`📦 Collections location: ${collectionsPath}`);
+                  sendProgress('');
+                  sendProgress('IMPORTANT: Collections path is auto-detected when using this venv');
+                  sendProgress(`  ANSIBLE_COLLECTIONS_PATH will be set to: ${collectionsPath}`);
+                  sendProgress('');
+                  sendComplete(true, ansibleRulebookPath, null);
+                  resolve(true);
+                });
+              });
+            });
+          });
+        });
+      });
     });
   });
 }
@@ -286,7 +522,13 @@ wss.on('connection', (ws, req) => {
     try {
       const data = JSON.parse(message);
 
-      // Log ALL messages for debugging
+      // Log ALL messages for debugging (including install_ansible_rulebook)
+      if (data.type === 'install_ansible_rulebook') {
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`[${clientId}] 📦 INSTALL MESSAGE RECEIVED`);
+        console.log(`${'='.repeat(80)}\n`);
+      }
+
       console.log(`[${clientId}] Received message type: ${data.type}`, data.type === 'update_tunnel_forwarding' ? JSON.stringify(data) : '');
 
       if (data.type !== 'SessionStats' && data.type !== 'heartbeat') {
@@ -524,6 +766,18 @@ wss.on('connection', (ws, req) => {
               }));
             }
           });
+          break;
+
+        case 'install_ansible_rulebook':
+          console.log('📦 Starting ansible-rulebook installation...');
+          console.log('WebSocket readyState:', ws.readyState);
+          console.log('Collections to install:', data.collections || 'none');
+          try {
+            await installAnsibleRulebook(ws, data.collections || []);
+            console.log('Installation function completed');
+          } catch (error) {
+            console.error('Installation error:', error);
+          }
           break;
 
         case 'get_ansible_version':
@@ -880,10 +1134,40 @@ function spawnAnsibleRulebook(executionId) {
     ...execution.envVars
   };
 
+  // If ansible-rulebook is in a venv, automatically set ANSIBLE_COLLECTIONS_PATH
+  // Expected path format: /path/to/venv/bin/ansible-rulebook or /path/to/venv/Scripts/ansible-rulebook.exe
+  if (ansibleRulebookPath.includes('/bin/ansible-rulebook') || ansibleRulebookPath.includes('\\Scripts\\ansible-rulebook')) {
+    const venvDir = ansibleRulebookPath.replace(/[\/\\](bin|Scripts)[\/\\]ansible-rulebook(\.exe)?$/, '');
+    const collectionsPath = path.join(venvDir, 'collections');
+
+    console.log(`Detected venv path: ${venvDir}`);
+    console.log(`Looking for collections at: ${collectionsPath}`);
+
+    // Check if collections directory exists
+    if (fs.existsSync(collectionsPath)) {
+      processEnv.ANSIBLE_COLLECTIONS_PATH = collectionsPath;
+      console.log(`✅ Auto-detected venv collections path: ${collectionsPath}`);
+
+      // Verify the ansible.eda collection exists
+      const edaCollectionPath = path.join(collectionsPath, 'ansible_collections', 'ansible', 'eda');
+      if (fs.existsSync(edaCollectionPath)) {
+        console.log(`✅ ansible.eda collection found at: ${edaCollectionPath}`);
+      } else {
+        console.log(`⚠️  ansible.eda collection NOT found at: ${edaCollectionPath}`);
+      }
+    } else {
+      console.log(`⚠️  Collections directory does not exist: ${collectionsPath}`);
+      console.log(`   ansible-rulebook may not find source plugins from ansible.eda`);
+    }
+  }
+
   console.log(`Using ansible-rulebook command: ${ansibleRulebookPath}`);
   console.log(`Full command: ${ansibleRulebookPath} ${args.join(' ')}`);
   console.log(`Working directory: ${execution.workingDirectory || 'current directory'}`);
   console.log(`Environment variables for ${executionId}:`, Object.keys(execution.envVars || {}).join(', ') || 'none');
+  if (processEnv.ANSIBLE_COLLECTIONS_PATH) {
+    console.log(`ANSIBLE_COLLECTIONS_PATH: ${processEnv.ANSIBLE_COLLECTIONS_PATH}`);
+  }
 
   const spawnOptions = {
     stdio: ['ignore', 'pipe', 'pipe'],

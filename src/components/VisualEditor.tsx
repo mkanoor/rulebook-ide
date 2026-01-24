@@ -173,6 +173,9 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   const [forwardToPort, setForwardToPort] = useState<number | null>(null);
   const [selectedStatsRuleset, setSelectedStatsRuleset] = useState<string | null>(null);
   const [rulesetStats, setRulesetStats] = useState<Map<string, unknown>>(new Map());
+  const [isInstallingAnsibleRulebook, setIsInstallingAnsibleRulebook] = useState(false);
+  const [installationLog, setInstallationLog] = useState<string>('');
+  const [collectionsToInstall, setCollectionsToInstall] = useState<string>('ansible.eda');
   const [showAddActionModal, setShowAddActionModal] = useState(false);
   const [addActionContext, setAddActionContext] = useState<{ rulesetIndex: number; ruleIndex: number } | null>(null);
   const [selectedActionType, setSelectedActionType] = useState('debug');
@@ -945,6 +948,45 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               }
               break;
 
+            case 'installation_progress':
+              console.log('[Installation Progress]', message.message);
+              setInstallationLog(prev => prev + message.message + '\n');
+              break;
+
+            case 'installation_complete':
+              console.log('[Installation Complete]', message);
+              setIsInstallingAnsibleRulebook(false);
+              if (message.success) {
+                setInstallationLog(prev => prev + '\n✅ Installation completed successfully!\n');
+                setInstallationLog(prev => prev + `ansible-rulebook installed at: ${message.path}\n`);
+
+                // Update the settings with the new path
+                setServerSettings(prev => ({
+                  ...prev,
+                  ansibleRulebookPath: message.path
+                }));
+
+                // Save settings automatically
+                saveSettings({
+                  ...serverSettings,
+                  ansibleRulebookPath: message.path
+                });
+
+                addEvent('System', `ansible-rulebook installed successfully at: ${message.path}`);
+
+                // Trigger binary check with new path
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(JSON.stringify({
+                    type: 'check_binary',
+                    ansibleRulebookPath: message.path
+                  }));
+                }
+              } else {
+                setInstallationLog(prev => prev + `\n❌ Installation failed: ${message.error}\n`);
+                addEvent('Error', `ansible-rulebook installation failed: ${message.error}`);
+              }
+              break;
+
             default:
               break;
           }
@@ -966,6 +1008,31 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     } catch (error) {
       addEvent('Error', `Failed to connect: ${error}`);
     }
+  };
+
+  const installAnsibleRulebook = () => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      alert('WebSocket not connected. Please connect to the server first.');
+      return;
+    }
+
+    console.log('[Install] Starting ansible-rulebook installation...');
+    setIsInstallingAnsibleRulebook(true);
+    setInstallationLog('Starting installation...\n');
+
+    // Parse collections list (comma or newline separated)
+    const collections = collectionsToInstall
+      .split(/[,\n]/)
+      .map(c => c.trim())
+      .filter(c => c.length > 0);
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: 'install_ansible_rulebook',
+        collections: collections,
+      })
+    );
+    console.log('[Install] Installation message sent to server with collections:', collections);
   };
 
   const startExecution = () => {
@@ -1005,6 +1072,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       addEvent('Error', 'WebSocket not connected');
       return;
     }
+
+    // Clear previous execution stats
+    setRulesetStats(new Map());
+    setTriggeredRules(new Map());
 
     let extraVarsObj = {};
     try {
@@ -2599,19 +2670,91 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
               <div className="form-group">
                 <label className="form-label">Ansible Rulebook Command</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={serverSettings.ansibleRulebookPath}
-                  onChange={(e) =>
-                    setServerSettings({ ...serverSettings, ansibleRulebookPath: e.target.value })
-                  }
-                  placeholder="ansible-rulebook"
-                />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={serverSettings.ansibleRulebookPath}
+                    onChange={(e) =>
+                      setServerSettings({ ...serverSettings, ansibleRulebookPath: e.target.value })
+                    }
+                    placeholder="ansible-rulebook"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="btn btn-secondary"
+                    onClick={installAnsibleRulebook}
+                    disabled={isInstallingAnsibleRulebook || !isConnected}
+                    title={!isConnected ? 'Connect to server first' : 'Install private copy of ansible-rulebook'}
+                  >
+                    {isInstallingAnsibleRulebook ? '⏳ Installing...' : '📦 Install'}
+                  </button>
+                </div>
                 <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                  Command or full path to ansible-rulebook executable
+                  Command or full path to ansible-rulebook executable. Click Install to create a private isolated copy.
                 </small>
               </div>
+
+              <div className="form-group">
+                <label className="form-label">Ansible Collections to Install</label>
+                <textarea
+                  className="form-textarea"
+                  value={collectionsToInstall}
+                  onChange={(e) => setCollectionsToInstall(e.target.value)}
+                  placeholder="ansible.eda&#10;community.general&#10;..."
+                  rows={3}
+                  style={{ minHeight: '80px' }}
+                />
+                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                  Collections to install (one per line or comma-separated). Leave empty to skip collection installation.
+                </small>
+              </div>
+
+              {installationLog && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  background: '#f7fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontFamily: 'Monaco, Menlo, monospace',
+                  fontSize: '12px',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  position: 'relative'
+                }}>
+                  <button
+                    onClick={() => setInstallationLog('')}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: 'transparent',
+                      border: 'none',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      color: '#718096',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = '#e2e8f0';
+                      e.currentTarget.style.color = '#2d3748';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#718096';
+                    }}
+                    title="Close installation log"
+                  >
+                    ✕
+                  </button>
+                  {installationLog}
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label">Working Directory</label>

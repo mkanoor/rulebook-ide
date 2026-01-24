@@ -44,6 +44,21 @@
   text-align: center;
 }
 
+.footer-rule-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.footer-stat-time {
+  font-weight: 600;
+  font-size: 11px;
+  opacity: 0.9;
+  margin-left: 4px;
+}
+
 .footer-separator {
   opacity: 0.4;
   margin: 0 4px;
@@ -53,6 +68,21 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.footer-execution-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  cursor: help;
+  transition: all 0.2s;
+}
+
+.footer-execution-status:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .footer-connection-status {
@@ -68,6 +98,28 @@
 
 .footer-connection-status:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+.execution-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.execution-dot.running {
+  background: var(--color-info, #4299e1);
+  box-shadow: 0 0 8px var(--color-info, #4299e1);
+}
+
+.execution-dot.stopped {
+  background: var(--color-text-muted, #a0aec0);
+  box-shadow: 0 0 8px var(--color-text-muted, #a0aec0);
+}
+
+.execution-text {
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .connection-dot {

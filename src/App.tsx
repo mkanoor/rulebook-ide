@@ -28,7 +28,7 @@ function App() {
       sources: [
         {
           name: 'Example Source',
-          'eda.builtin.range': { limit: 5 },
+          'ansible.eda.range': { limit: 5 },
         },
       ],
       rules: [
@@ -155,7 +155,7 @@ function App() {
       sources: [
         {
           name: 'Example Source',
-          'eda.builtin.range': { limit: 5 },
+          'ansible.eda.range': { limit: 5 },
         },
       ],
       rules: [
@@ -844,6 +844,7 @@ function App() {
       {/* Footer */}
       <Footer
         isConnected={executionState.isConnected}
+        isRunning={executionState.isRunning}
         rulesetCount={rulesets.length}
         ruleCount={rulesets.reduce((sum, rs) => sum + rs.rules.length, 0)}
         rulesetStats={rulesetStats}
