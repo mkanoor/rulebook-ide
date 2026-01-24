@@ -3,6 +3,7 @@ import type { Condition, AllCondition, AnyCondition, NotAllCondition } from '../
 import { getConditionType } from '../types/rulebook';
 import { validateCondition } from '../conditionValidator';
 import { logger } from '../utils/logger';
+import { AutocompleteInput } from './AutocompleteInput';
 
 interface ConditionEditorProps {
   condition: Condition;
@@ -245,14 +246,23 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
 
       {conditionType === 'simple' ? (
         <div className="form-group">
-          <label className="form-label form-label-required">Condition</label>
-          <input
-            type="text"
-            className={`form-input ${validationErrors.has(0) ? 'input-error' : ''}`}
+          <label className="form-label form-label-required">
+            Condition
+            <small style={{ fontWeight: 'normal', marginLeft: '8px', color: '#718096' }}>
+              (Ctrl+Space for suggestions)
+            </small>
+          </label>
+          <AutocompleteInput
             value={simpleCondition}
-            onChange={handleSimpleConditionChange}
+            onChange={(value) => {
+              setSimpleCondition(value);
+              setConditions([value]);
+              updateCondition('simple', [value], timeout);
+              validateConditionString(value, 0);
+            }}
             placeholder="e.g., event.i == 1 or event.status == 'active'"
-            title="Enter a condition expression using event properties (e.g., event.i == 1, event.status == 'active')"
+            className={`form-input ${validationErrors.has(0) ? 'input-error' : ''}`}
+            title="Enter a condition expression using event properties - press Ctrl+Space for autocomplete suggestions"
           />
           {validationErrors.has(0) && (
             <div style={{
@@ -280,6 +290,9 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
           <div className="form-group">
             <label className="form-label form-label-required">
               Conditions ({conditions.length})
+              <small style={{ fontWeight: 'normal', marginLeft: '8px', color: '#718096' }}>
+                (Ctrl+Space for suggestions)
+              </small>
             </label>
             {conditions.map((cond, index) => (
               <div key={index} style={{ marginBottom: '12px' }}>
@@ -290,14 +303,12 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                     alignItems: 'center',
                   }}
                 >
-                  <input
-                    type="text"
-                    className={`form-input ${validationErrors.has(index) ? 'input-error' : ''}`}
+                  <AutocompleteInput
                     value={cond}
-                    onChange={(e) => handleConditionChange(index, e.target.value)}
+                    onChange={(value) => handleConditionChange(index, value)}
                     placeholder={`Condition ${index + 1}`}
-                    style={{ flex: 1 }}
-                    title="Enter a condition expression using event properties"
+                    className={`form-input ${validationErrors.has(index) ? 'input-error' : ''}`}
+                    title="Enter a condition expression using event properties - press Ctrl+Space for autocomplete suggestions"
                   />
                   <button
                     type="button"
