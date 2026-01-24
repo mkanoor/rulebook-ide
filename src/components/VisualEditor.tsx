@@ -1516,26 +1516,59 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   };
 
   const handleDeleteRuleset = (index: number) => {
-    onRulesetsChange(rulesets.filter((_, i) => i !== index));
-    setSelectedItem(null);
+    const ruleset = rulesets[index];
+    const sourceCount = ruleset.sources?.length || 0;
+    const ruleCount = ruleset.rules?.length || 0;
+
+    const message = `Are you sure you want to delete ruleset "${ruleset.name}"?\n\n` +
+                   `This will permanently delete:\n` +
+                   `• ${sourceCount} source(s)\n` +
+                   `• ${ruleCount} rule(s) and all their actions\n\n` +
+                   `This action cannot be undone.`;
+
+    if (window.confirm(message)) {
+      onRulesetsChange(rulesets.filter((_, i) => i !== index));
+      setSelectedItem(null);
+    }
   };
 
   const handleDeleteSource = (rulesetIndex: number, sourceIndex: number) => {
-    const newRulesets = [...rulesets];
-    newRulesets[rulesetIndex].sources = newRulesets[rulesetIndex].sources.filter(
-      (_, i) => i !== sourceIndex
-    );
-    onRulesetsChange(newRulesets);
-    setSelectedItem(null);
+    const ruleset = rulesets[rulesetIndex];
+    const source = ruleset.sources[sourceIndex];
+    const sourceName = source.name || `Source #${sourceIndex + 1}`;
+
+    const message = `Are you sure you want to delete source "${sourceName}"?\n\n` +
+                   `This action cannot be undone.`;
+
+    if (window.confirm(message)) {
+      const newRulesets = [...rulesets];
+      newRulesets[rulesetIndex].sources = newRulesets[rulesetIndex].sources.filter(
+        (_, i) => i !== sourceIndex
+      );
+      onRulesetsChange(newRulesets);
+      setSelectedItem(null);
+    }
   };
 
   const handleDeleteRule = (rulesetIndex: number, ruleIndex: number) => {
-    const newRulesets = [...rulesets];
-    newRulesets[rulesetIndex].rules = newRulesets[rulesetIndex].rules.filter(
-      (_, i) => i !== ruleIndex
-    );
-    onRulesetsChange(newRulesets);
-    setSelectedItem(null);
+    const ruleset = rulesets[rulesetIndex];
+    const rule = ruleset.rules[ruleIndex];
+    const actionCount = getActionsArray(rule).length;
+
+    const message = `Are you sure you want to delete rule "${rule.name}"?\n\n` +
+                   `This will permanently delete:\n` +
+                   `• The rule's condition(s)\n` +
+                   `• ${actionCount} action(s)\n\n` +
+                   `This action cannot be undone.`;
+
+    if (window.confirm(message)) {
+      const newRulesets = [...rulesets];
+      newRulesets[rulesetIndex].rules = newRulesets[rulesetIndex].rules.filter(
+        (_, i) => i !== ruleIndex
+      );
+      onRulesetsChange(newRulesets);
+      setSelectedItem(null);
+    }
   };
 
   const handleDeleteAction = (
@@ -1543,13 +1576,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     ruleIndex: number,
     actionIndex: number
   ) => {
-    const newRulesets = [...rulesets];
-    const actions = newRulesets[rulesetIndex].rules[ruleIndex].actions || [];
-    newRulesets[rulesetIndex].rules[ruleIndex].actions = actions.filter(
-      (_, i) => i !== actionIndex
-    );
-    onRulesetsChange(newRulesets);
-    setSelectedItem(null);
+    const rule = rulesets[rulesetIndex].rules[ruleIndex];
+    const action = getActionsArray(rule)[actionIndex];
+    const actionType = getActionType(action);
+
+    const message = `Are you sure you want to delete this "${actionType}" action?\n\n` +
+                   `This action cannot be undone.`;
+
+    if (window.confirm(message)) {
+      const newRulesets = [...rulesets];
+      const actions = newRulesets[rulesetIndex].rules[ruleIndex].actions || [];
+      newRulesets[rulesetIndex].rules[ruleIndex].actions = actions.filter(
+        (_, i) => i !== actionIndex
+      );
+      onRulesetsChange(newRulesets);
+      setSelectedItem(null);
+    }
   };
 
   const renderPropertiesPanel = () => {

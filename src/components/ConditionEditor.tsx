@@ -199,6 +199,12 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   };
 
   const handleDeleteCondition = (index: number) => {
+    // Only show confirmation if there's an actual condition value
+    const conditionValue = conditions[index]?.trim();
+    if (conditionValue && !window.confirm(`Are you sure you want to delete this condition?\n\n"${conditionValue}"\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
     const newConditions = conditions.filter((_, i) => i !== index);
     // Ensure at least one condition remains
     if (newConditions.length === 0) {
