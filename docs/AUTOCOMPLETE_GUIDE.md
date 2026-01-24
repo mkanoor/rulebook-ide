@@ -27,18 +27,23 @@ Autocomplete appears automatically in the following situations:
    ```
 
 ### Manual Activation
-**Press `Ctrl+Space`** at any time to manually show suggestions
+Press the trigger key at any time to manually show suggestions:
+- **Windows/Linux**: `Ctrl+Space`
+- **Mac**: `⌘Space` (Cmd+Space)
+
+> 💡 **Tip**: The keyboard shortcut is displayed as a badge next to the input field and in the autocomplete dropdown footer.
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| **Ctrl+Space** | Show/hide autocomplete suggestions |
-| **↑ Arrow** | Navigate to previous suggestion |
-| **↓ Arrow** | Navigate to next suggestion |
-| **Enter** | Insert selected suggestion |
-| **Tab** | Insert selected suggestion |
-| **Escape** | Close autocomplete dropdown |
+| Key | Action | Platform |
+|-----|--------|----------|
+| **Ctrl+Space** | Show/hide autocomplete suggestions | Windows/Linux |
+| **⌘Space** (Cmd+Space) | Show/hide autocomplete suggestions | Mac |
+| **↑ Arrow** | Navigate to previous suggestion | All |
+| **↓ Arrow** | Navigate to next suggestion | All |
+| **Enter** | Insert selected suggestion | All |
+| **Tab** | Insert selected suggestion | All |
+| **Escape** | Close autocomplete dropdown | All |
 
 ## Using the Mouse
 

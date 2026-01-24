@@ -1,0 +1,19 @@
+.throttle-editor {
+  margin-top: 8px;
+}
+
+.throttle-fields {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--color-surface-hover, #f7fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+}
+
+.throttle-fields .form-group {
+  margin-bottom: 16px;
+}
+
+.throttle-fields .form-group:last-child {
+  margin-bottom: 0;
+}

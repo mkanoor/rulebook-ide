@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as yaml from 'js-yaml';
 import type { Ruleset, Condition, Action } from '../types/rulebook';
-import { getActionType, getActionsArray } from '../types/rulebook';
+import { getActionType, getActionsArray, getConditionType } from '../types/rulebook';
 import { VisualSourceEditor } from './VisualSourceEditor';
 import { ConditionEditor } from './ConditionEditor';
+import { ThrottleEditor } from './ThrottleEditor';
 import { Modal } from './common/Modal';
 import { validateRulesetArray, formatValidationErrors } from '../utils/schemaValidator';
 import { logger, LogLevel } from '../utils/logger';
@@ -70,6 +71,7 @@ export interface ServerSettings {
   jsonPathPrefix: string;
   templatePath: string;
   browserLogLevel: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'NONE';
+  sourceNameFormat: 'new' | 'legacy';
 }
 
 const DEFAULT_SETTINGS: ServerSettings = {
@@ -83,6 +85,7 @@ const DEFAULT_SETTINGS: ServerSettings = {
   jsonPathPrefix: 'event',
   templatePath: '/templates/default-rulebook.yml',
   browserLogLevel: 'INFO',
+  sourceNameFormat: 'new',
 };
 
 const loadSettings = (): ServerSettings => {
@@ -187,8 +190,6 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   // Local state for properties panel JSON editing
   const [actionConfigText, setActionConfigText] = useState('{}');
   const [actionConfigError, setActionConfigError] = useState<string | null>(null);
-  const [ruleThrottleText, setRuleThrottleText] = useState('{}');
-  const [ruleThrottleError, setRuleThrottleError] = useState<string | null>(null);
 
   // Validation state for name uniqueness
   const [rulesetNameError, setRulesetNameError] = useState<string | null>(null);
@@ -538,16 +539,6 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         setActionConfigText(newText);
         setActionConfigError(null);
       }
-    }
-  }, [selectedItem, rulesets]);
-
-  // Sync rule throttle text when selected item changes
-  useEffect(() => {
-    if (selectedItem?.type === 'rule') {
-      const rule = rulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex];
-      const newThrottleText = JSON.stringify(rule.throttle || {}, null, 2);
-      setRuleThrottleText(newThrottleText);
-      setRuleThrottleError(null);
     }
   }, [selectedItem, rulesets]);
 
@@ -1840,42 +1831,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               onRulesetsChange(newRulesets);
             }}
           />
-          <div className="form-group">
-            <label className="form-label">Throttle Configuration (JSON)</label>
-            <textarea
-              className="form-textarea"
-              value={ruleThrottleText}
-              onChange={(e) => {
-                const value = e.target.value;
-                setRuleThrottleText(value);
 
-                try {
-                  const parsed = JSON.parse(value);
+          {/* Throttle Configuration - Only available for simple conditions */}
+          {(getConditionType(rule.condition) === 'string' || getConditionType(rule.condition) === 'boolean') && (
+            <div className="form-group">
+              <label className="form-label">Throttle Configuration</label>
+              <ThrottleEditor
+                throttle={rule.throttle}
+                onChange={(throttle) => {
                   const newRulesets = [...rulesets];
-                  // Remove throttle if empty object
-                  if (Object.keys(parsed).length === 0) {
-                    newRulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex].throttle = undefined;
-                  } else {
-                    newRulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex].throttle = parsed;
-                  }
+                  newRulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex].throttle = throttle;
                   onRulesetsChange(newRulesets);
-                  setRuleThrottleError(null);
-                } catch (error) {
-                  setRuleThrottleError('Invalid JSON format');
-                }
-              }}
-              rows={8}
-              placeholder={`{\n  "accumulate_within": "1 minutes",\n  "threshold": 3,\n  "group_by_attributes": [\n    "event.level"\n  ]\n}`}
-              style={ruleThrottleError ?
-                { fontFamily: 'monospace', fontSize: '13px', borderColor: '#fc8181', borderWidth: '2px' } :
-                { fontFamily: 'monospace', fontSize: '13px' }
-              }
-            />
-            {ruleThrottleError && <div className="error-message">{ruleThrottleError}</div>}
-            <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-              Optional throttle settings (once_within, once_after, accumulate_within, threshold, group_by_attributes)
-            </small>
-          </div>
+                }}
+              />
+            </div>
+          )}
+
           <button
             className="btn btn-danger"
             onClick={() => handleDeleteRule(selectedItem.rulesetIndex, selectedItem.ruleIndex)}
@@ -2716,6 +2687,26 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 </select>
                 <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
                   Control browser console logging verbosity. Set to DEBUG to see detailed logs for troubleshooting browser issues.
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Source Name Format</label>
+                <select
+                  className="form-select"
+                  value={serverSettings.sourceNameFormat}
+                  onChange={(e) =>
+                    setServerSettings({ ...serverSettings, sourceNameFormat: e.target.value as ServerSettings['sourceNameFormat'] })
+                  }
+                  title="Choose source naming convention for backward compatibility"
+                >
+                  <option value="new">New Format (eda.builtin.*)</option>
+                  <option value="legacy">Legacy Format (ansible.eda.*)</option>
+                </select>
+                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                  Choose source naming format for backward compatibility with older ansible-rulebook versions.
+                  New format: <code style={{ background: '#edf2f7', padding: '2px 4px', borderRadius: '3px' }}>eda.builtin.range</code>,
+                  Legacy format: <code style={{ background: '#edf2f7', padding: '2px 4px', borderRadius: '3px' }}>ansible.eda.range</code>
                 </small>
               </div>
             </div>

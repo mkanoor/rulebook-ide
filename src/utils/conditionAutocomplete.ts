@@ -408,7 +408,8 @@ function getParserBasedSuggestions(input: string): AutocompleteSuggestion[] {
     const expected = result.error.expected;
 
     // Map parser expected tokens to our suggestions
-    if (expected.includes('number') || expected.some(e => e.includes('digit'))) {
+    // Add type guards to ensure elements are strings before calling .includes()
+    if (expected.includes('number') || expected.some(e => typeof e === 'string' && e.includes('digit'))) {
       suggestions.push({ text: '0', displayText: '123', description: 'Number value', type: 'value' });
     }
 
@@ -422,12 +423,12 @@ function getParserBasedSuggestions(input: string): AutocompleteSuggestion[] {
 
     // Look for operator suggestions
     const operatorExpected = expected.filter(e =>
-      ['==', '!=', '<', '>', '<=', '>=', 'and', 'or', 'not', 'in', 'contains'].includes(e)
+      typeof e === 'string' && ['==', '!=', '<', '>', '<=', '>=', 'and', 'or', 'not', 'in', 'contains'].includes(e)
     );
 
     if (operatorExpected.length > 0) {
       const matchingOps = [...COMPARISON_OPERATORS, ...LOGICAL_OPERATORS].filter(op =>
-        operatorExpected.some(exp => op.text.includes(exp))
+        operatorExpected.some(exp => typeof exp === 'string' && op.text.includes(exp))
       );
       suggestions.push(...matchingOps);
     }

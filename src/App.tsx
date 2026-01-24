@@ -6,6 +6,7 @@ import { JsonPathExplorer } from './components/JsonPathExplorer';
 import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
+import { getCurrentSourceNameFormat, convertAllSources } from './utils/sourceNameConverter';
 import './App.css';
 
 function App() {
@@ -47,6 +48,8 @@ function App() {
     null
   );
   const [currentFilename, setCurrentFilename] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [initialRulesets, setInitialRulesets] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const visualEditorRef = useRef<VisualEditorRef>(null);
   const [executionState, setExecutionState] = useState<ExecutionState>({
@@ -93,6 +96,30 @@ function App() {
     const interval = setInterval(checkSettings, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Track unsaved changes
+  useEffect(() => {
+    const currentState = JSON.stringify(rulesets);
+    if (initialRulesets && currentState !== initialRulesets) {
+      setHasUnsavedChanges(true);
+    } else if (initialRulesets && currentState === initialRulesets) {
+      setHasUnsavedChanges(false);
+    }
+  }, [rulesets, initialRulesets]);
+
+  // Warn user before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Close theme selector when clicking outside
   useEffect(() => {
@@ -205,7 +232,11 @@ function App() {
         // Continue with export even if validation fails
       }
 
-      const yamlStr = yaml.dump(rulesets, {
+      // Convert source names based on user's preferred format
+      const sourceNameFormat = getCurrentSourceNameFormat();
+      const convertedRulesets = convertAllSources(rulesets, sourceNameFormat);
+
+      const yamlStr = yaml.dump(convertedRulesets, {
         indent: 2,
         lineWidth: -1,
         noRefs: true,
@@ -218,7 +249,7 @@ function App() {
             suggestedName: currentFilename || 'rulebook.yml',
             types: [
               {
-                description: 'YAML Files',
+                description: 'Ansible Rulebook Files (YAML)',
                 accept: {
                   'text/yaml': ['.yml', '.yaml'],
                 },
@@ -229,6 +260,10 @@ function App() {
           const writable = await handle.createWritable();
           await writable.write(yamlStr);
           await writable.close();
+
+          // Mark as saved - update the baseline state
+          setInitialRulesets(JSON.stringify(rulesets));
+          setHasUnsavedChanges(false);
 
           setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
           setTimeout(() => setMessage(null), 3000);
@@ -250,6 +285,10 @@ function App() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // Mark as saved - update the baseline state
+        setInitialRulesets(JSON.stringify(rulesets));
+        setHasUnsavedChanges(false);
 
         setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
         setTimeout(() => setMessage(null), 3000);
@@ -277,8 +316,18 @@ function App() {
           throw new Error('Invalid rulebook format: expected an array of rulesets');
         }
 
-        setRulesets(parsed);
+        // Convert imported source names to the current preferred format
+        // This ensures internal consistency regardless of the format of the imported file
+        const sourceNameFormat = getCurrentSourceNameFormat();
+        const convertedRulesets = convertAllSources(parsed, sourceNameFormat);
+
+        setRulesets(convertedRulesets);
         setCurrentFilename(file.name);
+
+        // Set baseline state for change tracking
+        setInitialRulesets(JSON.stringify(convertedRulesets));
+        setHasUnsavedChanges(false);
+
         setMessage({ type: 'success', text: 'Rulebook imported successfully!' });
         setTimeout(() => setMessage(null), 3000);
       } catch (error) {
@@ -298,12 +347,19 @@ function App() {
   };
 
   const handleNewRulebook = async () => {
-    if (
-      rulesets.length === 0 ||
-      window.confirm('This will clear the current rulebook. Continue?')
-    ) {
-      try {
-        // Get template path from settings
+    // Check for unsaved changes
+    if (hasUnsavedChanges) {
+      if (!window.confirm('You have unsaved changes. Creating a new rulebook will discard them. Continue?')) {
+        return;
+      }
+    } else if (rulesets.length > 0) {
+      if (!window.confirm('This will clear the current rulebook. Continue?')) {
+        return;
+      }
+    }
+
+    try {
+      // Get template path from settings
         const settings = visualEditorRef.current?.getSettings();
         const templatePath = settings?.templatePath || '/templates/default-rulebook.yml';
 
@@ -322,26 +378,36 @@ function App() {
 
         setRulesets(parsedTemplate);
         setCurrentFilename(null);
+
+        // Set baseline state for change tracking
+        setInitialRulesets(JSON.stringify(parsedTemplate));
+        setHasUnsavedChanges(false);
+
         setMessage({ type: 'success', text: 'New rulebook created from template!' });
         setTimeout(() => setMessage(null), 3000);
       } catch (error) {
         console.error('Failed to load template:', error);
         // Fallback to empty rulebook if template fails
-        setRulesets([
+        const fallbackRulesets = [
           {
             name: 'New Ruleset',
             hosts: 'all',
             sources: [],
             rules: [],
           },
-        ]);
+        ];
+        setRulesets(fallbackRulesets);
         setCurrentFilename(null);
+
+        // Set baseline state for change tracking
+        setInitialRulesets(JSON.stringify(fallbackRulesets));
+        setHasUnsavedChanges(false);
+
         setMessage({
           type: 'error',
           text: `Template load failed, created empty rulebook: ${error instanceof Error ? error.message : String(error)}`
         });
         setTimeout(() => setMessage(null), 5000);
-      }
     }
   };
 
@@ -367,7 +433,7 @@ function App() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: `Failed to generate YAML: ${error instanceof Error ? error.message : String(error)}`,
+        text: `Failed to generate rulebook view: ${error instanceof Error ? error.message : String(error)}`,
       });
       setTimeout(() => setMessage(null), 5000);
     }
@@ -439,8 +505,20 @@ function App() {
           <h1 style={{ margin: 0 }}>Ansible Rulebook IDE</h1>
           <span className="app-header-version">{ansibleVersion}</span>
           {currentFilename && (
-            <span className="app-header-filename">
-              📄 <strong>{currentFilename}</strong>
+            <span
+              className="app-header-filename"
+              title={hasUnsavedChanges ? "Unsaved changes" : "No unsaved changes"}
+            >
+              📄 <strong>{currentFilename}{hasUnsavedChanges ? ' *' : ''}</strong>
+            </span>
+          )}
+          {!currentFilename && hasUnsavedChanges && (
+            <span
+              className="app-header-filename"
+              title="Unsaved changes"
+              style={{ color: 'var(--color-warning, #fbbf24)' }}
+            >
+              ⚠️ <strong>Unsaved changes</strong>
             </span>
           )}
         </div>
@@ -481,23 +559,23 @@ function App() {
       </div>
 
       <div className="toolbar">
-        <button className="btn btn-primary btn-icon" onClick={handleNewRulebook} title="New Rulebook">
+        <button className="btn btn-primary btn-icon" onClick={handleNewRulebook} data-title="New Rulebook">
           📄
         </button>
         <button
           className="btn btn-secondary btn-icon"
           onClick={handleAddRuleset}
-          title="Add a Ruleset - a collection of event sources and rules with conditions and actions"
+          data-title="Add Ruleset"
         >
           ➕
         </button>
-        <button className="btn btn-outline btn-icon" onClick={handleViewYAML} title="View YAML">
+        <button className="btn btn-outline btn-icon" onClick={handleViewYAML} data-title="View Rulebook YAML">
           👁️
         </button>
-        <button className="btn btn-outline btn-icon" onClick={handleExportYAML} title="Export YAML">
+        <button className="btn btn-outline btn-icon" onClick={handleExportYAML} data-title="Export Rulebook">
           💾
         </button>
-        <label className="btn btn-outline btn-icon" style={{ cursor: 'pointer' }} title="Import YAML">
+        <label className="btn btn-outline btn-icon" style={{ cursor: 'pointer' }} data-title="Import Rulebook">
           📁
           <input
             ref={fileInputRef}
@@ -510,7 +588,7 @@ function App() {
         <button
           className="btn btn-outline btn-icon"
           onClick={() => visualEditorRef.current?.openSettings()}
-          title="Server Settings"
+          data-title="Server Settings"
         >
           🔧
         </button>
@@ -521,7 +599,7 @@ function App() {
             setUnreadWebhooks(0);
             setHasNewWebhook(false);
           }}
-          title="JSON Path Explorer"
+          data-title="JSON Path Explorer"
           style={{ position: 'relative' }}
         >
           🔍
@@ -533,7 +611,7 @@ function App() {
           <button
             className="btn btn-outline btn-icon"
             onClick={() => visualEditorRef.current?.openCloudTunnel()}
-            title="Cloud Tunnel (External Access)"
+            data-title="Cloud Tunnel (External Access)"
           >
             ☁️
           </button>
@@ -541,7 +619,7 @@ function App() {
         <button
           className="btn btn-outline btn-icon"
           onClick={() => setShowAboutModal(true)}
-          title="About"
+          data-title="About"
         >
           ℹ️
         </button>
@@ -555,7 +633,7 @@ function App() {
             className="btn btn-primary btn-icon"
             onClick={() => visualEditorRef.current?.startExecution()}
             disabled={!executionState.binaryFound}
-            title={
+            data-title={
               !executionState.binaryFound
                 ? (executionState.binaryError || 'Please set the path of ansible-rulebook in Settings')
                 : 'Start Execution'
@@ -571,7 +649,7 @@ function App() {
           <button
             className="btn btn-danger btn-icon"
             onClick={() => visualEditorRef.current?.stopExecution()}
-            title="Stop Execution"
+            data-title="Stop Execution"
           >
             ⏹
           </button>
@@ -580,7 +658,7 @@ function App() {
           <button
             className="btn btn-outline btn-icon"
             onClick={() => visualEditorRef.current?.openWebhookModal()}
-            title="Send Webhook"
+            data-title="Send Webhook"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }}>
               <path fillRule="evenodd" clipRule="evenodd" d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z" fill="currentColor"></path>
@@ -590,7 +668,7 @@ function App() {
         <button
           className="btn btn-outline btn-icon"
           onClick={() => visualEditorRef.current?.openEventLog()}
-          title={`Show Event Log${executionState.eventCount > 0 ? ` (${executionState.eventCount})` : ''}`}
+          data-title={`Show Event Log${executionState.eventCount > 0 ? ` (${executionState.eventCount})` : ''}`}
         >
           📋
         </button>
@@ -598,7 +676,7 @@ function App() {
           <button
             className="btn btn-outline btn-icon"
             onClick={() => visualEditorRef.current?.clearEvents()}
-            title="Clear Event Log"
+            data-title="Clear Event Log"
           >
             🗑️
           </button>

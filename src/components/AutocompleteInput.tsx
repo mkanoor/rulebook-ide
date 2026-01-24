@@ -13,6 +13,10 @@ interface AutocompleteInputProps {
   title?: string;
 }
 
+// Detect if running on Mac
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.platform);
+const triggerKey = isMac ? '⌘Space' : 'Ctrl+Space';
+
 export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   value,
   onChange,
@@ -49,8 +53,9 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) {
-      // Ctrl+Space to show suggestions
-      if (e.ctrlKey && e.key === ' ') {
+      // Ctrl+Space (or Cmd+Space on Mac) to show suggestions
+      const isTriggerKey = (e.ctrlKey || e.metaKey) && e.key === ' ';
+      if (isTriggerKey) {
         e.preventDefault();
         setShowSuggestions(true);
         return;
@@ -91,10 +96,51 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     const currentPos = input.selectionStart || value.length;
     const beforeCursor = value.substring(0, currentPos);
     const afterCursor = value.substring(currentPos);
+    let textToInsert = suggestion.insertText || suggestion.text;
 
-    // Find the start of the current word
-    const wordStart = beforeCursor.search(/[\w.]*$/);
-    const textToInsert = suggestion.insertText || suggestion.text;
+    let wordStart: number;
+
+    // For variable field completions (type === 'variable'), handle dot-notation specially
+    if (suggestion.type === 'variable') {
+      const lastDotIndex = beforeCursor.lastIndexOf('.');
+      const hasRecentDot = lastDotIndex >= 0 && lastDotIndex === beforeCursor.length - 1;
+
+      // Check if we have a partial word after a dot (e.g., "event.se")
+      // But NOT a complete field (e.g., "event.severity")
+      const afterDot = lastDotIndex >= 0 ? beforeCursor.substring(lastDotIndex + 1) : '';
+      const hasPartialWordAfterDot = lastDotIndex >= 0 && afterDot.length > 0 && /^\w+$/.test(afterDot);
+
+      if (hasRecentDot) {
+        // Just typed a dot - insert after the dot
+        wordStart = currentPos;
+      } else if (hasPartialWordAfterDot && !textToInsert.includes('.')) {
+        // Typed partial word after dot (e.g., "event.se") and suggestion is just a field name
+        // Replace only the partial text after the dot
+        wordStart = lastDotIndex + 1;
+      } else {
+        // Default: find the start of the current word (including dots)
+        wordStart = beforeCursor.search(/[\w.]*$/);
+      }
+    } else {
+      // For operators, keywords, etc. - insert at current position with proper spacing
+      // Find the start of any trailing whitespace
+      const match = beforeCursor.match(/\s*$/);
+      wordStart = currentPos - (match ? match[0].length : 0);
+
+      // Add space before operator if there isn't one already
+      const charBeforeOperator = value[wordStart - 1];
+      const needsSpaceBefore = wordStart > 0 && charBeforeOperator && charBeforeOperator !== ' ';
+
+      if (needsSpaceBefore && suggestion.type === 'operator') {
+        textToInsert = ' ' + textToInsert;
+      }
+
+      // Add space after operator if it doesn't already have one
+      const needsSpaceAfter = suggestion.type === 'operator' && !textToInsert.endsWith(' ');
+      if (needsSpaceAfter) {
+        textToInsert = textToInsert + ' ';
+      }
+    }
 
     const newValue = value.substring(0, wordStart) + textToInsert + afterCursor;
     const newCursorPos = wordStart + textToInsert.length;
@@ -147,7 +193,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   };
 
   return (
-    <div className="autocomplete-container" style={{ position: 'relative', flex: 1 }}>
+    <div className="autocomplete-container" style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
       <input
         ref={inputRef}
         type="text"
@@ -160,7 +206,23 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         placeholder={placeholder}
         className={className}
         title={title}
+        style={{ flex: 1 }}
       />
+
+      {/* Keyboard shortcut hint badge */}
+      <span style={{
+        fontSize: '10px',
+        color: '#a0aec0',
+        backgroundColor: '#f7fafc',
+        padding: '3px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e2e8f0',
+        whiteSpace: 'nowrap',
+        fontFamily: 'monospace',
+        fontWeight: 500
+      }}>
+        {triggerKey}
+      </span>
 
       {showSuggestions && suggestions.length > 0 && (
         <div
@@ -254,12 +316,19 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             backgroundColor: '#f7fafc',
             borderTop: '1px solid #e2e8f0',
             display: 'flex',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            gap: '12px'
           }}>
             <span>↑↓ Navigate</span>
-            <span>Enter/Tab to insert</span>
-            <span>Esc to close</span>
-            <span>Ctrl+Space to show</span>
+            <span>⏎ Tab Select</span>
+            <span>Esc Close</span>
+            <span style={{
+              fontWeight: 600,
+              color: '#667eea',
+              backgroundColor: '#ebf4ff',
+              padding: '2px 6px',
+              borderRadius: '3px'
+            }}>{triggerKey}</span>
           </div>
         </div>
       )}
