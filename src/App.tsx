@@ -620,20 +620,6 @@ function App() {
             ☁️
           </button>
         )}
-        <button
-          className="btn btn-outline btn-icon"
-          onClick={() => setShowHelpModal(true)}
-          data-title="Help & Documentation"
-        >
-          ❓
-        </button>
-        <button
-          className="btn btn-outline btn-icon"
-          onClick={() => setShowAboutModal(true)}
-          data-title="About"
-        >
-          ℹ️
-        </button>
 
         {/* Separator */}
         <div className="toolbar-separator"></div>
@@ -692,6 +678,25 @@ function App() {
             🗑️
           </button>
         )}
+
+        {/* Spacer to push Help and About to the right */}
+        <div style={{ flex: 1 }}></div>
+
+        {/* Help and About - Always at the far right */}
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={() => setShowHelpModal(true)}
+          data-title="Help & Documentation"
+        >
+          ❓
+        </button>
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={() => setShowAboutModal(true)}
+          data-title="About"
+        >
+          ℹ️
+        </button>
       </div>
 
       {message && (

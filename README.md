@@ -2,31 +2,66 @@
 
 A web-based integrated development environment for creating and managing Ansible Rulebooks. This application provides an intuitive interface for editing rulebooks based on the [Ansible Rulebook schema](https://github.com/ansible/ansible-rulebook).
 
+## Quick Start
+
+The fastest way to get started:
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start the development server
+npm run dev
+
+# 3. Open http://localhost:5555 in your browser
+
+# 4. Choose an execution mode in Settings (🔧):
+#    - Container Mode (easiest - requires Podman or Docker)
+#    - Venv Mode (click "Install ansible-rulebook")
+#    - Custom Path (use your existing installation)
+
+# 5. Start creating rulebooks!
+```
+
 ## Features
 
+### Core Editing
 - **Visual Editing**: Create and edit rulesets, sources, rules, and actions through a user-friendly interface
-- **Live Execution**: Test rulebooks with ansible-rulebook in real-time with automatic process launching
-- **Cloud Tunnels**: Receive webhooks from external sources (GitHub, GitLab, etc.) using ngrok integration
-- **JSON Path Explorer**: Analyze webhook payloads and extract JSONPath expressions for rule conditions
-- **Dynamic Forwarding**: Enable/disable webhook forwarding to ansible-rulebook after analyzing payloads
 - **Multiple Rulesets**: Support for managing multiple rulesets within a single rulebook
 - **Flexible Sources**: Add and configure event sources with dynamic configuration
 - **Condition Editor**: Edit rule conditions as strings or structured objects (all/any/not_all)
-- **Action Management**: Support for all action types including:
-  - debug
-  - print_event
-  - run_playbook
-  - run_module
-  - run_job_template
-  - run_workflow_template
-  - set_fact
-  - retract_fact
-  - post_event
-  - shutdown
-  - none
 - **YAML Import/Export**: Import existing YAML rulebooks and export your work
 - **Live YAML Preview**: View the generated YAML in a separate window
 - **Schema Validation**: Built on the official Ansible Rulebook schema
+
+### Execution Modes
+- **Container Mode**: Run ansible-rulebook in Podman/Docker containers
+- **Venv Mode**: Automatic installation in isolated virtual environments with collection support
+- **Custom Path Mode**: Use your existing ansible-rulebook installation
+- **Prerequisite Validation**: Automatic checks for required dependencies (Python, Java, Podman/Docker)
+- **Live Execution**: Test rulebooks with ansible-rulebook in real-time with automatic process launching
+- **Real-time Stats**: Track events processed, matched, suppressed, and last rule fired
+- **Execution Status**: Visual indicators for running/stopped status and WebSocket connectivity
+
+### Webhook & Testing
+- **Cloud Tunnels**: Receive webhooks from external sources (GitHub, GitLab, etc.) using ngrok integration
+- **JSON Path Explorer**: Analyze webhook payloads and extract JSONPath expressions for rule conditions
+- **Dynamic Forwarding**: Enable/disable webhook forwarding to ansible-rulebook after analyzing payloads
+- **Webhook Testing**: Send test webhooks directly from the UI with custom payloads
+
+### Action Management
+Support for all action types including:
+- debug
+- print_event
+- run_playbook
+- run_module
+- run_job_template
+- run_workflow_template
+- set_fact
+- retract_fact
+- post_event
+- shutdown
+- none
 
 ## Installation
 
@@ -91,9 +126,79 @@ PORT=8080 npm run dev
 PORT=8080 npm run stop
 ```
 
-## Execution Mode
+## Execution Modes
 
-The IDE leverages ansible-rulebook's native WebSocket capabilities to provide real-time testing and monitoring of your rulebooks.
+The IDE supports three execution modes for running ansible-rulebook, each with different requirements and use cases. The IDE automatically validates prerequisites for the selected mode.
+
+### 1. Container Mode (Recommended for Quick Start)
+
+Run ansible-rulebook in a container using Podman or Docker. This is the easiest way to get started without installing dependencies.
+
+**Prerequisites:**
+- Podman or Docker installed
+- No Python or Java installation required
+- No ansible-rulebook installation needed
+
+**Configuration:**
+1. Open **🔧 Settings**
+2. Select **Container (Podman/Docker)** as the execution mode
+3. Optionally specify a custom container image (default: `quay.io/ansible/ansible-rulebook:main`)
+4. The IDE will automatically verify if Podman or Docker is available
+
+**Benefits:**
+- ✅ No local dependencies required
+- ✅ Consistent environment across systems
+- ✅ Easy version management (just change the image)
+- ✅ Isolated from system Python/Java installations
+
+### 2. Temporary Virtual Environment Mode
+
+Install ansible-rulebook in an isolated temporary virtual environment. Perfect for testing without affecting your system.
+
+**Prerequisites:**
+- Python 3 (tested with 3.9+)
+- Java Runtime Environment (JRE 17 or newer)
+- pip (Python package manager)
+
+**Configuration:**
+1. Open **🔧 Settings**
+2. Select **Install in Temporary Virtual Environment**
+3. Optionally specify collections to install (default: `ansible.eda`)
+4. Click **📦 Install ansible-rulebook**
+5. The IDE will:
+   - Create a temporary virtual environment
+   - Install ansible-core and ansible-rulebook
+   - Install specified Ansible collections
+   - Automatically configure the collections path
+
+**Benefits:**
+- ✅ Isolated installation that doesn't interfere with system packages
+- ✅ Automatic collections installation
+- ✅ Easy cleanup (just delete the temp directory)
+- ✅ Custom collection selection
+
+### 3. Custom Path Mode
+
+Use an existing ansible-rulebook installation on your system.
+
+**Prerequisites:**
+- Python 3 (tested with 3.9+)
+- Java Runtime Environment (JRE 17 or newer)
+- ansible-rulebook installed and accessible
+- Ansible collections installed separately (if needed)
+
+**Configuration:**
+1. Open **🔧 Settings**
+2. Select **Custom Path**
+3. Specify the path to your ansible-rulebook binary
+   - Example: `/usr/local/bin/ansible-rulebook`
+   - Or: `/path/to/venv/bin/ansible-rulebook`
+4. Configure `ANSIBLE_COLLECTIONS_PATH` environment variable separately if needed
+
+**Benefits:**
+- ✅ Use your existing installation
+- ✅ Full control over versions and configurations
+- ✅ Works with custom virtual environments
 
 ### How It Works
 
@@ -103,34 +208,39 @@ The IDE leverages ansible-rulebook's native WebSocket capabilities to provide re
 - **Remote execution control** - Supports start, stop, and configuration via WebSocket messages
 
 When you click **Start Execution**, the IDE:
-1. Spawns `ansible-rulebook` in `--worker` mode with a WebSocket URL
+1. Spawns `ansible-rulebook` in `--worker` mode with a WebSocket URL (using the selected execution mode)
 2. Sends your rulebook and variables to ansible-rulebook over the WebSocket connection
 3. Receives real-time events as rules fire and actions execute
 4. Displays rule triggers, event data, and execution status in the UI
 
 This architecture allows the IDE to provide immediate feedback without writing temporary files or requiring manual ansible-rulebook invocation.
 
-### Prerequisites
+### Prerequisite Validation
 
-- ansible-rulebook must be installed
-  - The server looks for `ansible-rulebook` in your system PATH by default
-  - You can specify a custom path by setting the `ANSIBLE_RULEBOOK_PATH` environment variable
-  - Example: `ANSIBLE_RULEBOOK_PATH=/path/to/venv/bin/ansible-rulebook npm run dev`
-  - Or add it to your `.env.local` file: `ANSIBLE_RULEBOOK_PATH=/path/to/venv/bin/ansible-rulebook`
+The IDE automatically checks for required dependencies when you:
+- Open Server Settings
+- Change the execution mode
+- Start the application
+
+If prerequisites are missing, you'll see a warning with specific installation instructions.
 
 ### Using Execution Mode
 
-1. Click the **▶️ Execute** button in the toolbar
-2. Optionally, add extra variables in JSON format
-3. Click **Start Execution**
-4. The ansible-rulebook process will be **automatically started** in worker mode
-   - Command: `ansible-rulebook --worker --id <uuid> --websocket-url ws://localhost:5555`
+1. **Configure your execution mode** (see Execution Modes section above)
+2. Click the **▶️ Execute** button in the toolbar
+3. Optionally, add extra variables in JSON format
+4. Click **Start Execution**
+5. The ansible-rulebook process will be **automatically started** based on your execution mode:
+   - **Container Mode**: `podman run --rm -i --network host <image> ansible-rulebook --worker --id <uuid> --websocket-url ws://<host-ip>:5555`
+   - **Venv Mode**: `<venv>/bin/ansible-rulebook --worker --id <uuid> --websocket-url ws://localhost:5555`
+   - **Custom Mode**: `<custom-path>/ansible-rulebook --worker --id <uuid> --websocket-url ws://localhost:5555`
    - The process connects to the IDE's WebSocket server
    - Rulebook and variables are transmitted via WebSocket (no temporary files)
-5. Watch as rules are triggered in real-time:
+6. Watch as rules are triggered in real-time:
    - Rules that are triggered will be highlighted in yellow
    - The event log shows all events from ansible-rulebook
    - Triggered rules display a "TRIGGERED" badge with animation
+   - Footer shows real-time stats: events processed, matched, suppressed, and last rule fired
 
 ### Features
 

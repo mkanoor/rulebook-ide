@@ -64,6 +64,8 @@ interface RuleTrigger {
 export interface ServerSettings {
   wsUrl: string;
   wsPort: number;
+  executionMode: 'container' | 'venv' | 'custom';
+  containerImage: string;
   ansibleRulebookPath: string;
   workingDirectory: string;
   heartbeat: number;
@@ -78,7 +80,9 @@ export interface ServerSettings {
 const DEFAULT_SETTINGS: ServerSettings = {
   wsUrl: 'ws://localhost',
   wsPort: 5555,
-  ansibleRulebookPath: '/Users/madhukanoor/devsrc/ansible-rulebook/venv/bin/ansible-rulebook',
+  executionMode: 'custom',
+  containerImage: 'quay.io/ansible/ansible-rulebook:main',
+  ansibleRulebookPath: 'ansible-rulebook',
   workingDirectory: '',
   heartbeat: 0,
   ngrokApiToken: '',
@@ -134,6 +138,9 @@ export const VisualEditor = forwardRef<VisualEditorRef, VisualEditorProps>(({
   const [isRunning, setIsRunning] = useState(false);
   const [binaryFound, setBinaryFound] = useState(false);
   const [binaryError, setBinaryError] = useState<string | null>(null);
+  const [prerequisitesValid, setPrerequisitesValid] = useState(true);
+  const [prerequisitesMissing, setPrerequisitesMissing] = useState<string[]>([]);
+  const [prerequisitesWarnings, setPrerequisitesWarnings] = useState<string[]>([]);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [events, setEvents] = useState<ExecutionEvent[]>([]);
   const [triggeredRules, setTriggeredRules] = useState<Map<string, RuleTrigger>>(new Map());
@@ -685,10 +692,18 @@ EDA_CONTROLLER_SSL_VERIFY=`);
           ansibleRulebookPath: serverSettings.ansibleRulebookPath
         }));
 
+        // Check prerequisites for the current execution mode
+        ws.send(JSON.stringify({
+          type: 'check_prerequisites',
+          executionMode: serverSettings.executionMode
+        }));
+
         // Request ansible-rulebook version
         ws.send(JSON.stringify({
           type: 'get_ansible_version',
-          ansibleRulebookPath: serverSettings.ansibleRulebookPath
+          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+          executionMode: serverSettings.executionMode,
+          containerImage: serverSettings.containerImage
         }));
 
         // Request current ngrok tunnel state to sync with backend
@@ -728,6 +743,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               setBinaryError(message.error || null);
               if (message.error) {
                 addEvent('Error', message.error);
+              }
+              break;
+
+            case 'prerequisites_status':
+              console.log('Prerequisites check result:', message);
+              setPrerequisitesValid(message.valid);
+              setPrerequisitesMissing(message.missing || []);
+              setPrerequisitesWarnings(message.warnings || []);
+
+              if (!message.valid) {
+                addEvent('Warning', `Missing prerequisites for ${message.executionMode} mode: ${message.missing.join(', ')}`);
+              }
+              if (message.warnings && message.warnings.length > 0) {
+                message.warnings.forEach((warning: string) => {
+                  addEvent('Warning', warning);
+                });
               }
               break;
 
@@ -1123,6 +1154,8 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         rulebook: rulebookYaml,
         extraVars: extraVarsObj,
         envVars: envVarsObj,
+        executionMode: serverSettings.executionMode,
+        containerImage: serverSettings.containerImage,
         ansibleRulebookPath: serverSettings.ansibleRulebookPath,
         workingDirectory: serverSettings.workingDirectory,
         heartbeat: serverSettings.heartbeat,
@@ -2669,8 +2702,180 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               </div>
 
               <div className="form-group">
-                <label className="form-label">Ansible Rulebook Command</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <label className="form-label">Execution Mode</label>
+                <select
+                  className="form-select"
+                  value={serverSettings.executionMode}
+                  onChange={(e) => {
+                    const newMode = e.target.value as 'container' | 'venv' | 'custom';
+                    setServerSettings({ ...serverSettings, executionMode: newMode });
+
+                    // Check prerequisites for the new execution mode
+                    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                      wsRef.current.send(JSON.stringify({
+                        type: 'check_prerequisites',
+                        executionMode: newMode
+                      }));
+                    }
+                  }}
+                >
+                  <option value="container">Container (Podman/Docker)</option>
+                  <option value="venv">Install in Temporary Virtual Environment</option>
+                  <option value="custom">Custom Path</option>
+                </select>
+                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                  Choose how ansible-rulebook should be executed
+                </small>
+                {!prerequisitesValid && prerequisitesMissing.length > 0 && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '8px',
+                    background: '#fff5f5',
+                    border: '1px solid #fc8181',
+                    borderRadius: '4px',
+                    fontSize: '0.9em'
+                  }}>
+                    <strong style={{ color: '#c53030' }}>⚠️ Missing Prerequisites:</strong>
+                    <ul style={{ margin: '4px 0 0 20px', color: '#742a2a' }}>
+                      {prerequisitesMissing.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {prerequisitesWarnings.length > 0 && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '8px',
+                    background: '#fffbeb',
+                    border: '1px solid #fbbf24',
+                    borderRadius: '4px',
+                    fontSize: '0.9em'
+                  }}>
+                    <strong style={{ color: '#92400e' }}>⚠️ Warnings:</strong>
+                    <ul style={{ margin: '4px 0 0 20px', color: '#78350f' }}>
+                      {prerequisitesWarnings.map((warning, idx) => (
+                        <li key={idx}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {serverSettings.executionMode === 'container' && (
+                <div className="form-group">
+                  <label className="form-label">Container Image</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={serverSettings.containerImage}
+                    onChange={(e) =>
+                      setServerSettings({ ...serverSettings, containerImage: e.target.value })
+                    }
+                    placeholder="quay.io/ansible/ansible-rulebook:main"
+                  />
+                  <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                    Container image to use for ansible-rulebook execution. Requires podman or docker.
+                  </small>
+                </div>
+              )}
+
+              {serverSettings.executionMode === 'venv' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Ansible Rulebook Path (Auto-filled after installation)</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={serverSettings.ansibleRulebookPath}
+                        onChange={(e) =>
+                          setServerSettings({ ...serverSettings, ansibleRulebookPath: e.target.value })
+                        }
+                        placeholder="Will be set after installation"
+                        style={{ flex: 1 }}
+                        readOnly
+                      />
+                      <button
+                        className="btn btn-secondary"
+                        onClick={installAnsibleRulebook}
+                        disabled={isInstallingAnsibleRulebook || !isConnected}
+                        title={!isConnected ? 'Connect to server first' : 'Install private copy of ansible-rulebook'}
+                      >
+                        {isInstallingAnsibleRulebook ? '⏳ Installing...' : '📦 Install'}
+                      </button>
+                    </div>
+                    <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                      Click Install to create a private isolated copy in a temporary directory.
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Ansible Collections to Install</label>
+                    <textarea
+                      className="form-textarea"
+                      value={collectionsToInstall}
+                      onChange={(e) => setCollectionsToInstall(e.target.value)}
+                      placeholder="ansible.eda&#10;community.general&#10;..."
+                      rows={3}
+                      style={{ minHeight: '80px' }}
+                    />
+                    <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                      Collections to install (one per line or comma-separated). Leave empty to skip collection installation.
+                    </small>
+                  </div>
+
+                  {installationLog && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      background: '#f7fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontFamily: 'Monaco, Menlo, monospace',
+                      fontSize: '12px',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      position: 'relative'
+                    }}>
+                      <button
+                        onClick={() => setInstallationLog('')}
+                        style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          background: 'transparent',
+                          border: 'none',
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                          color: '#718096',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = '#e2e8f0';
+                          e.currentTarget.style.color = '#2d3748';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = '#718096';
+                        }}
+                        title="Close installation log"
+                      >
+                        ✕
+                      </button>
+                      {installationLog}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {serverSettings.executionMode === 'custom' && (
+                <div className="form-group">
+                  <label className="form-label">Ansible Rulebook Command</label>
                   <input
                     type="text"
                     className="form-input"
@@ -2679,80 +2884,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                       setServerSettings({ ...serverSettings, ansibleRulebookPath: e.target.value })
                     }
                     placeholder="ansible-rulebook"
-                    style={{ flex: 1 }}
                   />
-                  <button
-                    className="btn btn-secondary"
-                    onClick={installAnsibleRulebook}
-                    disabled={isInstallingAnsibleRulebook || !isConnected}
-                    title={!isConnected ? 'Connect to server first' : 'Install private copy of ansible-rulebook'}
-                  >
-                    {isInstallingAnsibleRulebook ? '⏳ Installing...' : '📦 Install'}
-                  </button>
-                </div>
-                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                  Command or full path to ansible-rulebook executable. Click Install to create a private isolated copy.
-                </small>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Ansible Collections to Install</label>
-                <textarea
-                  className="form-textarea"
-                  value={collectionsToInstall}
-                  onChange={(e) => setCollectionsToInstall(e.target.value)}
-                  placeholder="ansible.eda&#10;community.general&#10;..."
-                  rows={3}
-                  style={{ minHeight: '80px' }}
-                />
-                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
-                  Collections to install (one per line or comma-separated). Leave empty to skip collection installation.
-                </small>
-              </div>
-
-              {installationLog && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  background: '#f7fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontFamily: 'Monaco, Menlo, monospace',
-                  fontSize: '12px',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  position: 'relative'
-                }}>
-                  <button
-                    onClick={() => setInstallationLog('')}
-                    style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      background: 'transparent',
-                      border: 'none',
-                      fontSize: '16px',
-                      cursor: 'pointer',
-                      color: '#718096',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = '#e2e8f0';
-                      e.currentTarget.style.color = '#2d3748';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = '#718096';
-                    }}
-                    title="Close installation log"
-                  >
-                    ✕
-                  </button>
-                  {installationLog}
+                  <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                    Command or full path to ansible-rulebook executable.
+                  </small>
                 </div>
               )}
 

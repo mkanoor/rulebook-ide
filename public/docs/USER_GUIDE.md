@@ -12,7 +12,9 @@ Welcome to the Ansible Rulebook IDE! This guide will help you create, edit, and 
 - [Rules and Conditions](#rules-and-conditions)
 - [Actions](#actions)
 - [Throttle Configuration](#throttle-configuration)
+- [Execution Modes](#execution-modes)
 - [Execution and Testing](#execution-and-testing)
+- [Status Footer](#status-footer)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Tips and Best Practices](#tips-and-best-practices)
 - [Additional Resources](#additional-resources)
@@ -43,6 +45,8 @@ For detailed information, see the [Official Ansible Rulebook Documentation](http
 
 ### Toolbar (Left to Right)
 
+**Editing Actions:**
+
 | Icon | Action | Description |
 |------|--------|-------------|
 | 📄 | New Rulebook | Create a new rulebook from template |
@@ -51,9 +55,25 @@ For detailed information, see the [Official Ansible Rulebook Documentation](http
 | 💾 | Export Rulebook | Save the rulebook to a file |
 | 📁 | Import Rulebook | Load a rulebook from a file |
 | 🔧 | Settings | Configure server and execution settings |
-| 🔍 | JSON Path Explorer | Test JSON paths and view webhook payloads |
-| ☁️ | Cloud Tunnel | Create public URLs for webhooks (requires ngrok) |
-| ℹ️ | About | View version and environment information |
+| 🔍 | JSON Path Explorer | Test JSON paths and view webhook payloads (shows notification badge when new webhooks arrive) |
+| ☁️ | Cloud Tunnel | Create public URLs for webhooks (only visible if ngrok token is configured) |
+
+**Execution Controls:**
+
+| Icon | Action | Description |
+|------|--------|-------------|
+| ▶ | Start Execution | Start ansible-rulebook with current rulebook (disabled if prerequisites not met) |
+| ⏹ | Stop Execution | Stop the running ansible-rulebook process (only visible when running) |
+| 🔗 | Send Webhook | Send test webhooks to running sources (only visible when running with webhook sources) |
+| 📋 | Event Log | Show/hide the event log panel (shows event count when events exist) |
+| 🗑️ | Clear Events | Clear all events from the event log (only visible when events exist) |
+
+**Help & Information (Far Right):**
+
+| Icon | Action | Description |
+|------|--------|-------------|
+| ❓ | Help | Open this user guide with searchable documentation |
+| ℹ️ | About | View ansible-rulebook version and environment information |
 
 ### Main Editor
 - **Left Panel**: Tree view of rulesets, sources, rules, and actions
@@ -63,6 +83,12 @@ For detailed information, see the [Official Ansible Rulebook Documentation](http
 - Fixed panel showing execution events
 - **Resizable**: Drag the top edge to adjust height
 - Shows event timestamps, types, and details
+
+### Status Footer (Bottom)
+- Always visible at the bottom of the screen
+- **Left side**: Real-time execution statistics (events processed, matched, suppressed, last rule fired)
+- **Right side**: System status (execution running/stopped, connection status)
+- See [Status Footer](#status-footer) for details
 
 ---
 
@@ -352,6 +378,117 @@ throttle:
 
 ---
 
+## Execution Modes
+
+The IDE supports three execution modes for running ansible-rulebook. Choose the mode that best fits your environment and needs.
+
+### Container Mode (Recommended for Quick Start)
+
+Run ansible-rulebook in a Podman or Docker container. This is the easiest way to get started.
+
+**Prerequisites:**
+- Podman or Docker installed
+- No Python or Java installation required
+- No ansible-rulebook installation needed
+
+**Setup:**
+1. Click **🔧 Settings** in the toolbar
+2. Select **Container (Podman/Docker)** as the execution mode
+3. Optionally specify a custom container image (default: `quay.io/ansible/ansible-rulebook:main`)
+4. The IDE will automatically verify if Podman or Docker is available
+
+**Benefits:**
+- ✅ No local dependencies required
+- ✅ Consistent environment across systems
+- ✅ Easy version management (just change the image)
+- ✅ Isolated from system Python/Java installations
+
+### Temporary Virtual Environment Mode
+
+Install ansible-rulebook in an isolated temporary virtual environment.
+
+**Prerequisites:**
+- Python 3 (tested with 3.9+)
+- Java Runtime Environment (JRE 17 or newer)
+- pip (Python package manager)
+
+**Setup:**
+1. Click **🔧 Settings** in the toolbar
+2. Select **Install in Temporary Virtual Environment**
+3. Optionally specify collections to install (default: `ansible.eda`)
+   - Add multiple collections separated by commas or newlines
+   - Leave empty to skip collection installation
+4. Click **📦 Install ansible-rulebook**
+5. Wait for the installation to complete (progress shown in the log)
+
+**What Gets Installed:**
+- Temporary Python virtual environment
+- ansible-core and ansible-rulebook packages
+- Specified Ansible collections
+- Automatic collections path configuration
+
+**Benefits:**
+- ✅ Isolated installation that doesn't interfere with system packages
+- ✅ Automatic collections installation
+- ✅ Easy cleanup (just delete the temp directory)
+- ✅ Custom collection selection
+
+### Custom Path Mode
+
+Use an existing ansible-rulebook installation on your system.
+
+**Prerequisites:**
+- Python 3 (tested with 3.9+)
+- Java Runtime Environment (JRE 17 or newer)
+- ansible-rulebook installed and accessible
+- Ansible collections installed separately (if needed)
+
+**Setup:**
+1. Click **🔧 Settings** in the toolbar
+2. Select **Custom Path**
+3. Specify the path to your ansible-rulebook binary
+   - Example: `/usr/local/bin/ansible-rulebook`
+   - Or: `/path/to/venv/bin/ansible-rulebook`
+4. Configure `ANSIBLE_COLLECTIONS_PATH` environment variable separately if needed
+
+**Benefits:**
+- ✅ Use your existing installation
+- ✅ Full control over versions and configurations
+- ✅ Works with custom virtual environments
+
+### Prerequisite Validation
+
+The IDE automatically checks for required dependencies when you:
+- Open Server Settings
+- Change the execution mode
+- Start the application
+
+**Missing Prerequisites Warning:**
+If prerequisites are missing, you'll see a red warning box with specific missing items:
+- For Container Mode: "podman or docker"
+- For Venv/Custom Mode: "python3", "java", or "pip"
+
+**Warnings:**
+Yellow warning boxes show non-critical issues like:
+- "python3 found but not working"
+- "pip not available"
+
+### Checking Your Version
+
+Click **ℹ️ About** in the toolbar to see:
+- ansible-rulebook version
+- Executable location
+- Python version
+- Java version
+- Platform information
+
+The version check adapts to your execution mode:
+- **Container Mode**: Shows version from the container image
+- **Venv Mode**: Shows version from the temporary installation
+- **Custom Mode**: Shows version from your custom path
+
+---
+
 ## Execution and Testing
 
 ### Starting Execution
@@ -364,9 +501,10 @@ throttle:
 ### Execution Requirements
 
 Before starting execution, ensure:
-- `ansible-rulebook` binary is installed and configured
-- Server settings are configured (Settings → Server Path)
-- At least one ruleset with sources and rules exists
+- **Execution mode is configured** (see [Execution Modes](#execution-modes))
+- **Prerequisites are met** for your chosen execution mode
+- **At least one ruleset** with sources and rules exists
+- **Server is connected** (green dot in footer)
 
 ### Viewing Events
 
@@ -393,6 +531,106 @@ To receive webhooks from external services:
 2. Click **☁️ Cloud Tunnel**
 3. Copy the public URL
 4. Use the URL in external services (GitHub, monitoring tools, etc.)
+
+---
+
+## Status Footer
+
+The footer at the bottom of the screen provides real-time status information about your rulebook execution.
+
+### Footer Sections
+
+The footer is divided into two main areas:
+
+#### Left Side - Execution Statistics
+
+Shows real-time statistics from the running rulebook:
+
+**Events Processed**: Total number of events received by ansible-rulebook
+- Updates in real-time as events flow through the system
+- Aggregated across all rulesets
+
+**Events Matched**: Number of events that matched at least one rule
+- Shows how many events triggered rule conditions
+- Helps understand rule effectiveness
+
+**Events Suppressed**: Events that were suppressed (e.g., by throttling)
+- Shows how many events were throttled or filtered out
+- Useful for monitoring throttle effectiveness
+
+**Last Rule Fired**: Name of the most recently triggered rule
+- Shows which rule last matched an event
+- Includes timestamp (e.g., "2 seconds ago", "5 minutes ago")
+- Truncates long rule names with ellipsis
+
+Example:
+```
+Events: 15 | Matched: 8 | Suppressed: 3 | Last: Handle Critical Alert (2s ago)
+```
+
+#### Right Side - System Status
+
+Shows connection and execution status:
+
+**Execution Status** (Running/Stopped):
+- 🟢 **Running** (green dot with white border): ansible-rulebook is actively executing
+- 🔴 **Stopped** (red dot, dimmed): ansible-rulebook is not running
+
+**Connection Status** (Connected/Disconnected):
+- 🟢 **Connected** (green dot with white border): WebSocket connection to backend is active
+- 🔴 **Disconnected** (red dot, dimmed): Backend server is not available
+
+### Status Indicators
+
+**Visual Design:**
+- **Active states** (Running/Connected): Bright green with glowing ring effect
+- **Inactive states** (Stopped/Disconnected): Red with reduced opacity
+- **No animation**: Status dots are static (no pulsing) for easier viewing
+
+**What Each Status Means:**
+
+| Execution | Connection | Meaning |
+|-----------|-----------|---------|
+| 🟢 Running | 🟢 Connected | Rulebook is executing and receiving events |
+| 🔴 Stopped | 🟢 Connected | Ready to start execution |
+| 🔴 Stopped | 🔴 Disconnected | Backend server is down or unreachable |
+| 🟢 Running | 🔴 Disconnected | Execution may be interrupted |
+
+### Understanding Statistics
+
+**Events Processed vs Matched:**
+- **Processed**: Total events received from all sources
+- **Matched**: Events that triggered at least one rule
+- If matched is low compared to processed, your conditions may be too strict
+
+**Events Suppressed:**
+- Shows effectiveness of throttling
+- High suppression may indicate alert storms being controlled
+- Zero suppression means all events are being processed
+
+**Last Rule Fired:**
+- Quick way to see which rules are actively triggering
+- Time indicator shows how recently (updates automatically)
+- Useful for troubleshooting and monitoring
+
+### Footer Tips
+
+**Monitoring Execution:**
+1. Watch the **Running/Stopped** indicator to confirm execution state
+2. Check **Events Processed** to verify events are flowing
+3. Monitor **Events Matched** to see if rules are triggering
+4. Use **Last Rule Fired** to track recent activity
+
+**Troubleshooting:**
+- If **Disconnected**: Check if the server is running (`npm run dev`)
+- If **Stopped**: Click **▶ Start Execution** to begin
+- If **Events Processed = 0**: Check event sources are configured correctly
+- If **Events Matched = 0**: Review rule conditions, they may not match incoming events
+
+**Statistics Reset:**
+- Statistics are cleared when you start a new execution
+- Statistics aggregate across all rulesets in the rulebook
+- Time indicators update automatically every second
 
 ---
 
@@ -490,9 +728,13 @@ To receive webhooks from external services:
 - Check that you're in a condition input field
 
 **Q: Execution won't start?**
-- Verify `ansible-rulebook` is installed
-- Check Settings → Server Path configuration
+- Check the execution mode is configured in Settings
+- Verify prerequisites are met (see [Execution Modes](#execution-modes))
+- For Container Mode: Ensure Podman or Docker is installed
+- For Venv Mode: Run the installation first
+- For Custom Mode: Verify the ansible-rulebook path is correct
 - Ensure at least one source is configured
+- Check footer shows "Connected" (green dot)
 
 **Q: Webhook not receiving events?**
 - Check the port is not in use

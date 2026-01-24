@@ -68,10 +68,55 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           <div className="help-markdown">
             <ReactMarkdown
               components={{
-                // Make links open in new tabs
-                a: ({ node, ...props }) => (
-                  <a {...props} target="_blank" rel="noopener noreferrer" />
-                ),
+                // Handle links: internal anchors scroll within modal, external links open in new tab
+                a: ({ node, href, ...props }) => {
+                  // Check if it's an internal anchor link (starts with #)
+                  if (href && href.startsWith('#')) {
+                    return (
+                      <a
+                        {...props}
+                        href={href}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Find the target element by ID (remove the # from href)
+                          const targetId = href.substring(1);
+                          const targetElement = document.getElementById(targetId);
+                          if (targetElement) {
+                            // Scroll within the help modal content
+                            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
+                        }}
+                      />
+                    );
+                  }
+                  // External links open in new tab
+                  return <a {...props} href={href} target="_blank" rel="noopener noreferrer" />;
+                },
+                // Add IDs to headings so they can be linked to
+                h1: ({ node, children, ...props }) => {
+                  const id = typeof children === 'string'
+                    ? children.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    : undefined;
+                  return <h1 {...props} id={id}>{children}</h1>;
+                },
+                h2: ({ node, children, ...props }) => {
+                  const id = typeof children === 'string'
+                    ? children.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    : undefined;
+                  return <h2 {...props} id={id}>{children}</h2>;
+                },
+                h3: ({ node, children, ...props }) => {
+                  const id = typeof children === 'string'
+                    ? children.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    : undefined;
+                  return <h3 {...props} id={id}>{children}</h3>;
+                },
+                h4: ({ node, children, ...props }) => {
+                  const id = typeof children === 'string'
+                    ? children.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    : undefined;
+                  return <h4 {...props} id={id}>{children}</h4>;
+                },
                 // Add syntax highlighting class to code blocks
                 code: ({ node, className, children, ...props }) => {
                   const isInline = !className?.includes('language-');

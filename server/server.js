@@ -65,6 +65,99 @@ function checkAnsibleBinary(path = 'ansible-rulebook') {
   });
 }
 
+// Check if required dependencies are installed based on execution mode
+// Returns: { valid: boolean, missing: string[], warnings: string[] }
+function checkExecutionModePrerequisites(executionMode) {
+  return new Promise((resolve) => {
+    const missing = [];
+    const warnings = [];
+    let checksCompleted = 0;
+    const totalChecks = executionMode === 'container' ? 2 : 3;
+
+    function checkComplete() {
+      checksCompleted++;
+      if (checksCompleted === totalChecks) {
+        resolve({
+          valid: missing.length === 0,
+          missing,
+          warnings
+        });
+      }
+    }
+
+    if (executionMode === 'container') {
+      // Check for podman or docker
+      exec('which podman', (podmanError) => {
+        if (podmanError) {
+          exec('which docker', (dockerError) => {
+            if (dockerError) {
+              missing.push('podman or docker');
+            }
+            checkComplete();
+          });
+        } else {
+          checkComplete();
+        }
+      });
+
+      // Check if podman/docker is actually working
+      exec('which podman', (podmanError) => {
+        const runtime = podmanError ? 'docker' : 'podman';
+        exec(`${runtime} --version`, (error, stdout) => {
+          if (error) {
+            warnings.push(`${runtime} found but not working: ${error.message}`);
+          }
+          checkComplete();
+        });
+      });
+    } else {
+      // For venv and custom modes, check python3, java, and ansible-rulebook dependencies
+
+      // Check python3
+      exec('which python3', (error, stdout) => {
+        if (error || !stdout.trim()) {
+          missing.push('python3');
+        } else {
+          // Verify python3 works
+          exec('python3 --version', (versionError) => {
+            if (versionError) {
+              warnings.push('python3 found but not working');
+            }
+          });
+        }
+        checkComplete();
+      });
+
+      // Check java
+      exec('which java', (error, stdout) => {
+        if (error || !stdout.trim()) {
+          missing.push('java');
+        } else {
+          // Verify java works
+          exec('java -version', (versionError) => {
+            if (versionError) {
+              warnings.push('java found but not working');
+            }
+          });
+        }
+        checkComplete();
+      });
+
+      // Check if pip is available (needed for venv mode)
+      if (executionMode === 'venv') {
+        exec('python3 -m pip --version', (error) => {
+          if (error) {
+            warnings.push('pip not available (python3 -m pip failed)');
+          }
+          checkComplete();
+        });
+      } else {
+        checkComplete();
+      }
+    }
+  });
+}
+
 // Helper function to kill a process and all its children
 function killProcessTree(pid, signal = 'SIGTERM') {
   return new Promise((resolve) => {
@@ -608,6 +701,8 @@ wss.on('connection', (ws, req) => {
             rulebook: data.rulebook,
             extraVars: data.extraVars,
             envVars: data.envVars || {},
+            executionMode: data.executionMode || 'custom',
+            containerImage: data.containerImage || 'quay.io/ansible/ansible-rulebook:main',
             ansibleRulebookPath: data.ansibleRulebookPath || 'ansible-rulebook',
             workingDirectory: data.workingDirectory || '',
             heartbeat: data.heartbeat || 0,
@@ -768,6 +863,32 @@ wss.on('connection', (ws, req) => {
           });
           break;
 
+        case 'check_prerequisites':
+          // Check if required dependencies are installed for the execution mode
+          const modeToCheck = data.executionMode || 'custom';
+          console.log(`Checking prerequisites for execution mode: ${modeToCheck}`);
+
+          const prereqResult = await checkExecutionModePrerequisites(modeToCheck);
+
+          if (prereqResult.valid) {
+            console.log(`✅ All prerequisites met for ${modeToCheck} mode`);
+          } else {
+            console.log(`⚠️  Missing prerequisites for ${modeToCheck} mode:`, prereqResult.missing.join(', '));
+          }
+
+          if (prereqResult.warnings.length > 0) {
+            console.log(`⚠️  Warnings:`, prereqResult.warnings.join(', '));
+          }
+
+          ws.send(JSON.stringify({
+            type: 'prerequisites_status',
+            executionMode: modeToCheck,
+            valid: prereqResult.valid,
+            missing: prereqResult.missing,
+            warnings: prereqResult.warnings
+          }));
+          break;
+
         case 'install_ansible_rulebook':
           console.log('📦 Starting ansible-rulebook installation...');
           console.log('WebSocket readyState:', ws.readyState);
@@ -781,66 +902,144 @@ wss.on('connection', (ws, req) => {
           break;
 
         case 'get_ansible_version':
+          const executionMode = data.executionMode || 'custom';
+          const containerImage = data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
           const ansiblePath = data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
 
-          exec(`${ansiblePath} --version`, (error, stdout, stderr) => {
-            if (error) {
-              console.error('Error getting ansible-rulebook version:', error);
+          let versionCommand;
+          if (executionMode === 'container') {
+            // For container mode, run the version command inside the container
+            // Check if podman is available, fall back to docker
+            exec('which podman', (podmanError) => {
+              const containerRuntime = podmanError ? 'docker' : 'podman';
+              versionCommand = `${containerRuntime} run --rm ${containerImage} ansible-rulebook --version`;
+
+              console.log(`Getting version from container: ${versionCommand}`);
+
+              exec(versionCommand, (error, stdout, stderr) => {
+                if (error) {
+                  console.error('Error getting ansible-rulebook version from container:', error);
+                  ws.send(JSON.stringify({
+                    type: 'ansible_version_response',
+                    success: false,
+                    version: 'Unknown',
+                    fullVersion: 'Unable to retrieve version information',
+                    error: error.message
+                  }));
+                  return;
+                }
+
+                const lines = stdout.split('\n');
+                const firstLine = lines[0].trim();
+                console.log(`ansible-rulebook version (container): ${firstLine}`);
+
+                const versionInfo = {
+                  version: firstLine,
+                  executableLocation: 'Container: ' + containerImage,
+                  droolsJpyVersion: '',
+                  javaHome: '',
+                  javaVersion: '',
+                  ansibleCoreVersion: '',
+                  pythonVersion: '',
+                  pythonExecutable: '',
+                  platform: ''
+                };
+
+                lines.forEach(line => {
+                  const trimmed = line.trim();
+                  if (trimmed.startsWith('Executable location =')) {
+                    versionInfo.executableLocation = 'Container: ' + containerImage + ' (' + trimmed.split('=')[1].trim() + ')';
+                  } else if (trimmed.startsWith('Drools_jpy version =')) {
+                    versionInfo.droolsJpyVersion = trimmed.split('=')[1].trim();
+                  } else if (trimmed.startsWith('Java home =')) {
+                    versionInfo.javaHome = trimmed.split('=')[1].trim();
+                  } else if (trimmed.startsWith('Java version =')) {
+                    versionInfo.javaVersion = trimmed.split('=')[1].trim();
+                  } else if (trimmed.startsWith('Ansible core version =')) {
+                    versionInfo.ansibleCoreVersion = trimmed.split('=')[1].trim();
+                  } else if (trimmed.startsWith('Python version =')) {
+                    versionInfo.pythonVersion = trimmed.split('=')[1].trim();
+                  } else if (trimmed.startsWith('Python executable =')) {
+                    versionInfo.pythonExecutable = trimmed.split('=')[1].trim();
+                  } else if (trimmed.startsWith('Platform =')) {
+                    versionInfo.platform = trimmed.split('=')[1].trim();
+                  }
+                });
+
+                ws.send(JSON.stringify({
+                  type: 'ansible_version_response',
+                  success: true,
+                  version: firstLine,
+                  fullVersion: stdout.trim(),
+                  versionInfo: versionInfo
+                }));
+              });
+            });
+          } else {
+            // For venv or custom mode, use the direct path
+            versionCommand = `${ansiblePath} --version`;
+
+            console.log(`Getting version from path: ${versionCommand}`);
+
+            exec(versionCommand, (error, stdout, stderr) => {
+              if (error) {
+                console.error('Error getting ansible-rulebook version:', error);
+                ws.send(JSON.stringify({
+                  type: 'ansible_version_response',
+                  success: false,
+                  version: 'Unknown',
+                  fullVersion: 'Unable to retrieve version information',
+                  error: error.message
+                }));
+                return;
+              }
+
+              const lines = stdout.split('\n');
+              const firstLine = lines[0].trim();
+              console.log(`ansible-rulebook version: ${firstLine}`);
+
+              const versionInfo = {
+                version: firstLine,
+                executableLocation: '',
+                droolsJpyVersion: '',
+                javaHome: '',
+                javaVersion: '',
+                ansibleCoreVersion: '',
+                pythonVersion: '',
+                pythonExecutable: '',
+                platform: ''
+              };
+
+              lines.forEach(line => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('Executable location =')) {
+                  versionInfo.executableLocation = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Drools_jpy version =')) {
+                  versionInfo.droolsJpyVersion = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Java home =')) {
+                  versionInfo.javaHome = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Java version =')) {
+                  versionInfo.javaVersion = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Ansible core version =')) {
+                  versionInfo.ansibleCoreVersion = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Python version =')) {
+                  versionInfo.pythonVersion = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Python executable =')) {
+                  versionInfo.pythonExecutable = trimmed.split('=')[1].trim();
+                } else if (trimmed.startsWith('Platform =')) {
+                  versionInfo.platform = trimmed.split('=')[1].trim();
+                }
+              });
+
               ws.send(JSON.stringify({
                 type: 'ansible_version_response',
-                success: false,
-                version: 'Unknown',
-                fullVersion: 'Unable to retrieve version information',
-                error: error.message
+                success: true,
+                version: firstLine,
+                fullVersion: stdout.trim(),
+                versionInfo: versionInfo
               }));
-              return;
-            }
-
-            const lines = stdout.split('\n');
-            const firstLine = lines[0].trim();
-            console.log(`ansible-rulebook version: ${firstLine}`);
-
-            const versionInfo = {
-              version: firstLine,
-              executableLocation: '',
-              droolsJpyVersion: '',
-              javaHome: '',
-              javaVersion: '',
-              ansibleCoreVersion: '',
-              pythonVersion: '',
-              pythonExecutable: '',
-              platform: ''
-            };
-
-            lines.forEach(line => {
-              const trimmed = line.trim();
-              if (trimmed.startsWith('Executable location =')) {
-                versionInfo.executableLocation = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Drools_jpy version =')) {
-                versionInfo.droolsJpyVersion = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Java home =')) {
-                versionInfo.javaHome = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Java version =')) {
-                versionInfo.javaVersion = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Ansible core version =')) {
-                versionInfo.ansibleCoreVersion = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Python version =')) {
-                versionInfo.pythonVersion = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Python executable =')) {
-                versionInfo.pythonExecutable = trimmed.split('=')[1].trim();
-              } else if (trimmed.startsWith('Platform =')) {
-                versionInfo.platform = trimmed.split('=')[1].trim();
-              }
             });
-
-            ws.send(JSON.stringify({
-              type: 'ansible_version_response',
-              success: true,
-              version: firstLine,
-              fullVersion: stdout.trim(),
-              versionInfo: versionInfo
-            }));
-          });
+          }
           break;
 
         case 'test_tunnel':
@@ -1110,10 +1309,33 @@ function spawnAnsibleRulebook(executionId) {
     process.env.ANSIBLE_RULEBOOK_PATH ||
     'ansible-rulebook';
 
+  // For container mode with --network host, get the actual host IP address
+  let wsUrl = `ws://localhost:${PORT}`;
+  if (execution.executionMode === 'container') {
+    // Try to get the host's actual IP address
+    const networkInterfaces = os.networkInterfaces();
+    let hostIp = '127.0.0.1';
+
+    // Find the first non-internal IPv4 address
+    for (const interfaceName in networkInterfaces) {
+      const addresses = networkInterfaces[interfaceName];
+      for (const addr of addresses) {
+        if (addr.family === 'IPv4' && !addr.internal) {
+          hostIp = addr.address;
+          break;
+        }
+      }
+      if (hostIp !== '127.0.0.1') break;
+    }
+
+    console.log(`Using host IP ${hostIp} for container WebSocket connection`);
+    wsUrl = `ws://${hostIp}:${PORT}`;
+  }
+
   const args = [
     '--worker',
     '--id', executionId,
-    '--websocket-url', `ws://localhost:${PORT}`
+    '--websocket-url', wsUrl
   ];
 
   if (execution.heartbeat && execution.heartbeat > 0) {
@@ -1134,19 +1356,21 @@ function spawnAnsibleRulebook(executionId) {
     ...execution.envVars
   };
 
-  // If ansible-rulebook is in a venv, automatically set ANSIBLE_COLLECTIONS_PATH
+  // If using venv execution mode, automatically set ANSIBLE_COLLECTIONS_PATH
+  // Only applies when we installed ansible-rulebook in a temporary venv
   // Expected path format: /path/to/venv/bin/ansible-rulebook or /path/to/venv/Scripts/ansible-rulebook.exe
-  if (ansibleRulebookPath.includes('/bin/ansible-rulebook') || ansibleRulebookPath.includes('\\Scripts\\ansible-rulebook')) {
+  if (execution.executionMode === 'venv' &&
+      (ansibleRulebookPath.includes('/bin/ansible-rulebook') || ansibleRulebookPath.includes('\\Scripts\\ansible-rulebook'))) {
     const venvDir = ansibleRulebookPath.replace(/[\/\\](bin|Scripts)[\/\\]ansible-rulebook(\.exe)?$/, '');
     const collectionsPath = path.join(venvDir, 'collections');
 
-    console.log(`Detected venv path: ${venvDir}`);
+    console.log(`Detected venv installation path: ${venvDir}`);
     console.log(`Looking for collections at: ${collectionsPath}`);
 
     // Check if collections directory exists
     if (fs.existsSync(collectionsPath)) {
       processEnv.ANSIBLE_COLLECTIONS_PATH = collectionsPath;
-      console.log(`✅ Auto-detected venv collections path: ${collectionsPath}`);
+      console.log(`✅ Auto-setting ANSIBLE_COLLECTIONS_PATH for venv installation: ${collectionsPath}`);
 
       // Verify the ansible.eda collection exists
       const edaCollectionPath = path.join(collectionsPath, 'ansible_collections', 'ansible', 'eda');
@@ -1159,10 +1383,72 @@ function spawnAnsibleRulebook(executionId) {
       console.log(`⚠️  Collections directory does not exist: ${collectionsPath}`);
       console.log(`   ansible-rulebook may not find source plugins from ansible.eda`);
     }
+  } else if (execution.executionMode === 'custom') {
+    console.log(`Using custom ansible-rulebook path: ${ansibleRulebookPath}`);
+    console.log(`ANSIBLE_COLLECTIONS_PATH not auto-configured for custom mode`);
   }
 
-  console.log(`Using ansible-rulebook command: ${ansibleRulebookPath}`);
-  console.log(`Full command: ${ansibleRulebookPath} ${args.join(' ')}`);
+  // Determine command and args based on execution mode
+  let command, commandArgs;
+
+  if (execution.executionMode === 'container') {
+    // Container mode: use podman/docker
+    const containerImage = execution.containerImage || 'quay.io/ansible/ansible-rulebook:main';
+
+    // Check if podman is available, fall back to docker
+    let containerRuntime = 'podman';
+    try {
+      exec(`which ${containerRuntime}`, (error) => {
+        if (error) {
+          containerRuntime = 'docker';
+          console.log(`Podman not found, using docker`);
+        }
+      });
+    } catch (e) {
+      containerRuntime = 'docker';
+    }
+
+    command = containerRuntime;
+    commandArgs = [
+      'run',
+      '--rm',
+      '-i',
+      '--network', 'host',
+    ];
+
+    // Add environment variables
+    Object.keys(processEnv).forEach(key => {
+      if (key !== 'PATH' && key !== 'HOME') { // Skip system env vars
+        commandArgs.push('-e', `${key}=${processEnv[key]}`);
+      }
+    });
+
+    // Add working directory mount if specified
+    if (execution.workingDirectory && execution.workingDirectory.trim()) {
+      commandArgs.push('-v', `${execution.workingDirectory}:/workspace`);
+      commandArgs.push('-w', '/workspace');
+    }
+
+    // Add the container image
+    commandArgs.push(containerImage);
+
+    // Add ansible-rulebook command and args
+    commandArgs.push('ansible-rulebook');
+    commandArgs.push(...args);
+
+    console.log(`Using container mode with ${containerRuntime}`);
+    console.log(`Container image: ${containerImage}`);
+    console.log(`Full command: ${command} ${commandArgs.join(' ')}`);
+  } else {
+    // Custom or venv mode: direct execution
+    command = ansibleRulebookPath;
+    commandArgs = args;
+
+    console.log(`Using ${execution.executionMode} mode`);
+    console.log(`Using ansible-rulebook command: ${ansibleRulebookPath}`);
+    console.log(`Full command: ${ansibleRulebookPath} ${args.join(' ')}`);
+  }
+
   console.log(`Working directory: ${execution.workingDirectory || 'current directory'}`);
   console.log(`Environment variables for ${executionId}:`, Object.keys(execution.envVars || {}).join(', ') || 'none');
   if (processEnv.ANSIBLE_COLLECTIONS_PATH) {
@@ -1174,11 +1460,11 @@ function spawnAnsibleRulebook(executionId) {
     env: processEnv
   };
 
-  if (execution.workingDirectory && execution.workingDirectory.trim()) {
+  if (execution.workingDirectory && execution.workingDirectory.trim() && execution.executionMode !== 'container') {
     spawnOptions.cwd = execution.workingDirectory;
   }
 
-  const ansibleProcess = spawn(ansibleRulebookPath, args, spawnOptions);
+  const ansibleProcess = spawn(command, commandArgs, spawnOptions);
 
   ansibleProcess.stdout.on('data', (data) => {
     const output = data.toString();
@@ -1326,7 +1612,7 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`🚀 Ansible Rulebook IDE Server`);
   console.log(`${'='.repeat(80)}`);
@@ -1334,6 +1620,7 @@ server.listen(PORT, async () => {
   console.log(`   Port: ${PORT}`);
   console.log(`   URL: http://localhost:${PORT}`);
   console.log(`   WebSocket: ws://localhost:${PORT}`);
+  console.log(`   Binding: 0.0.0.0 (accepts connections from all network interfaces)`);
   console.log(`${'='.repeat(80)}\n`);
 
   // Check for ansible-rulebook binary (initial check uses default command name)
