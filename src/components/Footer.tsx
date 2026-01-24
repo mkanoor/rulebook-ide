@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import './Footer.css';
 
 interface FooterProps {
@@ -16,6 +16,16 @@ export const Footer: React.FC<FooterProps> = ({
   ruleCount,
   rulesetStats,
 }) => {
+  // Force re-render every second to update relative time displays
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
   // Aggregate stats across all rulesets
   const aggregatedStats = useMemo<{
     totalEventsProcessed: number;
