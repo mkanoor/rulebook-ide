@@ -618,6 +618,13 @@ function App() {
         )}
         <button
           className="btn btn-outline btn-icon"
+          onClick={() => window.open('/docs/USER_GUIDE.md', '_blank')}
+          data-title="Help & Documentation"
+        >
+          ❓
+        </button>
+        <button
+          className="btn btn-outline btn-icon"
           onClick={() => setShowAboutModal(true)}
           data-title="About"
         >
