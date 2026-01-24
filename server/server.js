@@ -670,6 +670,8 @@ wss.on('connection', (ws, req) => {
             }
 
             // Send ControllerInfo if EDA_CONTROLLER environment variables are set
+            // In worker mode, env vars from cli.py are overwritten by request_workload()
+            // so we must send ControllerInfo via WebSocket
             const controllerInfo = {};
             let hasControllerInfo = false;
 
@@ -698,12 +700,14 @@ wss.on('connection', (ws, req) => {
             }
 
             if (hasControllerInfo) {
-              console.log(`Sending ControllerInfo to worker ${executionId}:`,
+              console.log(`✅ Sending ControllerInfo to worker ${executionId}:`,
                 Object.keys(controllerInfo).map(k => k === 'token' || k === 'password' ? `${k}=***` : `${k}=${controllerInfo[k]}`).join(', '));
               ws.send(JSON.stringify({
                 type: 'ControllerInfo',
                 ...controllerInfo
               }));
+            } else {
+              console.log(`No ControllerInfo to send (no EDA_CONTROLLER_* env vars found)`);
             }
 
             ws.send(JSON.stringify({
