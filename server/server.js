@@ -1462,39 +1462,52 @@ function spawnAnsibleRulebook(executionId) {
     // Extract webhook ports from the rulebook for port mapping
     const webhookPorts = new Set();
     try {
+      console.log(`Parsing rulebook to detect webhook ports...`);
       const parsed = yaml.load(execution.rulebook);
+      console.log(`Parsed rulebook, found ${Array.isArray(parsed) ? parsed.length : 0} ruleset(s)`);
+
       if (Array.isArray(parsed)) {
         for (const ruleset of parsed) {
+          console.log(`Checking ruleset: ${ruleset.name}`);
           if (ruleset.sources && Array.isArray(ruleset.sources)) {
+            console.log(`  Found ${ruleset.sources.length} source(s)`);
             for (const source of ruleset.sources) {
               // Check for webhook sources (generic, webhook, alertmanager, etc.)
               const sourceKeys = Object.keys(source).filter(k => k !== 'name' && k !== 'filters');
+              console.log(`  Source keys:`, sourceKeys);
               for (const sourceKey of sourceKeys) {
                 const sourceConfig = source[sourceKey];
+                console.log(`  Checking source ${sourceKey}, config:`, sourceConfig);
                 if (sourceConfig && typeof sourceConfig === 'object' && sourceConfig.port) {
                   webhookPorts.add(sourceConfig.port);
-                  console.log(`Detected webhook port ${sourceConfig.port} from source ${sourceKey}`);
+                  console.log(`✅ Detected webhook port ${sourceConfig.port} from source ${sourceKey}`);
                 }
               }
             }
           }
         }
       }
+      console.log(`Total webhook ports detected: ${webhookPorts.size}`, Array.from(webhookPorts));
     } catch (error) {
       console.log(`Warning: Could not parse rulebook for webhook ports: ${error.message}`);
     }
 
-    // On macOS (Darwin), use port mapping instead of --network host
+    // On macOS (Darwin), --network host doesn't work (Podman runs in VM)
     // On Linux, --network host works correctly
     const isMacOS = os.platform() === 'darwin';
 
-    if (isMacOS && webhookPorts.size > 0) {
+    if (isMacOS) {
       // macOS: Use explicit port mappings for webhook sources
-      console.log(`macOS detected: Using port mappings instead of --network host`);
-      webhookPorts.forEach(port => {
-        commandArgs.push('-p', `${port}:${port}`);
-        console.log(`Added port mapping: -p ${port}:${port}`);
-      });
+      // Note: --network host doesn't work on macOS because Podman runs in a VM
+      if (webhookPorts.size > 0) {
+        console.log(`macOS detected: Adding port mappings for ${webhookPorts.size} webhook port(s)`);
+        webhookPorts.forEach(port => {
+          commandArgs.push('-p', `${port}:${port}`);
+          console.log(`Added port mapping: -p ${port}:${port}`);
+        });
+      } else {
+        console.log(`macOS detected: No webhook ports found, using default bridge network`);
+      }
     } else {
       // Linux: Use --network host (more efficient and works for all ports)
       commandArgs.push('--network', 'host');
