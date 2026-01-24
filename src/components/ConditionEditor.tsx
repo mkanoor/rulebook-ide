@@ -92,13 +92,13 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
       setConditions([condition.toString()]);
     } else if (typeof condition === 'object') {
       if ('any' in condition) {
-        setConditions(condition.any);
+        setConditions(condition.any.length > 0 ? condition.any : ['']);
         setTimeout('');
       } else if ('all' in condition) {
-        setConditions(condition.all);
+        setConditions(condition.all.length > 0 ? condition.all : ['']);
         setTimeout(condition.timeout || '');
       } else if ('not_all' in condition) {
-        setConditions(condition.not_all);
+        setConditions(condition.not_all.length > 0 ? condition.not_all : ['']);
         setTimeout(condition.timeout);
       }
     } else {
@@ -127,21 +127,24 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         onChange(value);
       }
     } else if (type === 'any') {
+      const filteredConds = conds.filter(c => c.trim() !== '');
       const anyCondition: AnyCondition = {
-        any: conds.filter(c => c.trim() !== ''),
+        any: filteredConds.length > 0 ? filteredConds : [''], // Ensure at least one condition
       };
       onChange(anyCondition);
     } else if (type === 'all') {
+      const filteredConds = conds.filter(c => c.trim() !== '');
       const allCondition: AllCondition = {
-        all: conds.filter(c => c.trim() !== ''),
+        all: filteredConds.length > 0 ? filteredConds : [''], // Ensure at least one condition
       };
       if (timeoutValue.trim()) {
         allCondition.timeout = timeoutValue;
       }
       onChange(allCondition);
     } else if (type === 'not_all') {
+      const filteredConds = conds.filter(c => c.trim() !== '');
       const notAllCondition: NotAllCondition = {
-        not_all: conds.filter(c => c.trim() !== ''),
+        not_all: filteredConds.length > 0 ? filteredConds : [''], // Ensure at least one condition
         timeout: timeoutValue || '10 seconds', // Default timeout
       };
       onChange(notAllCondition);
