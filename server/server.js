@@ -17,6 +17,11 @@ const rootDir = join(__dirname, '..');
 const PORT = process.env.PORT || 5555;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
+// Browser log level configuration
+// Set LOG_LEVEL environment variable to control browser console logging
+// Valid values: DEBUG, INFO, WARN, ERROR, NONE
+const BROWSER_LOG_LEVEL = process.env.LOG_LEVEL || 'INFO';
+
 // Store active connections and execution data
 const executions = new Map();
 const clients = new Map();
@@ -297,6 +302,11 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({
             type: 'binary_status',
             found: ansibleBinaryFound
+          }));
+          // Send log level configuration to browser
+          ws.send(JSON.stringify({
+            type: 'log_level_config',
+            logLevel: BROWSER_LOG_LEVEL
           }));
           break;
 

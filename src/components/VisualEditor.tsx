@@ -6,6 +6,7 @@ import { VisualSourceEditor } from './VisualSourceEditor';
 import { ConditionEditor } from './ConditionEditor';
 import { Modal } from './common/Modal';
 import { validateRulesetArray, formatValidationErrors } from '../utils/schemaValidator';
+import { logger, LogLevel } from '../utils/logger';
 import '../styles/VisualEditor.css';
 
 interface VisualEditorProps {
@@ -68,6 +69,7 @@ export interface ServerSettings {
   autoShowJsonExplorer: boolean;
   jsonPathPrefix: string;
   templatePath: string;
+  browserLogLevel: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'NONE';
 }
 
 const DEFAULT_SETTINGS: ServerSettings = {
@@ -80,6 +82,7 @@ const DEFAULT_SETTINGS: ServerSettings = {
   autoShowJsonExplorer: false,
   jsonPathPrefix: 'event',
   templatePath: '/templates/default-rulebook.yml',
+  browserLogLevel: 'INFO',
 };
 
 const loadSettings = (): ServerSettings => {
@@ -370,6 +373,21 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     }
   }, [isConnected, isRunning, webhookPorts.length, events.length, binaryFound, binaryError, onExecutionStateChange]);
 
+  // Apply saved log level on mount
+  useEffect(() => {
+    const levelMap: { [key: string]: LogLevel } = {
+      'DEBUG': LogLevel.DEBUG,
+      'INFO': LogLevel.INFO,
+      'WARN': LogLevel.WARN,
+      'ERROR': LogLevel.ERROR,
+      'NONE': LogLevel.NONE,
+    };
+    const level = levelMap[serverSettings.browserLogLevel];
+    if (level !== undefined) {
+      logger.setLogLevel(level);
+    }
+  }, []);
+
   // Auto-connect WebSocket on mount
   useEffect(() => {
     connectWebSocket();
@@ -607,6 +625,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
           switch (message.type) {
             case 'registered':
+              break;
+
+            case 'log_level_config':
+              // Set browser log level from server configuration
+              if (message.logLevel) {
+                const levelMap: { [key: string]: LogLevel } = {
+                  'DEBUG': LogLevel.DEBUG,
+                  'INFO': LogLevel.INFO,
+                  'WARN': LogLevel.WARN,
+                  'ERROR': LogLevel.ERROR,
+                  'NONE': LogLevel.NONE,
+                };
+                const level = levelMap[message.logLevel.toUpperCase()];
+                if (level !== undefined) {
+                  logger.setLogLevel(level);
+                  console.log(`Browser log level set to: ${message.logLevel}`);
+                }
+              }
               break;
 
             case 'binary_status':
@@ -2347,6 +2383,21 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               className="btn btn-primary"
               onClick={() => {
                 saveSettings(serverSettings);
+
+                // Apply browser log level immediately
+                const levelMap: { [key: string]: LogLevel } = {
+                  'DEBUG': LogLevel.DEBUG,
+                  'INFO': LogLevel.INFO,
+                  'WARN': LogLevel.WARN,
+                  'ERROR': LogLevel.ERROR,
+                  'NONE': LogLevel.NONE,
+                };
+                const level = levelMap[serverSettings.browserLogLevel];
+                if (level !== undefined) {
+                  logger.setLogLevel(level);
+                  logger.info(`Browser log level changed to: ${serverSettings.browserLogLevel}`);
+                }
+
                 setShowSettingsModal(false);
                 // Trigger binary check after settings update
                 if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -2507,6 +2558,26 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 />
                 <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
                   Path to YAML template file used when creating new rulebooks (relative to public folder or absolute URL)
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Browser Log Level</label>
+                <select
+                  className="form-select"
+                  value={serverSettings.browserLogLevel}
+                  onChange={(e) =>
+                    setServerSettings({ ...serverSettings, browserLogLevel: e.target.value as ServerSettings['browserLogLevel'] })
+                  }
+                >
+                  <option value="DEBUG">DEBUG - Show all logs (most verbose)</option>
+                  <option value="INFO">INFO - Show info, warnings, and errors</option>
+                  <option value="WARN">WARN - Show warnings and errors only</option>
+                  <option value="ERROR">ERROR - Show errors only</option>
+                  <option value="NONE">NONE - Disable all browser logging</option>
+                </select>
+                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                  Control browser console logging verbosity. Set to DEBUG to see detailed logs for troubleshooting browser issues.
                 </small>
               </div>
             </div>

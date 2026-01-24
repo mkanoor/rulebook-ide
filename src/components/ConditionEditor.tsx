@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Condition, AllCondition, AnyCondition, NotAllCondition } from '../types/rulebook';
 import { getConditionType } from '../types/rulebook';
 import { validateCondition } from '../conditionValidator';
+import { logger } from '../utils/logger';
 
 interface ConditionEditorProps {
   condition: Condition;
@@ -160,9 +161,15 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
       // Set default timeout for not_all
       const newTimeout = '10 seconds';
       setTimeout(newTimeout);
-      updateCondition(newType, conditions, newTimeout);
+      // When switching from simple to not_all, use the simple condition
+      const newConds = simpleCondition ? [simpleCondition] : [''];
+      setConditions(newConds);
+      updateCondition(newType, newConds, newTimeout);
     } else {
-      updateCondition(newType, conditions, timeout);
+      // When switching from simple to any/all, preserve the simple condition
+      const newConds = simpleCondition ? [simpleCondition] : [''];
+      setConditions(newConds);
+      updateCondition(newType, newConds, timeout);
     }
   };
 
@@ -187,7 +194,8 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const handleAddCondition = () => {
     const newConditions = [...conditions, ''];
     setConditions(newConditions);
-    updateCondition(conditionType, newConditions, timeout);
+    // Don't call updateCondition here - the empty string will be filtered out anyway
+    // The user needs to type something first, which will trigger handleConditionChange
   };
 
   const handleDeleteCondition = (index: number) => {
