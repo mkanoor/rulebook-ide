@@ -3,6 +3,7 @@ import * as yaml from 'js-yaml';
 import type { Ruleset } from './types/rulebook';
 import { VisualEditor, type VisualEditorRef, type ExecutionState } from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
+import { HelpModal } from './components/HelpModal';
 import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
@@ -18,6 +19,7 @@ function App() {
   const [ansibleVersion, setAnsibleVersion] = useState<string>('v1.0.0');
   const [ansibleVersionInfo, setAnsibleVersionInfo] = useState<any>(null);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [rulesets, setRulesets] = useState<Ruleset[]>([
     {
       name: 'Example Ruleset',
@@ -618,7 +620,7 @@ function App() {
         )}
         <button
           className="btn btn-outline btn-icon"
-          onClick={() => window.open('/docs/USER_GUIDE.md', '_blank')}
+          onClick={() => setShowHelpModal(true)}
           data-title="Help & Documentation"
         >
           ❓
@@ -847,6 +849,12 @@ function App() {
               )}
             </div>
       </Modal>
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
     </div>
   );
 }
