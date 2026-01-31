@@ -122,23 +122,37 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         wordStart = beforeCursor.search(/[\w.]*$/);
       }
     } else {
-      // For operators, keywords, etc. - insert at current position with proper spacing
-      // Find the start of any trailing whitespace
-      const match = beforeCursor.match(/\s*$/);
-      wordStart = currentPos - (match ? match[0].length : 0);
+      // For operators, keywords, values, etc.
+      if (suggestion.type === 'operator') {
+        // For operators - insert at current position with proper spacing
+        // Find the start of any trailing whitespace
+        const match = beforeCursor.match(/\s*$/);
+        wordStart = currentPos - (match ? match[0].length : 0);
 
-      // Add space before operator if there isn't one already
-      const charBeforeOperator = value[wordStart - 1];
-      const needsSpaceBefore = wordStart > 0 && charBeforeOperator && charBeforeOperator !== ' ';
+        // Add space before operator if there isn't one already
+        const charBeforeOperator = value[wordStart - 1];
+        const needsSpaceBefore = wordStart > 0 && charBeforeOperator && charBeforeOperator !== ' ';
 
-      if (needsSpaceBefore && suggestion.type === 'operator') {
-        textToInsert = ' ' + textToInsert;
-      }
+        if (needsSpaceBefore) {
+          textToInsert = ' ' + textToInsert;
+        }
 
-      // Add space after operator if it doesn't already have one
-      const needsSpaceAfter = suggestion.type === 'operator' && !textToInsert.endsWith(' ');
-      if (needsSpaceAfter) {
-        textToInsert = textToInsert + ' ';
+        // Add space after operator if it doesn't already have one
+        const needsSpaceAfter = !textToInsert.endsWith(' ');
+        if (needsSpaceAfter) {
+          textToInsert = textToInsert + ' ';
+        }
+      } else {
+        // For keywords and values (true, false, null, etc.) - replace the current word
+        // Find the start of the current word (alphanumeric characters)
+        const match = beforeCursor.match(/\w+$/);
+        if (match) {
+          // Replace the partial word
+          wordStart = currentPos - match[0].length;
+        } else {
+          // No partial word, insert at current position
+          wordStart = currentPos;
+        }
       }
     }
 

@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as yaml from 'js-yaml';
-import type { Ruleset, Condition, Action } from '../types/rulebook';
+import type { Ruleset, Condition, Action, Rule } from '../types/rulebook';
 import { getActionType, getActionsArray, getConditionType } from '../types/rulebook';
 import { VisualSourceEditor } from './VisualSourceEditor';
 import { ConditionEditor } from './ConditionEditor';
 import { ThrottleEditor } from './ThrottleEditor';
 import { Modal } from './common/Modal';
 import { validateRulesetArray, formatValidationErrors } from '../utils/schemaValidator';
+import { validateAllConditions, formatConditionErrors, getConditionErrorSummary, getFirstInvalidConditionLocation } from '../utils/rulebookValidator';
 import { logger, LogLevel } from '../utils/logger';
+import {
+  generateConfigHash,
+  getCachedVersionInfo,
+  setCachedVersionInfo,
+  getCachedCollectionList,
+  setCachedCollectionList
+} from '../utils/configCache';
 import '../styles/VisualEditor.css';
 
 interface VisualEditorProps {
@@ -16,6 +24,7 @@ interface VisualEditorProps {
   onExecutionStateChange?: (state: ExecutionState) => void;
   onWebhookReceived?: (payload: unknown) => void;
   onVersionInfoReceived?: (version: string, versionInfo: any) => void;
+  onCollectionListReceived?: (collections: any[]) => void;
   onStatsChange?: (stats: Map<string, any>) => void;
 }
 
@@ -26,6 +35,7 @@ export interface ExecutionState {
   eventCount: number;
   binaryFound: boolean;
   binaryError: string | null;
+  executionMode: 'container' | 'venv' | 'custom';
 }
 
 export interface VisualEditorRef {
@@ -37,6 +47,7 @@ export interface VisualEditorRef {
   clearEvents: () => void;
   openCloudTunnel: () => void;
   getSettings: () => ServerSettings;
+  navigateToRule: (rulesetIndex: number, ruleIndex: number) => void;
 }
 
 type SelectedItem =
@@ -128,6 +139,7 @@ export const VisualEditor = forwardRef<VisualEditorRef, VisualEditorProps>(({
   onExecutionStateChange,
   onWebhookReceived,
   onVersionInfoReceived,
+  onCollectionListReceived,
   onStatsChange,
 }, ref) => {
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
@@ -189,12 +201,6 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   const [actionParams, setActionParams] = useState<Record<string, string>>({
     msg: 'Action triggered'
   });
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    rulesetIndex: number;
-  } | null>(null);
   const [ngrokTunnels, setNgrokTunnels] = useState<Map<number, { url: string; tunnelId: string; forwardTo: number | null }>>(new Map());
   const [testingTunnel, setTestingTunnel] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -204,6 +210,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   // Local state for properties panel JSON editing
   const [actionConfigText, setActionConfigText] = useState('{}');
   const [actionConfigError, setActionConfigError] = useState<string | null>(null);
+
+  // Track rules with invalid conditions
+  const [invalidRules, setInvalidRules] = useState<Set<string>>(new Set());
+
+  // Track current config hash to detect changes
+  const [currentConfigHash, setCurrentConfigHash] = useState<string>('');
+
+  // Context menu state for rule copy/paste
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    rulesetIndex: number;
+    ruleIndex?: number; // Optional for ruleset-level context menu
+  } | null>(null);
+  const [copiedRule, setCopiedRule] = useState<{
+    rule: Rule;
+    sourceRulesetName: string;
+  } | null>(null);
 
   // Validation state for name uniqueness
   const [rulesetNameError, setRulesetNameError] = useState<string | null>(null);
@@ -420,6 +444,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     getSettings: () => {
       return serverSettings;
     },
+    navigateToRule: (rulesetIndex: number, ruleIndex: number) => {
+      // Select the rule with the invalid condition
+      setSelectedItem({ type: 'rule', rulesetIndex, ruleIndex });
+    },
   }));
 
   // Notify parent of execution state changes
@@ -432,9 +460,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         eventCount: events.length,
         binaryFound,
         binaryError,
+        executionMode: serverSettings.executionMode,
       });
     }
-  }, [isConnected, isRunning, webhookPorts.length, events.length, binaryFound, binaryError, onExecutionStateChange]);
+  }, [isConnected, isRunning, webhookPorts.length, events.length, binaryFound, binaryError, serverSettings.executionMode, onExecutionStateChange]);
 
   // Apply saved log level on mount
   useEffect(() => {
@@ -572,6 +601,31 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     }
   }, [rulesetStats, onStatsChange]);
 
+  // Validate all conditions and track which rules have errors
+  useEffect(() => {
+    const errors = validateAllConditions(rulesets);
+    const invalidRuleKeys = new Set<string>();
+
+    errors.forEach(error => {
+      const key = `${error.rulesetIndex}-${error.ruleIndex}`;
+      invalidRuleKeys.add(key);
+    });
+
+    setInvalidRules(invalidRuleKeys);
+  }, [rulesets]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu(null);
+    };
+
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
+
   // Source config is now handled by VisualSourceEditor component
 
   // Sync action config text when selected item changes
@@ -698,13 +752,41 @@ EDA_CONTROLLER_SSL_VERIFY=`);
           executionMode: serverSettings.executionMode
         }));
 
-        // Request ansible-rulebook version
-        ws.send(JSON.stringify({
-          type: 'get_ansible_version',
-          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-          executionMode: serverSettings.executionMode,
-          containerImage: serverSettings.containerImage
-        }));
+        // Generate config hash for caching
+        const configHash = generateConfigHash(
+          serverSettings.executionMode,
+          serverSettings.containerImage,
+          serverSettings.ansibleRulebookPath
+        );
+        setCurrentConfigHash(configHash);
+
+        // Check cache for version info
+        const cachedVersion = getCachedVersionInfo(configHash);
+        if (cachedVersion && onVersionInfoReceived) {
+          onVersionInfoReceived(cachedVersion.version, cachedVersion.versionInfo);
+        } else {
+          // Request ansible-rulebook version from server
+          ws.send(JSON.stringify({
+            type: 'get_ansible_version',
+            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+            executionMode: serverSettings.executionMode,
+            containerImage: serverSettings.containerImage
+          }));
+        }
+
+        // Check cache for collection list
+        const cachedCollections = getCachedCollectionList(configHash);
+        if (cachedCollections && onCollectionListReceived) {
+          onCollectionListReceived(cachedCollections);
+        } else {
+          // Request ansible collection list from server
+          ws.send(JSON.stringify({
+            type: 'get_collection_list',
+            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+            executionMode: serverSettings.executionMode,
+            containerImage: serverSettings.containerImage
+          }));
+        }
 
         // Request current ngrok tunnel state to sync with backend
         ws.send(JSON.stringify({
@@ -765,6 +847,20 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             case 'ansible_version_response':
               if (message.success && onVersionInfoReceived) {
                 onVersionInfoReceived(message.version, message.versionInfo);
+                // Cache the version info
+                if (currentConfigHash) {
+                  setCachedVersionInfo(currentConfigHash, message.version, message.versionInfo);
+                }
+              }
+              break;
+
+            case 'collection_list_response':
+              if (message.success && onCollectionListReceived) {
+                onCollectionListReceived(message.collections || []);
+                // Cache the collection list
+                if (currentConfigHash) {
+                  setCachedCollectionList(currentConfigHash, message.collections || []);
+                }
               }
               break;
 
@@ -1012,6 +1108,29 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                     type: 'check_binary',
                     ansibleRulebookPath: message.path
                   }));
+
+                  // Generate new config hash for newly installed ansible-rulebook
+                  const newConfigHash = generateConfigHash(
+                    serverSettings.executionMode,
+                    serverSettings.containerImage,
+                    message.path
+                  );
+                  setCurrentConfigHash(newConfigHash);
+
+                  // Fetch fresh data (ignore cache for new installations)
+                  wsRef.current.send(JSON.stringify({
+                    type: 'get_ansible_version',
+                    ansibleRulebookPath: message.path,
+                    executionMode: serverSettings.executionMode,
+                    containerImage: serverSettings.containerImage
+                  }));
+
+                  wsRef.current.send(JSON.stringify({
+                    type: 'get_collection_list',
+                    ansibleRulebookPath: message.path,
+                    executionMode: serverSettings.executionMode,
+                    containerImage: serverSettings.containerImage
+                  }));
                 }
               } else {
                 setInstallationLog(prev => prev + `\n❌ Installation failed: ${message.error}\n`);
@@ -1073,6 +1192,21 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   };
 
   const confirmStartExecution = () => {
+    // Validate all conditions before execution
+    const conditionErrors = validateAllConditions(rulesets);
+    if (conditionErrors.length > 0) {
+      const summary = getConditionErrorSummary(conditionErrors);
+      const details = formatConditionErrors(conditionErrors);
+      const location = getFirstInvalidConditionLocation(conditionErrors);
+      const errorMsg = `❌ Cannot start execution with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before starting execution.\n\n💡 Click OK to jump to the first invalid condition.`;
+
+      const shouldNavigate = window.confirm(errorMsg);
+      if (shouldNavigate && location) {
+        setSelectedItem({ type: 'rule', rulesetIndex: location.rulesetIndex, ruleIndex: location.ruleIndex });
+      }
+      return;
+    }
+
     // Validate rulesets before execution
     try {
       const validationErrors = validateRulesetArray(rulesets);
@@ -1492,6 +1626,84 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     return triggeredRules.has(key);
   };
 
+  const isRuleInvalid = (rulesetIndex: number, ruleIndex: number): boolean => {
+    const key = `${rulesetIndex}-${ruleIndex}`;
+    return invalidRules.has(key);
+  };
+
+  const handleCopyRule = (rulesetIndex: number, ruleIndex: number) => {
+    const ruleset = rulesets[rulesetIndex];
+    const rule = ruleset.rules[ruleIndex];
+    setCopiedRule({
+      rule: JSON.parse(JSON.stringify(rule)), // Deep copy
+      sourceRulesetName: ruleset.name,
+    });
+    setContextMenu(null);
+
+    // Show feedback
+    logger.info(`Copied rule "${rule.name}" from ruleset "${ruleset.name}"`);
+  };
+
+  const handlePasteRule = (targetRulesetIndex: number) => {
+    if (!copiedRule) return;
+
+    const newRulesets = [...rulesets];
+    const targetRuleset = newRulesets[targetRulesetIndex];
+
+    // Create a copy of the rule
+    const newRule = JSON.parse(JSON.stringify(copiedRule.rule));
+
+    // Generate a unique name for the pasted rule
+    const baseName = copiedRule.rule.name;
+    let newName = `${baseName} (Copy)`;
+    let counter = 1;
+
+    // Check if name already exists in target ruleset
+    while (targetRuleset.rules.some(r => r.name === newName)) {
+      counter++;
+      newName = `${baseName} (Copy ${counter})`;
+    }
+
+    newRule.name = newName;
+
+    // Add the rule to the target ruleset
+    targetRuleset.rules.push(newRule);
+
+    onRulesetsChange(newRulesets);
+    setContextMenu(null);
+
+    // Show feedback
+    logger.info(`Pasted rule "${newName}" into ruleset "${targetRuleset.name}"`);
+
+    // Select the newly pasted rule
+    setSelectedItem({
+      type: 'rule',
+      rulesetIndex: targetRulesetIndex,
+      ruleIndex: targetRuleset.rules.length - 1,
+    });
+  };
+
+  // Keyboard shortcuts for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+C or Cmd+C to copy
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedItem?.type === 'rule') {
+        e.preventDefault();
+        handleCopyRule(selectedItem.rulesetIndex, selectedItem.ruleIndex);
+      }
+
+      // Ctrl+V or Cmd+V to paste
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && copiedRule && selectedItem?.type === 'rule') {
+        e.preventDefault();
+        handlePasteRule(selectedItem.rulesetIndex);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItem, copiedRule]);
+
   const getSourceTypeAndArgs = (source: any): { type: string; args: any } => {
     // Extract the source type (first key that's not 'name' or 'filters')
     const { name, filters, ...rest } = source;
@@ -1700,6 +1912,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       );
       onRulesetsChange(newRulesets);
       setSelectedItem(null);
+      setContextMenu(null); // Close context menu if open
     }
   };
 
@@ -2213,8 +2426,8 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                   onClick={() => setSelectedItem({ type: 'ruleset', rulesetIndex })}
                   onContextMenu={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     setContextMenu({
-                      visible: true,
                       x: e.clientX,
                       y: e.clientY,
                       rulesetIndex,
@@ -2245,6 +2458,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                     {ruleset.rules.map((rule, ruleIndex) => {
                       const isTriggered = isRuleTriggered(ruleset.name, rule.name);
                       const trigger = isTriggered ? triggeredRules.get(`${ruleset.name}::${rule.name}`) : undefined;
+                      const hasInvalidCondition = isRuleInvalid(rulesetIndex, ruleIndex);
 
                       return (
                         <div
@@ -2255,7 +2469,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                             selectedItem.ruleIndex === ruleIndex
                               ? 'selected'
                               : ''
-                          } ${isTriggered ? 'rule-triggered' : ''}`}
+                          } ${isTriggered ? 'rule-triggered' : ''} ${hasInvalidCondition ? 'rule-invalid' : ''}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedItem({ type: 'rule', rulesetIndex, ruleIndex });
@@ -2267,16 +2481,66 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                               setShowTriggerEventModal(true);
                             }
                           }}
-                          title={isTriggered && trigger ? "Double-click to view triggering event" : undefined}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setContextMenu({
+                              x: e.clientX,
+                              y: e.clientY,
+                              rulesetIndex,
+                              ruleIndex,
+                            });
+                          }}
+                          title={
+                            hasInvalidCondition
+                              ? "⚠️ This rule has an invalid condition - click to edit"
+                              : isTriggered && trigger
+                              ? "Double-click to view triggering event • Right-click for options"
+                              : "Right-click for copy/paste/delete options"
+                          }
                         >
                           <div className="rule-header-compact">
                             <strong>{rule.name}</strong>
-                            {isTriggered && trigger && trigger.triggerCount > 0 && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span className="trigger-indicator">⚡</span>
-                                <span className="trigger-count">{trigger.triggerCount}</span>
-                              </div>
-                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {hasInvalidCondition && (
+                                <span
+                                  className="invalid-indicator"
+                                  style={{
+                                    fontSize: '16px',
+                                    color: '#e53e3e',
+                                    lineHeight: 1
+                                  }}
+                                  title="Invalid condition"
+                                >
+                                  ⚠️
+                                </span>
+                              )}
+                              {copiedRule &&
+                               copiedRule.rule.name === rule.name &&
+                               copiedRule.sourceRulesetName === ruleset.name && (
+                                <span
+                                  className="copied-indicator"
+                                  style={{
+                                    fontSize: '14px',
+                                    color: '#667eea',
+                                    lineHeight: 1,
+                                    backgroundColor: '#ebf4ff',
+                                    padding: '2px 6px',
+                                    borderRadius: '3px',
+                                    fontWeight: 600,
+                                  }}
+                                  title="Rule copied to clipboard"
+                                >
+                                  📋
+                                </span>
+                              )}
+                              {isTriggered && trigger && trigger.triggerCount > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span className="trigger-indicator">⚡</span>
+                                  <span className="trigger-count">{trigger.triggerCount}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="actions-gears-compact">
                             {getActionsArray(rule).map((action, actionIndex) => (
@@ -2655,12 +2919,50 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 }
 
                 setShowSettingsModal(false);
+
+                // Generate new config hash
+                const newConfigHash = generateConfigHash(
+                  serverSettings.executionMode,
+                  serverSettings.containerImage,
+                  serverSettings.ansibleRulebookPath
+                );
+
                 // Trigger binary check after settings update
                 if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                   wsRef.current.send(JSON.stringify({
                     type: 'check_binary',
                     ansibleRulebookPath: serverSettings.ansibleRulebookPath
                   }));
+
+                  // Only fetch if config changed
+                  if (newConfigHash !== currentConfigHash) {
+                    setCurrentConfigHash(newConfigHash);
+
+                    // Check cache first
+                    const cachedVersion = getCachedVersionInfo(newConfigHash);
+                    if (cachedVersion && onVersionInfoReceived) {
+                      onVersionInfoReceived(cachedVersion.version, cachedVersion.versionInfo);
+                    } else {
+                      wsRef.current.send(JSON.stringify({
+                        type: 'get_ansible_version',
+                        ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                        executionMode: serverSettings.executionMode,
+                        containerImage: serverSettings.containerImage
+                      }));
+                    }
+
+                    const cachedCollections = getCachedCollectionList(newConfigHash);
+                    if (cachedCollections && onCollectionListReceived) {
+                      onCollectionListReceived(cachedCollections);
+                    } else {
+                      wsRef.current.send(JSON.stringify({
+                        type: 'get_collection_list',
+                        ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                        executionMode: serverSettings.executionMode,
+                        containerImage: serverSettings.containerImage
+                      }));
+                    }
+                  }
                 }
               }}
             >
@@ -2711,12 +3013,49 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                     const newMode = e.target.value as 'container' | 'venv' | 'custom';
                     setServerSettings({ ...serverSettings, executionMode: newMode });
 
+                    // Generate new config hash
+                    const newConfigHash = generateConfigHash(
+                      newMode,
+                      serverSettings.containerImage,
+                      serverSettings.ansibleRulebookPath
+                    );
+
                     // Check prerequisites for the new execution mode
                     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                       wsRef.current.send(JSON.stringify({
                         type: 'check_prerequisites',
                         executionMode: newMode
                       }));
+
+                      // Only fetch if config changed
+                      if (newConfigHash !== currentConfigHash) {
+                        setCurrentConfigHash(newConfigHash);
+
+                        // Check cache first
+                        const cachedVersion = getCachedVersionInfo(newConfigHash);
+                        if (cachedVersion && onVersionInfoReceived) {
+                          onVersionInfoReceived(cachedVersion.version, cachedVersion.versionInfo);
+                        } else {
+                          wsRef.current.send(JSON.stringify({
+                            type: 'get_ansible_version',
+                            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                            executionMode: newMode,
+                            containerImage: serverSettings.containerImage
+                          }));
+                        }
+
+                        const cachedCollections = getCachedCollectionList(newConfigHash);
+                        if (cachedCollections && onCollectionListReceived) {
+                          onCollectionListReceived(cachedCollections);
+                        } else {
+                          wsRef.current.send(JSON.stringify({
+                            type: 'get_collection_list',
+                            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                            executionMode: newMode,
+                            containerImage: serverSettings.containerImage
+                          }));
+                        }
+                      }
                     }
                   }}
                 >
@@ -3690,6 +4029,99 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               </div>
             </div>
         </Modal>
+      )}
+
+      {/* Context Menu for Rules and Rulesets */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            backgroundColor: 'white',
+            border: '1px solid #cbd5e0',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 10000,
+            minWidth: '200px',
+            overflow: 'hidden',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Show copy/delete options only for rules (when ruleIndex is defined) */}
+          {contextMenu.ruleIndex !== undefined && (
+            <>
+              <div
+                className="context-menu-item"
+                onClick={() => handleCopyRule(contextMenu.rulesetIndex, contextMenu.ruleIndex!)}
+                style={{
+                  padding: '10px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  borderBottom: '1px solid #e2e8f0',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f7fafc'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <span style={{ fontSize: '16px' }}>📋</span>
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>Copy Rule</span>
+                <span style={{ fontSize: '11px', color: '#a0aec0', marginLeft: 'auto' }}>Ctrl+C</span>
+              </div>
+
+              <div
+                className="context-menu-item"
+                onClick={() => handleDeleteRule(contextMenu.rulesetIndex, contextMenu.ruleIndex!)}
+                style={{
+                  padding: '10px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  borderBottom: copiedRule ? '1px solid #e2e8f0' : 'none',
+                  transition: 'background-color 0.2s',
+                  color: '#e53e3e',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fff5f5'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <span style={{ fontSize: '16px' }}>🗑️</span>
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>Delete Rule</span>
+              </div>
+            </>
+          )}
+
+          {/* Show paste option when there's a copied rule */}
+          {copiedRule && (
+            <div
+              className="context-menu-item"
+              onClick={() => handlePasteRule(contextMenu.rulesetIndex)}
+              style={{
+                padding: '10px 16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f7fafc'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+            >
+              <span style={{ fontSize: '16px' }}>📄</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>Paste Rule</span>
+                  <span style={{ fontSize: '11px', color: '#a0aec0', marginLeft: 'auto' }}>Ctrl+V</span>
+                </div>
+                <span style={{ fontSize: '11px', color: '#718096' }}>
+                  "{copiedRule.rule.name}" from {copiedRule.sourceRulesetName}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

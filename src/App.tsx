@@ -9,6 +9,7 @@ import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
 import { getCurrentSourceNameFormat, convertAllSources } from './utils/sourceNameConverter';
+import { validateAllConditions, formatConditionErrors, getConditionErrorSummary, getFirstInvalidConditionLocation } from './utils/rulebookValidator';
 import './App.css';
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [ansibleVersion, setAnsibleVersion] = useState<string>('v1.0.0');
   const [ansibleVersionInfo, setAnsibleVersionInfo] = useState<any>(null);
+  const [collectionList, setCollectionList] = useState<any[]>([]);
+  const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [rulesets, setRulesets] = useState<Ruleset[]>([
@@ -62,6 +65,7 @@ function App() {
     eventCount: 0,
     binaryFound: false,
     binaryError: null,
+    executionMode: 'custom',
   });
   const [showJsonPathExplorer, setShowJsonPathExplorer] = useState(false);
   const [webhookPayload, setWebhookPayload] = useState<object | null>(null);
@@ -216,6 +220,21 @@ function App() {
         errorMsg += 'Please fix these issues before exporting.';
 
         alert(errorMsg);
+        return;
+      }
+
+      // Validate all conditions before exporting
+      const conditionErrors = validateAllConditions(rulesets);
+      if (conditionErrors.length > 0) {
+        const summary = getConditionErrorSummary(conditionErrors);
+        const details = formatConditionErrors(conditionErrors);
+        const location = getFirstInvalidConditionLocation(conditionErrors);
+        const errorMsg = `❌ Cannot export rulebook with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before exporting your rulebook.\n\n💡 Click OK to jump to the first invalid condition.`;
+
+        const shouldNavigate = window.confirm(errorMsg);
+        if (shouldNavigate && location && visualEditorRef.current) {
+          visualEditorRef.current.navigateToRule(location.rulesetIndex, location.ruleIndex);
+        }
         return;
       }
 
@@ -502,6 +521,10 @@ function App() {
     setAnsibleVersionInfo(versionInfo);
   };
 
+  const handleCollectionListReceived = (collections: any[]) => {
+    setCollectionList(collections);
+  };
+
   return (
     <div className="app">
       <div className="app-header">
@@ -629,15 +652,15 @@ function App() {
           <button
             className="btn btn-primary btn-icon"
             onClick={() => visualEditorRef.current?.startExecution()}
-            disabled={!executionState.binaryFound}
+            disabled={executionState.executionMode !== 'container' && !executionState.binaryFound}
             data-title={
-              !executionState.binaryFound
+              executionState.executionMode !== 'container' && !executionState.binaryFound
                 ? (executionState.binaryError || 'Please set the path of ansible-rulebook in Settings')
                 : 'Start Execution'
             }
             style={{
-              opacity: executionState.binaryFound ? 1 : 0.5,
-              cursor: executionState.binaryFound ? 'pointer' : 'not-allowed'
+              opacity: executionState.executionMode === 'container' || executionState.binaryFound ? 1 : 0.5,
+              cursor: executionState.executionMode === 'container' || executionState.binaryFound ? 'pointer' : 'not-allowed'
             }}
           >
             ▶
@@ -712,6 +735,7 @@ function App() {
         onExecutionStateChange={setExecutionState}
         onWebhookReceived={handleWebhookReceived}
         onVersionInfoReceived={handleVersionInfoReceived}
+        onCollectionListReceived={handleCollectionListReceived}
         onStatsChange={setRulesetStats}
       />
 
@@ -736,12 +760,18 @@ function App() {
       {/* About Modal */}
       <Modal
         isOpen={showAboutModal}
-        onClose={() => setShowAboutModal(false)}
+        onClose={() => {
+          setShowAboutModal(false);
+          setCollectionSearchTerm(''); // Reset search when closing
+        }}
         title="About Ansible Rulebook IDE"
         footer={
           <button
             className="btn btn-primary"
-            onClick={() => setShowAboutModal(false)}
+            onClick={() => {
+              setShowAboutModal(false);
+              setCollectionSearchTerm(''); // Reset search when closing
+            }}
           >
             Close
           </button>
@@ -828,6 +858,89 @@ function App() {
                       </div>
                     </div>
                   )}
+
+                  {/* Ansible Collections Section */}
+                  <div style={{ marginTop: '24px', borderTop: '2px solid #e2e8f0', paddingTop: '20px' }}>
+                    <h3 style={{ fontSize: '16px', marginBottom: '12px', color: currentTheme.colors.primary }}>
+                      Ansible Collections
+                    </h3>
+
+                    {collectionList.length > 0 ? (
+                      <>
+                        {/* Search box */}
+                        <input
+                          type="text"
+                          placeholder="Search collections..."
+                          value={collectionSearchTerm}
+                          onChange={(e) => setCollectionSearchTerm(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            marginBottom: '12px',
+                            border: '1px solid #cbd5e0',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            fontFamily: 'monospace'
+                          }}
+                        />
+
+                        {/* Collection list */}
+                        <div style={{
+                          maxHeight: '300px',
+                          overflowY: 'auto',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          backgroundColor: '#f7fafc'
+                        }}>
+                          {collectionList
+                            .filter(col => {
+                              const searchLower = collectionSearchTerm.toLowerCase();
+                              return col.name?.toLowerCase().includes(searchLower) ||
+                                     col.version?.toLowerCase().includes(searchLower);
+                            })
+                            .map((col, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderBottom: idx < collectionList.length - 1 ? '1px solid #e2e8f0' : 'none',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                <div style={{ fontWeight: 600, color: '#2d3748', marginBottom: '2px' }}>
+                                  {col.name}
+                                </div>
+                                <div style={{ color: '#718096', fontSize: '11px' }}>
+                                  Version: {col.version}
+                                </div>
+                              </div>
+                            ))}
+
+                          {collectionList.filter(col => {
+                            const searchLower = collectionSearchTerm.toLowerCase();
+                            return col.name?.toLowerCase().includes(searchLower) ||
+                                   col.version?.toLowerCase().includes(searchLower);
+                          }).length === 0 && (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#a0aec0', fontSize: '12px' }}>
+                              No collections match your search
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ marginTop: '8px', fontSize: '11px', color: '#718096' }}>
+                          Showing {collectionList.filter(col => {
+                            const searchLower = collectionSearchTerm.toLowerCase();
+                            return col.name?.toLowerCase().includes(searchLower) ||
+                                   col.version?.toLowerCase().includes(searchLower);
+                          }).length} of {collectionList.length} collections
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', color: '#718096', fontSize: '12px' }}>
+                        No collections found or not yet loaded
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>

@@ -84,6 +84,9 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     const newType = (type === 'string' || type === 'boolean') ? 'simple' : type as ConditionTypeOption;
     setConditionType(newType);
 
+    // Clear validation errors when condition changes
+    setValidationErrors(new Map());
+
     if (typeof condition === 'string') {
       setSimpleCondition(condition);
       setConditions([condition]);

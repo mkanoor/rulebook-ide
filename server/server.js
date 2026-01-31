@@ -173,6 +173,59 @@ function killProcessTree(pid, signal = 'SIGTERM') {
   });
 }
 
+// Parse ansible-galaxy collection list output
+// Expected format:
+// # /path/to/collections/ansible_collections
+// Collection        Version
+// ----------------- -------
+// ansible.builtin   2.14.0
+// community.general 6.0.0
+function parseCollectionList(output) {
+  const collections = [];
+  const lines = output.split('\n');
+  let inCollectionSection = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    // Skip the header separator line (dashes)
+    if (trimmed.match(/^-+\s+-+$/)) {
+      inCollectionSection = true;
+      continue;
+    }
+
+    // Skip the header line
+    if (trimmed.startsWith('Collection') && trimmed.includes('Version')) {
+      continue;
+    }
+
+    // Parse collection lines
+    if (inCollectionSection || trimmed.includes('.')) {
+      // Split by whitespace and get first two columns
+      const parts = trimmed.split(/\s+/);
+      if (parts.length >= 2) {
+        const name = parts[0];
+        const version = parts[1];
+
+        // Only add if it looks like a collection name (contains a dot)
+        if (name.includes('.')) {
+          collections.push({
+            name: name,
+            version: version
+          });
+        }
+      }
+    }
+  }
+
+  return collections;
+}
+
 // Function to install ansible-rulebook in a private virtual environment
 async function installAnsibleRulebook(ws, collections = []) {
   const sendProgress = (message) => {
@@ -1079,6 +1132,80 @@ wss.on('connection', (ws, req) => {
                 version: firstLine,
                 fullVersion: stdout.trim(),
                 versionInfo: versionInfo
+              }));
+            });
+          }
+          break;
+
+        case 'get_collection_list':
+          const collectionExecutionMode = data.executionMode || 'custom';
+          const collectionContainerImage = data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
+          const collectionAnsiblePath = data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
+
+          let collectionCommand;
+          if (collectionExecutionMode === 'container') {
+            // For container mode, run the collection list command inside the container
+            exec('which podman', (podmanError) => {
+              const containerRuntime = podmanError ? 'docker' : 'podman';
+              collectionCommand = `${containerRuntime} run --rm ${collectionContainerImage} ansible-galaxy collection list`;
+
+              console.log(`Getting collection list from container: ${collectionCommand}`);
+
+              exec(collectionCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+                if (error) {
+                  console.error('Error getting collection list from container:', error);
+                  ws.send(JSON.stringify({
+                    type: 'collection_list_response',
+                    success: false,
+                    collections: [],
+                    error: error.message
+                  }));
+                  return;
+                }
+
+                // Parse the ansible-galaxy collection list output
+                const collections = parseCollectionList(stdout);
+                console.log(`Found ${collections.length} collections in container`);
+
+                ws.send(JSON.stringify({
+                  type: 'collection_list_response',
+                  success: true,
+                  collections: collections
+                }));
+              });
+            });
+          } else {
+            // For venv or custom mode, use ansible-galaxy from the same environment
+            // Extract the directory path from ansiblePath and use it to find ansible-galaxy
+            const pathParts = collectionAnsiblePath.split('/');
+            pathParts.pop(); // Remove the binary name
+            const binDir = pathParts.length > 0 ? pathParts.join('/') : '';
+            const galaxyPath = binDir ? `${binDir}/ansible-galaxy` : 'ansible-galaxy';
+
+            collectionCommand = `${galaxyPath} collection list`;
+
+            console.log(`Getting collection list from path: ${collectionCommand}`);
+
+            exec(collectionCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+              if (error) {
+                console.error('Error getting collection list:', error);
+                ws.send(JSON.stringify({
+                  type: 'collection_list_response',
+                  success: false,
+                  collections: [],
+                  error: error.message
+                }));
+                return;
+              }
+
+              // Parse the ansible-galaxy collection list output
+              const collections = parseCollectionList(stdout);
+              console.log(`Found ${collections.length} collections`);
+
+              ws.send(JSON.stringify({
+                type: 'collection_list_response',
+                success: true,
+                collections: collections
               }));
             });
           }

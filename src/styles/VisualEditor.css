@@ -460,6 +460,18 @@
   animation: glow 2s infinite;
 }
 
+.rule-box-compact.rule-invalid {
+  background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+  border-color: #e53e3e;
+  border-width: 2px;
+  box-shadow: 0 0 10px rgba(229, 62, 62, 0.3);
+}
+
+.rule-box-compact.rule-invalid:hover {
+  border-color: #c53030;
+  box-shadow: 0 0 15px rgba(229, 62, 62, 0.5);
+}
+
 .rule-header-compact {
   display: flex;
   justify-content: space-between;
