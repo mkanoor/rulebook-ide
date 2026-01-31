@@ -25,7 +25,7 @@ Welcome to the Ansible Rulebook IDE! This guide will help you create, edit, and 
 
 An Ansible Rulebook is a YAML file that defines event-driven automation. It consists of:
 - **Rulesets**: Collections of rules and event sources
-- **Sources**: Where events come from (webhooks, Kafka, alerts, etc.)
+- **Sources**: Where events come from (webhooks, alerts, etc.)
 - **Rules**: Logic that matches events to actions
 - **Actions**: What to do when a rule matches (run playbooks, modules, etc.)
 
@@ -139,14 +139,6 @@ Sources define where events come from.
 eda.builtin.generic:
   host: 0.0.0.0
   port: 5000
-```
-
-#### Kafka
-```yaml
-eda.builtin.kafka:
-  host: localhost
-  port: 9092
-  topic: alerts
 ```
 
 #### Alertmanager

@@ -165,27 +165,6 @@ const FUNCTIONS: AutocompleteSuggestion[] = [
     description: 'Filter list by attribute value',
     type: 'function',
     insertText: 'selectattr("", "==", "")'
-  },
-  {
-    text: 'select(',
-    displayText: 'select',
-    description: 'Filter list by condition',
-    type: 'function',
-    insertText: 'select("")'
-  },
-  {
-    text: 'map(',
-    displayText: 'map',
-    description: 'Transform list elements',
-    type: 'function',
-    insertText: 'map("attribute", "")'
-  },
-  {
-    text: 'length(',
-    displayText: 'length',
-    description: 'Get length of list or string',
-    type: 'function',
-    insertText: 'length()'
   }
 ];
 

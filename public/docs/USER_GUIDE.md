@@ -167,14 +167,6 @@ eda.builtin.generic:
   port: 5000
 ```
 
-#### Kafka
-```yaml
-eda.builtin.kafka:
-  host: localhost
-  port: 9092
-  topic: alerts
-```
-
 #### Alertmanager
 ```yaml
 eda.builtin.alertmanager:
