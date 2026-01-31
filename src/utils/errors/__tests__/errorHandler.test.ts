@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { errorHandler } from '../errorHandler';
+import { errorHandler, logErrorBoundary } from '../errorHandler';
 import { RulebookError, ErrorCodes } from '../RulebookError';
 
 describe('errorHandler', () => {
@@ -35,6 +35,20 @@ describe('errorHandler', () => {
       const message = errorHandler.getUserMessage(error);
 
       expect(message).toContain('Validation failed');
+    });
+
+    it('should return user-friendly message for not found errors', () => {
+      const error = new Error('File not found');
+      const message = errorHandler.getUserMessage(error);
+
+      expect(message).toContain('Resource not found');
+    });
+
+    it('should return user-friendly message for 404 errors', () => {
+      const error = new Error('HTTP 404 - endpoint not available');
+      const message = errorHandler.getUserMessage(error);
+
+      expect(message).toContain('Resource not found');
     });
 
     it('should return generic message for unknown errors', () => {
@@ -82,6 +96,43 @@ describe('errorHandler', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[Rulebook IDE]'), error);
       expect(consoleSpy).toHaveBeenCalledWith('Context:', context);
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle production environment', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Mock production environment
+      vi.stubEnv('PROD', 'true');
+
+      const error = new Error('Test error in production');
+      errorHandler.log(error);
+
+      expect(consoleSpy).toHaveBeenCalled();
+
+      // Restore environment
+      vi.unstubAllEnvs();
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('logErrorBoundary', () => {
+    it('should log error boundary errors with component stack', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const error = new Error('Component render error');
+      const errorInfo = {
+        componentStack: '\n    at Component (Component.tsx:10)\n    at App (App.tsx:5)',
+      };
+
+      logErrorBoundary(error, errorInfo);
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[Rulebook IDE]'), error);
+      expect(consoleSpy).toHaveBeenCalledWith('Context:', {
+        componentStack: errorInfo.componentStack,
+        type: 'React Error Boundary',
+      });
+
       consoleSpy.mockRestore();
     });
   });

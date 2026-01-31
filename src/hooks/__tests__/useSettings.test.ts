@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSettings } from '../useSettings';
 
@@ -78,5 +78,42 @@ describe('useSettings', () => {
     });
 
     expect(result.current.hasNgrokToken).toBe(false);
+  });
+
+  it('should handle localStorage.getItem error gracefully', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('localStorage error');
+    });
+
+    const { result } = renderHook(() => useSettings());
+
+    // Should fall back to default settings
+    expect(result.current.settings.jsonPathPrefix).toBe('event');
+    expect(result.current.settings.autoShowJsonExplorer).toBe(true);
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load settings:', expect.any(Error));
+
+    consoleErrorSpy.mockRestore();
+    getItemSpy.mockRestore();
+  });
+
+  it('should handle localStorage.setItem error gracefully', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('localStorage quota exceeded');
+    });
+
+    const { result } = renderHook(() => useSettings());
+
+    act(() => {
+      result.current.updateSettings({ jsonPathPrefix: 'new.path' });
+    });
+
+    // Should update state even if localStorage fails
+    expect(result.current.settings.jsonPathPrefix).toBe('new.path');
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to save settings:', expect.any(Error));
+
+    consoleErrorSpy.mockRestore();
+    setItemSpy.mockRestore();
   });
 });

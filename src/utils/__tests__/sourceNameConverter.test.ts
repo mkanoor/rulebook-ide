@@ -1,15 +1,104 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getCurrentSourceNameFormat,
   convertSourceName,
   convertAllSources,
+  convertToLegacy,
+  convertToNew,
+  isNewFormat,
+  isLegacyFormat,
+  convertFilterArray,
+  convertSourceObject,
+  convertRulesetSources,
+  getAllSourceNames,
+  getSourceDisplayName,
 } from '../sourceNameConverter';
 import type { Ruleset } from '../../types/rulebook';
 
 describe('sourceNameConverter', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  describe('convertToLegacy', () => {
+    it('should convert new format to legacy', () => {
+      expect(convertToLegacy('eda.builtin.webhook')).toBe('ansible.eda.webhook');
+      expect(convertToLegacy('eda.builtin.range')).toBe('ansible.eda.range');
+      expect(convertToLegacy('eda.builtin.normalize_keys')).toBe('ansible.eda.normalize_keys');
+    });
+
+    it('should return same name if not in mapping', () => {
+      expect(convertToLegacy('custom.source')).toBe('custom.source');
+    });
+  });
+
+  describe('convertToNew', () => {
+    it('should convert legacy format to new', () => {
+      expect(convertToNew('ansible.eda.webhook')).toBe('eda.builtin.webhook');
+      expect(convertToNew('ansible.eda.range')).toBe('eda.builtin.range');
+      expect(convertToNew('ansible.eda.json_filter')).toBe('eda.builtin.json_filter');
+    });
+
+    it('should return same name if not in mapping', () => {
+      expect(convertToNew('custom.source')).toBe('custom.source');
+    });
+  });
+
+  describe('isNewFormat', () => {
+    it('should return true for new format sources', () => {
+      expect(isNewFormat('eda.builtin.webhook')).toBe(true);
+      expect(isNewFormat('eda.builtin.range')).toBe(true);
+    });
+
+    it('should return false for non-new format sources', () => {
+      expect(isNewFormat('ansible.eda.webhook')).toBe(false);
+      expect(isNewFormat('custom.source')).toBe(false);
+    });
+  });
+
+  describe('isLegacyFormat', () => {
+    it('should return true for legacy format sources', () => {
+      expect(isLegacyFormat('ansible.eda.webhook')).toBe(true);
+      expect(isLegacyFormat('ansible.eda.range')).toBe(true);
+    });
+
+    it('should return false for non-legacy format sources', () => {
+      expect(isLegacyFormat('eda.builtin.webhook')).toBe(false);
+      expect(isLegacyFormat('custom.source')).toBe(false);
+    });
+  });
+
   describe('getCurrentSourceNameFormat', () => {
-    it('should return default new format', () => {
+    it('should return default new format when no settings saved', () => {
       expect(getCurrentSourceNameFormat()).toBe('new');
+    });
+
+    it('should return saved format from localStorage', () => {
+      localStorage.setItem('rulebook-ide-settings', JSON.stringify({ sourceNameFormat: 'legacy' }));
+      expect(getCurrentSourceNameFormat()).toBe('legacy');
+    });
+
+    it('should return default new format when settings exist but no sourceNameFormat', () => {
+      localStorage.setItem('rulebook-ide-settings', JSON.stringify({ otherSetting: 'value' }));
+      expect(getCurrentSourceNameFormat()).toBe('new');
+    });
+
+    it('should handle localStorage errors gracefully', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('localStorage error');
+      });
+
+      const format = getCurrentSourceNameFormat();
+
+      expect(format).toBe('new');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to load source name format:',
+        expect.any(Error)
+      );
+
+      consoleErrorSpy.mockRestore();
+      getItemSpy.mockRestore();
     });
   });
 
@@ -113,6 +202,126 @@ describe('sourceNameConverter', () => {
         port: 5000,
         host: 'localhost',
       });
+    });
+  });
+
+  describe('convertFilterArray', () => {
+    it('should convert filter names to new format', () => {
+      const filters = [
+        { 'ansible.eda.normalize_keys': {} },
+        { 'ansible.eda.json_filter': { some: 'config' } },
+      ];
+
+      const converted = convertFilterArray(filters, 'new');
+
+      expect(converted[0]).toHaveProperty('eda.builtin.normalize_keys');
+      expect(converted[1]).toHaveProperty('eda.builtin.json_filter');
+      expect(converted[1]['eda.builtin.json_filter']).toEqual({ some: 'config' });
+    });
+
+    it('should convert filter names to legacy format', () => {
+      const filters = [{ 'eda.builtin.normalize_keys': {} }];
+
+      const converted = convertFilterArray(filters, 'legacy');
+
+      expect(converted[0]).toHaveProperty('ansible.eda.normalize_keys');
+    });
+  });
+
+  describe('convertSourceObject', () => {
+    it('should preserve name field', () => {
+      const source = { name: 'my-source', 'eda.builtin.webhook': { port: 5000 } };
+
+      const converted = convertSourceObject(source, 'legacy');
+
+      expect(converted.name).toBe('my-source');
+    });
+
+    it('should convert filters array', () => {
+      const source = {
+        name: 'test',
+        'eda.builtin.webhook': { port: 5000 },
+        filters: [{ 'eda.builtin.normalize_keys': {} }],
+      };
+
+      const converted = convertSourceObject(source, 'legacy');
+
+      expect(converted.filters[0]).toHaveProperty('ansible.eda.normalize_keys');
+    });
+
+    it('should handle non-array filters', () => {
+      const source = {
+        name: 'test',
+        'eda.builtin.webhook': { port: 5000 },
+        filters: 'not-an-array',
+      };
+
+      const converted = convertSourceObject(source, 'legacy');
+
+      expect(converted.filters).toBe('not-an-array');
+    });
+  });
+
+  describe('convertRulesetSources', () => {
+    it('should convert sources in a ruleset', () => {
+      const ruleset = {
+        name: 'test',
+        sources: [{ name: 's1', 'ansible.eda.webhook': { port: 5000 } }],
+      };
+
+      const converted = convertRulesetSources(ruleset, 'new');
+
+      expect(converted.sources[0]).toHaveProperty('eda.builtin.webhook');
+    });
+
+    it('should return ruleset unchanged if no sources array', () => {
+      const ruleset = { name: 'test', sources: null };
+
+      const converted = convertRulesetSources(ruleset, 'new');
+
+      expect(converted).toEqual(ruleset);
+    });
+
+    it('should return ruleset unchanged if sources is not an array', () => {
+      const ruleset = { name: 'test', sources: 'not-an-array' };
+
+      const converted = convertRulesetSources(ruleset, 'new');
+
+      expect(converted).toEqual(ruleset);
+    });
+  });
+
+  describe('getAllSourceNames', () => {
+    it('should return all known source names', () => {
+      const names = getAllSourceNames();
+
+      expect(names.length).toBeGreaterThan(0);
+      expect(names[0]).toHaveProperty('new');
+      expect(names[0]).toHaveProperty('legacy');
+    });
+
+    it('should include webhook in the list', () => {
+      const names = getAllSourceNames();
+
+      const webhook = names.find((n) => n.new === 'eda.builtin.webhook');
+      expect(webhook).toBeDefined();
+      expect(webhook?.legacy).toBe('ansible.eda.webhook');
+    });
+  });
+
+  describe('getSourceDisplayName', () => {
+    it('should remove eda.builtin prefix', () => {
+      expect(getSourceDisplayName('eda.builtin.webhook')).toBe('webhook');
+      expect(getSourceDisplayName('eda.builtin.range')).toBe('range');
+    });
+
+    it('should remove ansible.eda prefix', () => {
+      expect(getSourceDisplayName('ansible.eda.webhook')).toBe('webhook');
+      expect(getSourceDisplayName('ansible.eda.generic')).toBe('generic');
+    });
+
+    it('should return name as-is if no known prefix', () => {
+      expect(getSourceDisplayName('custom.source.name')).toBe('custom.source.name');
     });
   });
 });

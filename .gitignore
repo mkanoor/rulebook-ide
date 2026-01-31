@@ -56,3 +56,6 @@ Desktop.ini
 test-results.json
 test-summary.md
 test-output.txt
+
+# Test coverage
+coverage/

@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { debounce, throttle, memoize, sleep } from '../performance';
+import {
+  debounce,
+  throttle,
+  memoize,
+  sleep,
+  measurePerformance,
+  batchUpdates,
+} from '../performance';
 
 describe('performance utilities', () => {
   beforeEach(() => {
@@ -119,6 +126,75 @@ describe('performance utilities', () => {
       await sleep(50);
       const elapsed = Date.now() - start;
       expect(elapsed).toBeGreaterThanOrEqual(45);
+    });
+  });
+
+  describe('measurePerformance', () => {
+    it('should measure and log function execution time', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      vi.useRealTimers();
+
+      const testFn = () => {
+        let sum = 0;
+        for (let i = 0; i < 1000; i++) {
+          sum += i;
+        }
+        return sum;
+      };
+
+      measurePerformance('test operation', testFn);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/\[Performance\] test operation: \d+\.\d+ms/)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should execute the provided function', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      vi.useRealTimers();
+
+      const fn = vi.fn();
+      measurePerformance('test', fn);
+
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('batchUpdates', () => {
+    it('should execute all update functions', () => {
+      vi.useRealTimers();
+      const update1 = vi.fn();
+      const update2 = vi.fn();
+      const update3 = vi.fn();
+
+      batchUpdates([update1, update2, update3]);
+
+      expect(update1).toHaveBeenCalledTimes(1);
+      expect(update2).toHaveBeenCalledTimes(1);
+      expect(update3).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle empty array', () => {
+      expect(() => {
+        batchUpdates([]);
+      }).not.toThrow();
+    });
+
+    it('should execute updates in order', () => {
+      vi.useRealTimers();
+      const order: number[] = [];
+
+      const update1 = () => order.push(1);
+      const update2 = () => order.push(2);
+      const update3 = () => order.push(3);
+
+      batchUpdates([update1, update2, update3]);
+
+      expect(order).toEqual([1, 2, 3]);
     });
   });
 });
