@@ -75,6 +75,20 @@ function App() {
   const [hasNewWebhook, setHasNewWebhook] = useState(false);
   const [rulesetStats, setRulesetStats] = useState<Map<string, any>>(new Map());
 
+  // Confirmation modal state
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   // Apply theme on mount and when theme changes
   useEffect(() => {
     applyTheme(currentTheme);
@@ -180,109 +194,127 @@ function App() {
   };
 
   const handleExportYAML = async () => {
-    try {
-      // Check for duplicate ruleset names
-      const rulesetNames = new Map<string, number>();
-      const duplicateRulesets: string[] = [];
+    // Check for duplicate ruleset names
+    const rulesetNames = new Map<string, number>();
+    const duplicateRulesets: string[] = [];
 
-      rulesets.forEach((rs, idx) => {
-        const trimmedName = rs.name.trim();
-        if (rulesetNames.has(trimmedName)) {
-          duplicateRulesets.push(`"${trimmedName}" (rulesets #${rulesetNames.get(trimmedName)! + 1} and #${idx + 1})`);
+    rulesets.forEach((rs, idx) => {
+      const trimmedName = rs.name.trim();
+      if (rulesetNames.has(trimmedName)) {
+        duplicateRulesets.push(`"${trimmedName}" (rulesets #${rulesetNames.get(trimmedName)! + 1} and #${idx + 1})`);
+      } else {
+        rulesetNames.set(trimmedName, idx);
+      }
+    });
+
+    // Check for duplicate rule names within each ruleset
+    const duplicateRules: string[] = [];
+    rulesets.forEach((rs) => {
+      const ruleNames = new Map<string, number>();
+      rs.rules.forEach((rule, ruleIdx) => {
+        const trimmedName = rule.name.trim();
+        if (ruleNames.has(trimmedName)) {
+          duplicateRules.push(`"${trimmedName}" in ruleset "${rs.name}" (rules #${ruleNames.get(trimmedName)! + 1} and #${ruleIdx + 1})`);
         } else {
-          rulesetNames.set(trimmedName, idx);
+          ruleNames.set(trimmedName, ruleIdx);
         }
       });
+    });
 
-      // Check for duplicate rule names within each ruleset
-      const duplicateRules: string[] = [];
-      rulesets.forEach((rs) => {
-        const ruleNames = new Map<string, number>();
-        rs.rules.forEach((rule, ruleIdx) => {
-          const trimmedName = rule.name.trim();
-          if (ruleNames.has(trimmedName)) {
-            duplicateRules.push(`"${trimmedName}" in ruleset "${rs.name}" (rules #${ruleNames.get(trimmedName)! + 1} and #${ruleIdx + 1})`);
-          } else {
-            ruleNames.set(trimmedName, ruleIdx);
+    // Show error if there are duplicates
+    if (duplicateRulesets.length > 0 || duplicateRules.length > 0) {
+      let errorMsg = 'Cannot export with duplicate names:\n\n';
+      if (duplicateRulesets.length > 0) {
+        errorMsg += 'Duplicate Ruleset Names:\n' + duplicateRulesets.map(d => `  • ${d}`).join('\n') + '\n\n';
+      }
+      if (duplicateRules.length > 0) {
+        errorMsg += 'Duplicate Rule Names:\n' + duplicateRules.map(d => `  • ${d}`).join('\n') + '\n\n';
+      }
+      errorMsg += 'Please fix these issues before exporting.';
+
+      alert(errorMsg);
+      return;
+    }
+
+    // Validate all conditions before exporting
+    const conditionErrors = validateAllConditions(rulesets);
+    if (conditionErrors.length > 0) {
+      const summary = getConditionErrorSummary(conditionErrors);
+      const details = formatConditionErrors(conditionErrors);
+      const location = getFirstInvalidConditionLocation(conditionErrors);
+
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Invalid Conditions',
+        message:
+          `❌ Cannot export rulebook with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before exporting your rulebook.`,
+        confirmText: 'Go to First Error',
+        onConfirm: () => {
+          if (location && visualEditorRef.current) {
+            visualEditorRef.current.navigateToRule(location.rulesetIndex, location.ruleIndex);
           }
-        });
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+        },
       });
+      return;
+    }
 
-      // Show error if there are duplicates
-      if (duplicateRulesets.length > 0 || duplicateRules.length > 0) {
-        let errorMsg = 'Cannot export with duplicate names:\n\n';
-        if (duplicateRulesets.length > 0) {
-          errorMsg += 'Duplicate Ruleset Names:\n' + duplicateRulesets.map(d => `  • ${d}`).join('\n') + '\n\n';
-        }
-        if (duplicateRules.length > 0) {
-          errorMsg += 'Duplicate Rule Names:\n' + duplicateRules.map(d => `  • ${d}`).join('\n') + '\n\n';
-        }
-        errorMsg += 'Please fix these issues before exporting.';
-
-        alert(errorMsg);
-        return;
-      }
-
-      // Validate all conditions before exporting
-      const conditionErrors = validateAllConditions(rulesets);
-      if (conditionErrors.length > 0) {
-        const summary = getConditionErrorSummary(conditionErrors);
-        const details = formatConditionErrors(conditionErrors);
-        const location = getFirstInvalidConditionLocation(conditionErrors);
-        const errorMsg = `❌ Cannot export rulebook with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before exporting your rulebook.\n\n💡 Click OK to jump to the first invalid condition.`;
-
-        const shouldNavigate = window.confirm(errorMsg);
-        if (shouldNavigate && location && visualEditorRef.current) {
-          visualEditorRef.current.navigateToRule(location.rulesetIndex, location.ruleIndex);
-        }
-        return;
-      }
-
-      // Validate rulesets before exporting
+    // Validate rulesets before exporting
+    const performExport = async () => {
       try {
-        const validationErrors = validateRulesetArray(rulesets);
-        if (validationErrors.length > 0) {
-          const errorMessage = formatValidationErrors(validationErrors);
-          const confirmed = window.confirm(
-            `Validation errors found:\n\n${errorMessage}\n\nDo you want to export anyway?`
-          );
-          if (!confirmed) {
-            return;
-          }
-        }
-      } catch (validationError) {
-        console.error('Validation error:', validationError);
-        // Continue with export even if validation fails
-      }
+        // Convert source names based on user's preferred format
+        const sourceNameFormat = getCurrentSourceNameFormat();
+        const convertedRulesets = convertAllSources(rulesets, sourceNameFormat);
 
-      // Convert source names based on user's preferred format
-      const sourceNameFormat = getCurrentSourceNameFormat();
-      const convertedRulesets = convertAllSources(rulesets, sourceNameFormat);
+        const yamlStr = yaml.dump(convertedRulesets, {
+          indent: 2,
+          lineWidth: -1,
+          noRefs: true,
+        });
 
-      const yamlStr = yaml.dump(convertedRulesets, {
-        indent: 2,
-        lineWidth: -1,
-        noRefs: true,
-      });
-
-      // Use File System Access API if available
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: currentFilename || 'rulebook.yml',
-            types: [
-              {
-                description: 'Ansible Rulebook Files (YAML)',
-                accept: {
-                  'text/yaml': ['.yml', '.yaml'],
+        // Use File System Access API if available
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await (window as any).showSaveFilePicker({
+              suggestedName: currentFilename || 'rulebook.yml',
+              types: [
+                {
+                  description: 'Ansible Rulebook Files (YAML)',
+                  accept: {
+                    'text/yaml': ['.yml', '.yaml'],
+                  },
                 },
-              },
-            ],
-          });
+              ],
+            });
 
-          const writable = await handle.createWritable();
-          await writable.write(yamlStr);
-          await writable.close();
+            const writable = await handle.createWritable();
+            await writable.write(yamlStr);
+            await writable.close();
+
+            // Mark as saved - update the baseline state
+            setInitialRulesets(JSON.stringify(rulesets));
+            setHasUnsavedChanges(false);
+
+            setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
+            setTimeout(() => setMessage(null), 3000);
+          } catch (err) {
+            // User cancelled or error occurred
+            if ((err as Error).name !== 'AbortError') {
+              throw err;
+            }
+            // User cancelled, don't show error
+          }
+        } else {
+          // Fallback to download method for browsers without File System Access API
+          const blob = new Blob([yamlStr], { type: 'text/yaml' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = currentFilename || 'rulebook.yml';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
 
           // Mark as saved - update the baseline state
           setInitialRulesets(JSON.stringify(rulesets));
@@ -290,39 +322,38 @@ function App() {
 
           setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
           setTimeout(() => setMessage(null), 3000);
-        } catch (err) {
-          // User cancelled or error occurred
-          if ((err as Error).name !== 'AbortError') {
-            throw err;
-          }
-          // User cancelled, don't show error
         }
-      } else {
-        // Fallback to download method for browsers without File System Access API
-        const blob = new Blob([yamlStr], { type: 'text/yaml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = currentFilename || 'rulebook.yml';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        // Mark as saved - update the baseline state
-        setInitialRulesets(JSON.stringify(rulesets));
-        setHasUnsavedChanges(false);
-
-        setMessage({ type: 'success', text: 'Rulebook exported successfully!' });
-        setTimeout(() => setMessage(null), 3000);
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text: `Failed to export: ${error instanceof Error ? error.message : String(error)}`,
+        });
+        setTimeout(() => setMessage(null), 5000);
       }
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: `Failed to export: ${error instanceof Error ? error.message : String(error)}`,
-      });
-      setTimeout(() => setMessage(null), 5000);
+    };
+
+    try {
+      const validationErrors = validateRulesetArray(rulesets);
+      if (validationErrors.length > 0) {
+        const errorMessage = formatValidationErrors(validationErrors);
+        setConfirmationModal({
+          isOpen: true,
+          title: 'Validation Errors',
+          message: `Validation errors found:\n\n${errorMessage}\n\nDo you want to export anyway?`,
+          confirmText: 'Export Anyway',
+          onConfirm: () => {
+            setConfirmationModal({ ...confirmationModal, isOpen: false });
+            performExport();
+          },
+        });
+        return;
+      }
+    } catch (validationError) {
+      console.error('Validation error:', validationError);
+      // Continue with export even if validation fails
     }
+
+    await performExport();
   };
 
   const handleImportYAML = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -370,19 +401,9 @@ function App() {
   };
 
   const handleNewRulebook = async () => {
-    // Check for unsaved changes
-    if (hasUnsavedChanges) {
-      if (!window.confirm('You have unsaved changes. Creating a new rulebook will discard them. Continue?')) {
-        return;
-      }
-    } else if (rulesets.length > 0) {
-      if (!window.confirm('This will clear the current rulebook. Continue?')) {
-        return;
-      }
-    }
-
-    try {
-      // Get template path from settings
+    const performNewRulebook = async () => {
+      try {
+        // Get template path from settings
         const settings = visualEditorRef.current?.getSettings();
         const templatePath = settings?.templatePath || '/templates/default-rulebook.yml';
 
@@ -431,7 +452,37 @@ function App() {
           text: `Template load failed, created empty rulebook: ${error instanceof Error ? error.message : String(error)}`
         });
         setTimeout(() => setMessage(null), 5000);
+      }
+    };
+
+    // Check for unsaved changes
+    if (hasUnsavedChanges) {
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes. Creating a new rulebook will discard them.\n\nAre you sure you want to continue?',
+        confirmText: 'Discard Changes',
+        onConfirm: () => {
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+          performNewRulebook();
+        },
+      });
+      return;
+    } else if (rulesets.length > 0) {
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Clear Rulebook',
+        message: 'This will clear the current rulebook.\n\nAre you sure you want to continue?',
+        confirmText: 'Clear Rulebook',
+        onConfirm: () => {
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+          performNewRulebook();
+        },
+      });
+      return;
     }
+
+    await performNewRulebook();
   };
 
   const handleViewYAML = () => {
@@ -958,6 +1009,28 @@ function App() {
         isOpen={showHelpModal}
         onClose={() => setShowHelpModal(false)}
       />
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+        title={confirmationModal.title}
+        footer={
+          <>
+            <button
+              className="btn btn-outline"
+              onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-danger" onClick={confirmationModal.onConfirm}>
+              {confirmationModal.confirmText || 'Confirm'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ whiteSpace: 'pre-wrap' }}>{confirmationModal.message}</div>
+      </Modal>
 
       {/* Footer */}
       <Footer

@@ -219,6 +219,20 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     // Track current config hash to detect changes
     const [currentConfigHash, setCurrentConfigHash] = useState<string>('');
 
+    // Confirmation modal state
+    const [confirmationModal, setConfirmationModal] = useState<{
+      isOpen: boolean;
+      title: string;
+      message: string;
+      confirmText?: string;
+      onConfirm: () => void;
+    }>({
+      isOpen: false,
+      title: '',
+      message: '',
+      onConfirm: () => {},
+    });
+
     // WebSocket connection hook
     const {
       wsRef,
@@ -878,16 +892,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         const summary = getConditionErrorSummary(conditionErrors);
         const details = formatConditionErrors(conditionErrors);
         const location = getFirstInvalidConditionLocation(conditionErrors);
-        const errorMsg = `❌ Cannot start execution with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before starting execution.\n\n💡 Click OK to jump to the first invalid condition.`;
 
-        const shouldNavigate = window.confirm(errorMsg);
-        if (shouldNavigate && location) {
-          setSelectedItem({
-            type: 'rule',
-            rulesetIndex: location.rulesetIndex,
-            ruleIndex: location.ruleIndex,
-          });
-        }
+        setConfirmationModal({
+          isOpen: true,
+          title: 'Invalid Conditions',
+          message:
+            `❌ Cannot start execution with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before starting execution.`,
+          confirmText: 'Go to First Error',
+          onConfirm: () => {
+            if (location) {
+              setSelectedItem({
+                type: 'rule',
+                rulesetIndex: location.rulesetIndex,
+                ruleIndex: location.ruleIndex,
+              });
+            }
+            setConfirmationModal({ ...confirmationModal, isOpen: false });
+          },
+        });
         return;
       }
 
@@ -896,12 +918,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         const validationErrors = validateRulesetArray(rulesets);
         if (validationErrors.length > 0) {
           const errorMessage = formatValidationErrors(validationErrors);
-          const confirmed = window.confirm(
-            `Validation errors found:\n\n${errorMessage}\n\nDo you want to proceed with execution anyway?`
-          );
-          if (!confirmed) {
-            return;
-          }
+          setConfirmationModal({
+            isOpen: true,
+            title: 'Validation Errors',
+            message: `Validation errors found:\n\n${errorMessage}\n\nDo you want to proceed with execution anyway?`,
+            confirmText: 'Proceed Anyway',
+            onConfirm: () => {
+              setConfirmationModal({ ...confirmationModal, isOpen: false });
+              setShowExecutionModal(false);
+              // Continue with execution
+              if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+                connectWebSocket();
+                setTimeout(() => doStartExecution(), 1000);
+              } else {
+                doStartExecution();
+              }
+            },
+          });
+          return;
         }
       } catch (error) {
         console.error('Validation error:', error);
@@ -1551,17 +1585,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       const sourceCount = ruleset.sources?.length || 0;
       const ruleCount = ruleset.rules?.length || 0;
 
-      const message =
-        `Are you sure you want to delete ruleset "${ruleset.name}"?\n\n` +
-        `This will permanently delete:\n` +
-        `• ${sourceCount} source(s)\n` +
-        `• ${ruleCount} rule(s) and all their actions\n\n` +
-        `This action cannot be undone.`;
-
-      if (window.confirm(message)) {
-        onRulesetsChange(rulesets.filter((_, i) => i !== index));
-        setSelectedItem(null);
-      }
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Delete Ruleset',
+        message:
+          `Are you sure you want to delete ruleset "${ruleset.name}"?\n\n` +
+          `This will permanently delete:\n` +
+          `• ${sourceCount} source(s)\n` +
+          `• ${ruleCount} rule(s) and all their actions\n\n` +
+          `This action cannot be undone.`,
+        confirmText: 'Delete Ruleset',
+        onConfirm: () => {
+          onRulesetsChange(rulesets.filter((_, i) => i !== index));
+          setSelectedItem(null);
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+        },
+      });
     };
 
     const handleDeleteSource = (rulesetIndex: number, sourceIndex: number) => {
@@ -1569,18 +1608,23 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       const source = ruleset.sources[sourceIndex];
       const sourceName = source.name || `Source #${sourceIndex + 1}`;
 
-      const message =
-        `Are you sure you want to delete source "${sourceName}"?\n\n` +
-        `This action cannot be undone.`;
-
-      if (window.confirm(message)) {
-        const newRulesets = [...rulesets];
-        newRulesets[rulesetIndex].sources = newRulesets[rulesetIndex].sources.filter(
-          (_, i) => i !== sourceIndex
-        );
-        onRulesetsChange(newRulesets);
-        setSelectedItem(null);
-      }
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Delete Source',
+        message:
+          `Are you sure you want to delete source "${sourceName}"?\n\n` +
+          `This action cannot be undone.`,
+        confirmText: 'Delete Source',
+        onConfirm: () => {
+          const newRulesets = [...rulesets];
+          newRulesets[rulesetIndex].sources = newRulesets[rulesetIndex].sources.filter(
+            (_, i) => i !== sourceIndex
+          );
+          onRulesetsChange(newRulesets);
+          setSelectedItem(null);
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+        },
+      });
     };
 
     const handleDeleteRule = (rulesetIndex: number, ruleIndex: number) => {
@@ -1588,22 +1632,27 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       const rule = ruleset.rules[ruleIndex];
       const actionCount = getActionsArray(rule).length;
 
-      const message =
-        `Are you sure you want to delete rule "${rule.name}"?\n\n` +
-        `This will permanently delete:\n` +
-        `• The rule's condition(s)\n` +
-        `• ${actionCount} action(s)\n\n` +
-        `This action cannot be undone.`;
-
-      if (window.confirm(message)) {
-        const newRulesets = [...rulesets];
-        newRulesets[rulesetIndex].rules = newRulesets[rulesetIndex].rules.filter(
-          (_, i) => i !== ruleIndex
-        );
-        onRulesetsChange(newRulesets);
-        setSelectedItem(null);
-        setContextMenu(null); // Close context menu if open
-      }
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Delete Rule',
+        message:
+          `Are you sure you want to delete rule "${rule.name}"?\n\n` +
+          `This will permanently delete:\n` +
+          `• The rule's condition(s)\n` +
+          `• ${actionCount} action(s)\n\n` +
+          `This action cannot be undone.`,
+        confirmText: 'Delete Rule',
+        onConfirm: () => {
+          const newRulesets = [...rulesets];
+          newRulesets[rulesetIndex].rules = newRulesets[rulesetIndex].rules.filter(
+            (_, i) => i !== ruleIndex
+          );
+          onRulesetsChange(newRulesets);
+          setSelectedItem(null);
+          setContextMenu(null); // Close context menu if open
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+        },
+      });
     };
 
     const handleDeleteAction = (rulesetIndex: number, ruleIndex: number, actionIndex: number) => {
@@ -1611,19 +1660,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       const action = getActionsArray(rule)[actionIndex];
       const actionType = getActionType(action);
 
-      const message =
-        `Are you sure you want to delete this "${actionType}" action?\n\n` +
-        `This action cannot be undone.`;
-
-      if (window.confirm(message)) {
-        const newRulesets = [...rulesets];
-        const actions = newRulesets[rulesetIndex].rules[ruleIndex].actions || [];
-        newRulesets[rulesetIndex].rules[ruleIndex].actions = actions.filter(
-          (_, i) => i !== actionIndex
-        );
-        onRulesetsChange(newRulesets);
-        setSelectedItem(null);
-      }
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Delete Action',
+        message:
+          `Are you sure you want to delete this "${actionType}" action?\n\n` +
+          `This action cannot be undone.`,
+        confirmText: 'Delete Action',
+        onConfirm: () => {
+          const newRulesets = [...rulesets];
+          const actions = newRulesets[rulesetIndex].rules[ruleIndex].actions || [];
+          newRulesets[rulesetIndex].rules[ruleIndex].actions = actions.filter(
+            (_, i) => i !== actionIndex
+          );
+          onRulesetsChange(newRulesets);
+          setSelectedItem(null);
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+        },
+      });
     };
 
     const renderPropertiesPanel = () => {
@@ -4203,6 +4257,28 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             </div>
           </Modal>
         )}
+
+        {/* Confirmation Modal */}
+        <Modal
+          isOpen={confirmationModal.isOpen}
+          onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+          title={confirmationModal.title}
+          footer={
+            <>
+              <button
+                className="btn btn-outline"
+                onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-danger" onClick={confirmationModal.onConfirm}>
+                {confirmationModal.confirmText || 'Confirm'}
+              </button>
+            </>
+          }
+        >
+          <div style={{ whiteSpace: 'pre-wrap' }}>{confirmationModal.message}</div>
+        </Modal>
 
         {/* Context Menu for Rules and Rulesets */}
         {contextMenu && (

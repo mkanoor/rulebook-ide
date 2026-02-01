@@ -3,6 +3,7 @@ import type { Condition, AllCondition, AnyCondition, NotAllCondition } from '../
 import { getConditionType } from '../types/rulebook';
 import { validateCondition } from '../conditionValidator';
 import { AutocompleteInput } from './AutocompleteInput';
+import { Modal } from './common/Modal';
 
 interface ConditionEditorProps {
   condition: Condition;
@@ -48,6 +49,20 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
 
   // Validation state
   const [validationErrors, setValidationErrors] = useState<Map<number, string>>(new Map());
+
+  // Confirmation modal state
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Validate a condition string
   const validateConditionString = (conditionStr: string, index: number) => {
@@ -198,19 +213,33 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   };
 
   const handleDeleteCondition = (index: number) => {
+    const performDelete = () => {
+      const newConditions = conditions.filter((_, i) => i !== index);
+      // Ensure at least one condition remains
+      if (newConditions.length === 0) {
+        newConditions.push('');
+      }
+      setConditions(newConditions);
+      updateCondition(conditionType, newConditions, timeout);
+    };
+
     // Only show confirmation if there's an actual condition value
     const conditionValue = conditions[index]?.trim();
-    if (conditionValue && !window.confirm(`Are you sure you want to delete this condition?\n\n"${conditionValue}"\n\nThis action cannot be undone.`)) {
-      return;
+    if (conditionValue) {
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Delete Condition',
+        message: `Are you sure you want to delete this condition?\n\n"${conditionValue}"\n\nThis action cannot be undone.`,
+        confirmText: 'Delete Condition',
+        onConfirm: () => {
+          setConfirmationModal({ ...confirmationModal, isOpen: false });
+          performDelete();
+        },
+      });
+    } else {
+      // If empty, just delete without confirmation
+      performDelete();
     }
-
-    const newConditions = conditions.filter((_, i) => i !== index);
-    // Ensure at least one condition remains
-    if (newConditions.length === 0) {
-      newConditions.push('');
-    }
-    setConditions(newConditions);
-    updateCondition(conditionType, newConditions, timeout);
   };
 
   const handleTimeoutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,6 +429,28 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
           )}
         </>
       )}
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+        title={confirmationModal.title}
+        footer={
+          <>
+            <button
+              className="btn btn-outline"
+              onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-danger" onClick={confirmationModal.onConfirm}>
+              {confirmationModal.confirmText || 'Confirm'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ whiteSpace: 'pre-wrap' }}>{confirmationModal.message}</div>
+      </Modal>
     </div>
   );
 };
