@@ -7,6 +7,7 @@ import { errorHandler } from '../utils/errors';
 export function useErrorBoundary() {
   const [error, setError] = useState<Error | null>(null);
 
+   
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       setError(event.error);
@@ -32,6 +33,7 @@ export function useErrorBoundary() {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
+   
 
   const clearError = () => setError(null);
 

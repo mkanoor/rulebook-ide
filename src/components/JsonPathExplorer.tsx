@@ -12,7 +12,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
   const editorRef = useRef<ReturnType<typeof createJSONEditor> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedPath, setSelectedPath] = useState<string>('root');
-  const [selectedValue, setSelectedValue] = useState<any>(null);
+  const [selectedValue, setSelectedValue] = useState<unknown>(null);
   const [copied, setCopied] = useState(false);
   const [copiedWithValue, setCopiedWithValue] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,7 +31,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
               }
             }
           } as JSONContent,
-          mode: 'tree' as any,
+          mode: 'tree' as unknown,
           onSelect: (selection: any) => {
             if (selection && selection.path) {
               const formattedPath = selection.path.length > 0
@@ -43,7 +43,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
               try {
                 const content = editor.get();
                 if (content && 'json' in content) {
-                  let value: any = content.json;
+                  let value: unknown = content.json;
                   for (const key of selection.path) {
                     value = value[key];
                   }
@@ -69,6 +69,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
   }, []);
 
   // Update editor content when initialJson changes
+   
   useEffect(() => {
     if (editorRef.current && initialJson) {
       try {
@@ -78,6 +79,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
       }
     }
   }, [initialJson]);
+   
 
   const copyPath = () => {
     navigator.clipboard.writeText(selectedPath);

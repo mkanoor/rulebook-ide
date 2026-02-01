@@ -11,7 +11,7 @@ import * as parser from './condition-parser.js';
 export interface ValidationResult {
   isValid: boolean;
   error?: ValidationError;
-  ast?: any;
+  ast?: unknown;
 }
 
 export interface ValidationError {
@@ -278,7 +278,7 @@ export function extractVariables(condition: string): string[] {
 
   const variables: string[] = [];
 
-  function traverse(node: any) {
+  function traverse(node: unknown) {
     if (!node || typeof node !== 'object') return;
 
     if (node.type === 'Identifier') {
@@ -322,7 +322,7 @@ export interface ConditionObject {
   all?: string[];
   any?: string[];
   not_all?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ObjectValidationResult {

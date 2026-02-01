@@ -72,6 +72,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
   }, [events]);
 
   // Detect webhook sources and extract ports
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const detectedPorts: Array<{ port: number; rulesetName: string; sourceName: string }> = [];
 
@@ -86,8 +87,8 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
         if (isWebhook) {
           // Try to extract port from various possible locations
-          const webhookConfig = (source as any)['ansible.eda.webhook'] ||
-                               (source as any)['eda.builtin.webhook'] ||
+          const webhookConfig = (source as unknown)['ansible.eda.webhook'] ||
+                               (source as unknown)['eda.builtin.webhook'] ||
                                source;
 
           let detectedPort: number | null = null;
@@ -131,6 +132,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       }
     }
   }, [rulesets, selectedWebhookPort, activeTab]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const connectWebSocket = () => {
     try {
@@ -227,7 +229,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (_error) => {
         console.error('WebSocket error:', error);
         addEvent('Error', 'WebSocket connection error');
       };

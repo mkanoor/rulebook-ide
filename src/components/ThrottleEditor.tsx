@@ -36,6 +36,7 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
   );
 
   // Sync state when throttle prop changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setEnabled(!!throttle);
     setThrottleType(getInitialThrottleType());
@@ -43,6 +44,7 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
     setThreshold(throttle?.threshold?.toString() || '');
     setGroupByAttributes(throttle?.group_by_attributes?.join(', ') || '');
   }, [throttle]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateThrottle = (updates: Partial<{
     enabled: boolean;

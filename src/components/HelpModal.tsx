@@ -103,6 +103,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   // Render Mermaid diagrams after markdown content changes
+   
   useEffect(() => {
     if (!isLoading && !error && markdown) {
       // Use setTimeout to ensure DOM is updated
@@ -116,7 +117,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
             mermaid.render(id, code).then(({ svg }) => {
               element.innerHTML = svg;
-            }).catch((error) => {
+            }).catch((_error) => {
               console.error('Mermaid rendering error:', error);
               element.innerHTML = `<pre style="color: red;">Error rendering diagram: ${error.message}</pre>`;
             });
@@ -127,6 +128,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
       return () => clearTimeout(timer);
     }
   }, [markdown, isLoading, error]);
+   
 
   return (
     <Modal

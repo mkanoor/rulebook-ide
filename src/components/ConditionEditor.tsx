@@ -93,6 +93,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({ condition, onC
   // Sync state when condition prop changes (e.g., when loading a new rulebook)
   // This is a legitimate use of setState in an effect - we need to synchronize
   // local component state with external props when they change
+   
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const type = getConditionType(condition);
@@ -128,6 +129,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({ condition, onC
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [condition]);
+   
 
   // Update parent when internal state changes
   const updateCondition = (type: ConditionTypeOption, conds: string[], timeoutValue: string) => {

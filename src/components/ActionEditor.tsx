@@ -42,6 +42,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   const hasFormEditor = currentType === 'run_job_template' || currentType === 'run_workflow_template';
 
   // Sync with external changes (e.g., when loading a file)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const newActionJson = JSON.stringify(action, null, 2);
 
@@ -60,6 +61,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
       setJsonError(null);
     }
   }, [action, actionJson]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleActionTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newType = e.target.value;
@@ -187,7 +189,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         <div className="form-group">
           {currentType === 'run_job_template' && (
             <RunJobTemplateEditor
-              action={action as any}
+              action={action as unknown}
               onChange={(newAction) => {
                 setActionJson(JSON.stringify(newAction, null, 2));
                 onChange(index, newAction as Action);
@@ -196,7 +198,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
           )}
           {currentType === 'run_workflow_template' && (
             <RunWorkflowTemplateEditor
-              action={action as any}
+              action={action as unknown}
               onChange={(newAction) => {
                 setActionJson(JSON.stringify(newAction, null, 2));
                 onChange(index, newAction as Action);

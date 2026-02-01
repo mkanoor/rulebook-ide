@@ -14,7 +14,7 @@ interface FilterEditorProps {
 
 interface FilterState {
   type: string;
-  args: Record<string, any>;
+  args: Record<string, unknown>;
   schema: JsonSchema | null;
   isCustom: boolean;
   customArgsText?: string;
@@ -31,9 +31,11 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
   const schemaFileInputRefs = React.useRef<Map<number, HTMLInputElement | null>>(new Map());
 
   // Load all available filter schemas on mount
+   
   useEffect(() => {
     getAllEventFilterSchemas().then(setAvailableSchemas);
   }, []);
+   
 
   // Parse filters into filter states
   useEffect(() => {
@@ -46,7 +48,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
             const args = filter[filterType];
             const schema = await loadEventFilterSchema(filterType);
 
-            const filterArgs = typeof args === 'object' && args !== null ? args as Record<string, any> : {};
+            const filterArgs = typeof args === 'object' && args !== null ? args as Record<string, unknown> : {};
             const isCustom = !schema;
 
             return {
@@ -76,7 +78,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
     loadEventFilterSchema(filterType).then(schema => {
       if (schema) {
         // Initialize with default values from schema
-        const defaultArgs: Record<string, any> = {};
+        const defaultArgs: Record<string, unknown> = {};
         if (schema.properties) {
           Object.entries(schema.properties).forEach(([key, prop]) => {
             if (prop.default !== undefined) {
@@ -201,7 +203,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
     event.target.value = '';
   };
 
-  const handleFilterChange = (filterIndex: number, newArgs: Record<string, any>) => {
+  const handleFilterChange = (filterIndex: number, newArgs: Record<string, unknown>) => {
     const filterState = filterStates[filterIndex];
     if (!filterState) return;
 

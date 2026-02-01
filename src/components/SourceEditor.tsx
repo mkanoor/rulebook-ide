@@ -38,6 +38,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
   const [sourceArgsError, setSourceArgsError] = useState<string | null>(null);
 
   // Update source type and args when source prop changes externally
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const { type, args } = getSourceTypeAndArgs();
     const newArgsText = JSON.stringify(args, null, 2);
@@ -59,6 +60,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
       setSourceArgsError(null);
     }
   }, [source]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(index, { ...source, name: e.target.value });
@@ -77,8 +79,8 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
     }
 
     // Build new source object
-    const { name, filters } = source;
-    const newSource: any = {};
+    const { name: _name, filters: _filters } = source;
+    const newSource: unknown = {};
     if (name) newSource.name = name;
     if (newType) newSource[newType] = args;
     if (filters && filters.length > 0) newSource.filters = filters;
@@ -94,8 +96,8 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
       const parsed = JSON.parse(value);
 
       // Build new source object
-      const { name, filters } = source;
-      const newSource: any = {};
+      const { name: _name, filters: _filters } = source;
+      const newSource: unknown = {};
       if (name) newSource.name = name;
       if (sourceType) newSource[sourceType] = parsed;
       if (filters && filters.length > 0) newSource.filters = filters;

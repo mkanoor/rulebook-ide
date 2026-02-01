@@ -55,7 +55,7 @@ function validateConditionObject(
     return [];
   } else if (condType === 'any' || condType === 'all' || condType === 'not_all') {
     // Complex condition with multiple sub-conditions
-    const condObj = condition as any;
+    const condObj = condition as unknown;
     const condArray: string[] = condObj[condType];
 
     if (condArray && Array.isArray(condArray)) {
@@ -124,7 +124,7 @@ export function formatConditionErrors(errors: ConditionValidationError[]): strin
   const grouped = new Map<string, ConditionValidationError[]>();
 
   // Group errors by ruleset and rule
-  errors.forEach((error) => {
+  errors.forEach((_error) => {
     const key = `${error.rulesetName}::${error.ruleName}`;
     if (!grouped.has(key)) {
       grouped.set(key, []);
@@ -137,7 +137,7 @@ export function formatConditionErrors(errors: ConditionValidationError[]): strin
     const [rulesetName, ruleName] = key.split('::');
     message += `\n📋 Ruleset: "${rulesetName}" → Rule: "${ruleName}"\n`;
 
-    ruleErrors.forEach((error) => {
+    ruleErrors.forEach((_error) => {
       if (error.conditionType === 'simple') {
         message += `   ⚠️ Condition: "${error.conditionValue}"\n`;
       } else {

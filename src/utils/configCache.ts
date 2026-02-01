@@ -7,12 +7,12 @@
 
 interface CachedVersionInfo {
   version: string;
-  versionInfo: any;
+  versionInfo: unknown;
   timestamp: number;
 }
 
 interface CachedCollectionList {
-  collections: any[];
+  collections: unknown[];
   timestamp: number;
 }
 
@@ -111,7 +111,7 @@ export function setCachedVersionInfo(
 /**
  * Get cached collection list
  */
-export function getCachedCollectionList(configHash: string): any[] | null {
+export function getCachedCollectionList(configHash: string): unknown[] | null {
   const cache = loadCache();
   const cached = cache.collections[configHash];
 
@@ -128,7 +128,7 @@ export function getCachedCollectionList(configHash: string): any[] | null {
  */
 export function setCachedCollectionList(
   configHash: string,
-  collections: any[]
+  collections: unknown[]
 ): void {
   const cache = loadCache();
   cache.collections[configHash] = {

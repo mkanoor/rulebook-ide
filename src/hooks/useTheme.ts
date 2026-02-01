@@ -12,10 +12,12 @@ export function useTheme() {
   });
 
   // Apply theme when it changes
+   
   useEffect(() => {
     applyTheme(currentTheme);
     localStorage.setItem('rulebook-ide-theme', currentTheme.id);
   }, [currentTheme]);
+   
 
   return {
     currentTheme,

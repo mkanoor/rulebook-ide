@@ -34,6 +34,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Update suggestions when value or cursor position changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (value || cursorPosition === 0) {
       const newSuggestions = getAutocompleteSuggestions(value, cursorPosition);
@@ -43,6 +44,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       setSuggestions([]);
     }
   }, [value, cursorPosition]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;

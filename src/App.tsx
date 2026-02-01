@@ -98,6 +98,7 @@ function App() {
   }, [currentTheme]);
 
   // Check for ngrok token and json path prefix on mount and periodically
+   
   useEffect(() => {
     const checkSettings = () => {
       try {
@@ -121,8 +122,10 @@ function App() {
     const interval = setInterval(checkSettings, 1000);
     return () => clearInterval(interval);
   }, []);
+   
 
   // Track unsaved changes
+   
   useEffect(() => {
     const currentState = JSON.stringify(rulesets);
     if (initialRulesets && currentState !== initialRulesets) {
@@ -131,6 +134,7 @@ function App() {
       setHasUnsavedChanges(false);
     }
   }, [rulesets, initialRulesets]);
+   
 
   // Warn user before leaving with unsaved changes
   useEffect(() => {
@@ -147,6 +151,7 @@ function App() {
   }, [hasUnsavedChanges]);
 
   // Close theme selector when clicking outside
+   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -164,6 +169,7 @@ function App() {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [showThemeSelector]);
+   
 
   const handleThemeChange = (theme: Theme) => {
     setCurrentTheme(theme);
@@ -290,7 +296,7 @@ function App() {
         if ('showSaveFilePicker' in window) {
           try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const handle = await (window as any).showSaveFilePicker({
+            const handle = await (window as unknown).showSaveFilePicker({
               suggestedName: currentFilename || 'rulebook.yml',
               types: [
                 {

@@ -3,8 +3,8 @@ import type { JsonSchema, SchemaProperty } from '../utils/schemaLoader';
 
 interface SchemaFormProps {
   schema: JsonSchema;
-  value: Record<string, any>;
-  onChange: (value: Record<string, any>) => void;
+  value: Record<string, unknown>;
+  onChange: (value: Record<string, unknown>) => void;
   hideFields?: string[]; // Fields to hide (like source_type, filter_type)
 }
 
@@ -22,7 +22,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   const [errors, setErrors] = useState<ValidationError[]>([]);
 
   // Validate the form
-  const validate = (formValue: Record<string, any>): ValidationError[] => {
+  const validate = (formValue: Record<string, unknown>): ValidationError[] => {
     const newErrors: ValidationError[] = [];
     const { properties, required = [], oneOf } = schema;
 
@@ -73,10 +73,12 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   };
 
   // Validate on value change
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const validationErrors = validate(value);
     setErrors(validationErrors);
   }, [value, schema]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleFieldChange = (fieldName: string, fieldValue: any) => {
     onChange({

@@ -83,7 +83,7 @@ class Logger {
   /**
    * Log a debug message
    */
-  debug(...args: any[]): void {
+  debug(...args: unknown[]): void {
     if (this.currentLevel <= LogLevel.DEBUG) {
       console.debug('[DEBUG]', ...args);
     }
@@ -92,7 +92,7 @@ class Logger {
   /**
    * Log an info message
    */
-  info(...args: any[]): void {
+  info(...args: unknown[]): void {
     if (this.currentLevel <= LogLevel.INFO) {
       console.log('[INFO]', ...args);
     }
@@ -101,7 +101,7 @@ class Logger {
   /**
    * Log a warning message
    */
-  warn(...args: any[]): void {
+  warn(...args: unknown[]): void {
     if (this.currentLevel <= LogLevel.WARN) {
       console.warn('[WARN]', ...args);
     }
@@ -110,7 +110,7 @@ class Logger {
   /**
    * Log an error message
    */
-  error(...args: any[]): void {
+  error(...args: unknown[]): void {
     if (this.currentLevel <= LogLevel.ERROR) {
       console.error('[ERROR]', ...args);
     }
@@ -119,7 +119,7 @@ class Logger {
   /**
    * Always log regardless of log level (for critical system messages)
    */
-  always(...args: any[]): void {
+  always(...args: unknown[]): void {
     console.log('[SYSTEM]', ...args);
   }
 }
@@ -128,8 +128,8 @@ class Logger {
 export const logger = new Logger();
 
 // For convenience, also export individual functions
-export const debug = (...args: any[]) => logger.debug(...args);
-export const info = (...args: any[]) => logger.info(...args);
-export const warn = (...args: any[]) => logger.warn(...args);
-export const error = (...args: any[]) => logger.error(...args);
-export const always = (...args: any[]) => logger.always(...args);
+export const debug = (...args: unknown[]) => logger.debug(...args);
+export const info = (...args: unknown[]) => logger.info(...args);
+export const warn = (...args: unknown[]) => logger.warn(...args);
+export const error = (...args: unknown[]) => logger.error(...args);
+export const always = (...args: unknown[]) => logger.always(...args);

@@ -96,11 +96,11 @@ export function convertSourceName(sourceName: string, targetFormat: SourceNameFo
 /**
  * Convert filter names in a filters array to the specified format
  */
-export function convertFilterArray(filters: any[], targetFormat: SourceNameFormat): any[] {
+export function convertFilterArray(filters: unknown[], targetFormat: SourceNameFormat): unknown[] {
   return filters.map(filter => {
-    const converted: any = {};
+    const converted: Record<string, unknown> = {};
 
-    for (const [key, value] of Object.entries(filter)) {
+    for (const [key, value] of Object.entries(filter as Record<string, unknown>)) {
       // Convert the filter name (key) to the target format
       const convertedKey = convertSourceName(key, targetFormat);
       converted[convertedKey] = value;
@@ -113,8 +113,8 @@ export function convertFilterArray(filters: any[], targetFormat: SourceNameForma
 /**
  * Convert all source names in a source object to the specified format
  */
-export function convertSourceObject(sourceObj: any, targetFormat: SourceNameFormat): any {
-  const converted: any = {};
+export function convertSourceObject(sourceObj: Record<string, unknown>, targetFormat: SourceNameFormat): Record<string, unknown> {
+  const converted: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(sourceObj)) {
     if (key === 'name') {
@@ -140,21 +140,21 @@ export function convertSourceObject(sourceObj: any, targetFormat: SourceNameForm
 /**
  * Convert all sources in a ruleset to the specified format
  */
-export function convertRulesetSources(ruleset: any, targetFormat: SourceNameFormat): any {
+export function convertRulesetSources(ruleset: Record<string, unknown>, targetFormat: SourceNameFormat): Record<string, unknown> {
   if (!ruleset.sources || !Array.isArray(ruleset.sources)) {
     return ruleset;
   }
 
   return {
     ...ruleset,
-    sources: ruleset.sources.map((source: any) => convertSourceObject(source, targetFormat)),
+    sources: ruleset.sources.map((source: Record<string, unknown>) => convertSourceObject(source, targetFormat)),
   };
 }
 
 /**
  * Convert all sources in all rulesets to the specified format
  */
-export function convertAllSources(rulesets: any[], targetFormat: SourceNameFormat): any[] {
+export function convertAllSources(rulesets: unknown[], targetFormat: SourceNameFormat): unknown[] {
   return rulesets.map(ruleset => convertRulesetSources(ruleset, targetFormat));
 }
 

@@ -34,7 +34,7 @@ export function validateAction(action: unknown): ValidationError[] {
   }
 
   // Get the action schema definition
-  const actionSchemas = rulesetSchema.$defs as Record<string, any>;
+  const actionSchemas = rulesetSchema.$defs as Record<string, unknown>;
 
   // Map action types to schema definitions
   const schemaMap: Record<string, string> = {
@@ -121,7 +121,7 @@ export function formatValidationErrors(errors: ValidationError[]): string {
   }
 
   return errors
-    .map((error) => {
+    .map((_error) => {
       const prefix = error.path ? `${error.path}: ` : '';
       return `• ${prefix}${error.message}`;
     })
@@ -131,7 +131,7 @@ export function formatValidationErrors(errors: ValidationError[]): string {
 /**
  * Validates if an object is a valid JSON Schema
  */
-export function validateJsonSchema(schema: any): { isValid: boolean; errors: string[] } {
+export function validateJsonSchema(schema: unknown): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // Check if it's an object
@@ -166,7 +166,7 @@ export function validateJsonSchema(schema: any): { isValid: boolean; errors: str
       if (typeof prop !== 'object') {
         errors.push(`Property '${key}' must be an object`);
       } else {
-        const propObj = prop as any;
+        const propObj = prop as unknown;
         if (!propObj.type && !propObj.oneOf && !propObj.anyOf && !propObj.allOf && !propObj.$ref) {
           errors.push(`Property '${key}' must have a type or schema reference`);
         }
@@ -183,7 +183,7 @@ export function validateJsonSchema(schema: any): { isValid: boolean; errors: str
 /**
  * Loads a JSON schema from a URL or file path
  */
-export async function loadSchemaFromUrl(url: string): Promise<any> {
+export async function loadSchemaFromUrl(url: string): Promise<unknown> {
   try {
     // Check if it's a local file path or a URL
     const isUrl = url.startsWith('http://') || url.startsWith('https://');

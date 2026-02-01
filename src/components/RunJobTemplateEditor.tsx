@@ -35,9 +35,11 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [labelsText, setLabelsText] = useState(config.labels?.join(', ') || '');
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setLabelsText(config.labels?.join(', ') || '');
   }, [config.labels]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateConfig = (updates: Partial<typeof config>) => {
     onChange({

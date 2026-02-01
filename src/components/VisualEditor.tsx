@@ -377,6 +377,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     };
 
     // Validate selectedItem when rulesets change (e.g., when loading a new rulebook)
+     
     useEffect(() => {
       if (!selectedItem) return;
 
@@ -413,12 +414,15 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         }
       }
     }, [rulesets, selectedItem]);
+     
 
     // Clear validation errors when selection changes
+     
     useEffect(() => {
       setRulesetNameError(null);
       setRuleNameError(null);
     }, [selectedItem]);
+     
 
     // Action type definitions with required and optional parameters
     const actionTypes = {
@@ -656,6 +660,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     ]);
 
     // Apply saved log level on mount
+     
     useEffect(() => {
       const levelMap: { [key: string]: LogLevel } = {
         DEBUG: LogLevel.DEBUG,
@@ -669,6 +674,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         logger.setLogLevel(level);
       }
     }, [serverSettings.browserLogLevel]);
+     
 
     // WebSocket auto-connect and cleanup is now handled by useWebSocketConnection hook
 
@@ -682,6 +688,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     }, [events, showEventLog]);
 
     // Handle event log resize
+     
     useEffect(() => {
       const handleMouseMove = (e: MouseEvent) => {
         if (!isResizing) return;
@@ -705,8 +712,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         };
       }
     }, [isResizing]);
+     
 
     // Close context menu when clicking elsewhere
+     
     useEffect(() => {
       const handleClickOutside = () => {
         if (contextMenu) {
@@ -721,8 +730,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         };
       }
     }, [contextMenu]);
+     
 
     // Detect webhook sources
+     
     useEffect(() => {
       const detectedPorts: Array<{ port: number; rulesetName: string; sourceName: string }> = [];
 
@@ -783,28 +794,34 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         setSelectedWebhookPort(null);
       }
     }, [rulesets, selectedWebhookPort]);
+     
 
     // Notify parent component when stats change
+     
     useEffect(() => {
       if (onStatsChange) {
         onStatsChange(rulesetStats);
       }
     }, [rulesetStats, onStatsChange]);
+     
 
     // Validate all conditions and track which rules have errors
+     
     useEffect(() => {
       const errors = validateAllConditions(rulesets);
       const invalidRuleKeys = new Set<string>();
 
-      errors.forEach((error) => {
+      errors.forEach((_error) => {
         const key = `${error.rulesetIndex}-${error.ruleIndex}`;
         invalidRuleKeys.add(key);
       });
 
       setInvalidRules(invalidRuleKeys);
     }, [rulesets]);
+     
 
     // Close context menu when clicking outside
+     
     useEffect(() => {
       const handleClickOutside = () => {
         setContextMenu(null);
@@ -815,10 +832,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         return () => document.removeEventListener('click', handleClickOutside);
       }
     }, [contextMenu]);
+     
 
     // Source config is now handled by VisualSourceEditor component
 
     // Sync action config text when selected item changes
+     
     useEffect(() => {
       if (selectedItem?.type === 'action') {
         const rule = rulesets[selectedItem.rulesetIndex].rules[selectedItem.ruleIndex];
@@ -831,6 +850,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         }
       }
     }, [selectedItem, rulesets]);
+     
 
     // Warn user when closing tab with running execution
     useEffect(() => {
@@ -1398,6 +1418,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     };
 
     // Keyboard shortcuts for copy/paste
+     
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
         // Ctrl+C or Cmd+C to copy
@@ -1422,6 +1443,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       return () => document.removeEventListener('keydown', handleKeyDown);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedItem, copiedRule]);
+     
 
     const getSourceTypeAndArgs = (
       source: Record<string, unknown>

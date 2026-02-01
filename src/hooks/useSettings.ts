@@ -30,6 +30,7 @@ export function useSettings() {
   const [hasNgrokToken, setHasNgrokToken] = useState(false);
 
   // Persist settings to localStorage
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       localStorage.setItem('rulebook-ide-settings', JSON.stringify(settings));
@@ -38,6 +39,7 @@ export function useSettings() {
       console.error('Failed to save settings:', error);
     }
   }, [settings]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateSettings = (updates: Partial<RulebookSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));

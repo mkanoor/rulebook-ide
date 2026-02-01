@@ -3,7 +3,7 @@ import type { JsonSchema } from './schemaLoader';
 
 export interface SchemaLoadResult {
   schema: JsonSchema;
-  defaultArgs: Record<string, any>;
+  defaultArgs: Record<string, unknown>;
 }
 
 export interface SchemaLoadError {
@@ -13,8 +13,8 @@ export interface SchemaLoadError {
 /**
  * Extract default arguments from a JSON schema
  */
-export function extractDefaultArgs(schema: JsonSchema): Record<string, any> {
-  const defaultArgs: Record<string, any> = {};
+export function extractDefaultArgs(schema: JsonSchema): Record<string, unknown> {
+  const defaultArgs: Record<string, unknown> = {};
   if (schema.properties) {
     Object.entries(schema.properties).forEach(([key, prop]: [string, any]) => {
       if (prop.default !== undefined) {
@@ -28,7 +28,7 @@ export function extractDefaultArgs(schema: JsonSchema): Record<string, any> {
 /**
  * Validate and process a schema object
  */
-export function processSchema(schema: any): SchemaLoadResult | SchemaLoadError {
+export function processSchema(schema: unknown): SchemaLoadResult | SchemaLoadError {
   // Validate it's a valid JSON schema
   const validation = validateJsonSchema(schema);
   if (!validation.isValid) {

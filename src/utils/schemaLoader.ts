@@ -3,17 +3,17 @@
 export interface SchemaProperty {
   type: string | string[];
   description?: string;
-  default?: any;
+  default?: unknown;
   enum?: string[];
   const?: string;
   minimum?: number;
   maximum?: number;
   minItems?: number;
   maxItems?: number;
-  items?: any;
+  items?: unknown;
   properties?: Record<string, SchemaProperty>;
-  additionalProperties?: boolean | any;
-  oneOf?: any[];
+  additionalProperties?: boolean | unknown;
+  oneOf?: unknown[];
 }
 
 export interface JsonSchema {
@@ -23,7 +23,7 @@ export interface JsonSchema {
   description: string;
   properties: Record<string, SchemaProperty>;
   required?: string[];
-  oneOf?: any[];
+  oneOf?: unknown[];
 }
 
 // Cache for loaded schemas

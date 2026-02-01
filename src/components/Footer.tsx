@@ -19,6 +19,7 @@ export const Footer: React.FC<FooterProps> = ({
   // Force re-render every second to update relative time displays
   const [, setTick] = useState(0);
 
+   
   useEffect(() => {
     const timer = setInterval(() => {
       setTick(t => t + 1);
@@ -26,6 +27,7 @@ export const Footer: React.FC<FooterProps> = ({
 
     return () => clearInterval(timer);
   }, []);
+   
   // Aggregate stats across all rulesets
   const aggregatedStats = useMemo<{
     totalEventsProcessed: number;
