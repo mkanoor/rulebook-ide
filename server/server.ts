@@ -62,8 +62,10 @@ function checkAnsibleBinary(path: string = 'ansible-rulebook'): Promise<BinaryCh
         const found = !error && stdout.trim() !== '';
         resolve({
           found,
-          error: found ? null : `Command '${path}' not found in PATH. Please configure the full path in Settings.`,
-          isFullPath: false
+          error: found
+            ? null
+            : `Command '${path}' not found in PATH. Please configure the full path in Settings.`,
+          isFullPath: false,
         });
       });
     } else {
@@ -73,7 +75,7 @@ function checkAnsibleBinary(path: string = 'ansible-rulebook'): Promise<BinaryCh
         resolve({
           found,
           error: found ? null : `Binary not found or not executable at: ${path}`,
-          isFullPath: true
+          isFullPath: true,
         });
       });
     }
@@ -82,7 +84,9 @@ function checkAnsibleBinary(path: string = 'ansible-rulebook'): Promise<BinaryCh
 
 // Check if required dependencies are installed based on execution mode
 // Returns: { valid: boolean, missing: string[], warnings: string[] }
-function checkExecutionModePrerequisites(executionMode: ExecutionMode): Promise<PrerequisitesCheckResult> {
+function checkExecutionModePrerequisites(
+  executionMode: ExecutionMode
+): Promise<PrerequisitesCheckResult> {
   return new Promise((resolve) => {
     const missing: string[] = [];
     const warnings: string[] = [];
@@ -95,7 +99,7 @@ function checkExecutionModePrerequisites(executionMode: ExecutionMode): Promise<
         resolve({
           valid: missing.length === 0,
           missing,
-          warnings
+          warnings,
         });
       }
     }
@@ -118,7 +122,7 @@ function checkExecutionModePrerequisites(executionMode: ExecutionMode): Promise<
       // Check if podman/docker is actually working
       exec('which podman', (podmanError) => {
         const runtime = podmanError ? 'docker' : 'podman';
-        exec(`${runtime} --version`, (error, _stdout) => {
+        exec(`${runtime} --version`, (error) => {
           if (error) {
             warnings.push(`${runtime} found but not working: ${error.message}`);
           }
@@ -179,7 +183,7 @@ function killProcessTree(pid: number, signal: NodeJS.Signals = 'SIGTERM'): Promi
     exec(`pkill -${signal === 'SIGKILL' ? '9' : 'TERM'} -P ${pid}`, () => {
       try {
         process.kill(pid, signal);
-      } catch (killError) {
+      } catch {
         console.log(`Process ${pid} already terminated`);
       }
       resolve();
@@ -230,7 +234,7 @@ function parseCollectionList(output: string): AnsibleCollection[] {
         if (name.includes('.')) {
           collections.push({
             name: name,
-            version: version
+            version: version,
           });
         }
       }
@@ -245,22 +249,30 @@ async function installAnsibleRulebook(ws: WebSocket, collections: string[] = [])
   const sendProgress = (message: string): void => {
     console.log(`[Installation] ${message}`);
     try {
-      ws.send(JSON.stringify({
-        type: 'installation_progress',
-        message
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'installation_progress',
+          message,
+        })
+      );
     } catch (error) {
       console.error(`Error sending progress message: ${(error as Error).message}`);
     }
   };
 
-  const sendComplete = (success: boolean, path: string | null = null, error: string | null = null): void => {
-    ws.send(JSON.stringify({
-      type: 'installation_complete',
-      success,
-      path,
-      error
-    }));
+  const sendComplete = (
+    success: boolean,
+    path: string | null = null,
+    error: string | null = null
+  ): void => {
+    ws.send(
+      JSON.stringify({
+        type: 'installation_complete',
+        success,
+        path,
+        error,
+      })
+    );
   };
 
   return new Promise<boolean>((resolve) => {
@@ -311,13 +323,17 @@ async function installAnsibleRulebook(ws: WebSocket, collections: string[] = [])
         const isWindows = process.platform === 'win32';
         const binDir = isWindows ? 'Scripts' : 'bin';
         const pipPath = path.join(venvDir, binDir, isWindows ? 'pip.exe' : 'pip');
-        const ansibleRulebookPath = path.join(venvDir, binDir, isWindows ? 'ansible-rulebook.exe' : 'ansible-rulebook');
+        const ansibleRulebookPath = path.join(
+          venvDir,
+          binDir,
+          isWindows ? 'ansible-rulebook.exe' : 'ansible-rulebook'
+        );
 
         sendProgress('Upgrading pip...');
 
         // Step 5: Upgrade pip
         const pipUpgrade = spawn(pipPath, ['install', '--upgrade', 'pip'], {
-          env: { ...process.env, VIRTUAL_ENV: venvDir }
+          env: { ...process.env, VIRTUAL_ENV: venvDir },
         });
 
         pipUpgrade.stdout.on('data', (data) => {
@@ -338,10 +354,12 @@ async function installAnsibleRulebook(ws: WebSocket, collections: string[] = [])
           }
 
           // Step 6: Install ansible-core and ansible-rulebook
-          sendProgress('Installing ansible-core and ansible-rulebook (this may take a few minutes)...');
+          sendProgress(
+            'Installing ansible-core and ansible-rulebook (this may take a few minutes)...'
+          );
 
           const installProcess = spawn(pipPath, ['install', 'ansible-core', 'ansible-rulebook'], {
-            env: { ...process.env, VIRTUAL_ENV: venvDir }
+            env: { ...process.env, VIRTUAL_ENV: venvDir },
           });
 
           installProcess.stdout.on('data', (data) => {
@@ -383,7 +401,7 @@ async function installAnsibleRulebook(ws: WebSocket, collections: string[] = [])
               sendProgress('Installing certifi for SSL certificate handling...');
 
               const certifiInstall = spawn(pipPath, ['install', 'certifi'], {
-                env: { ...process.env, VIRTUAL_ENV: venvDir }
+                env: { ...process.env, VIRTUAL_ENV: venvDir },
               });
 
               certifiInstall.stdout.on('data', (data) => {
@@ -419,20 +437,33 @@ async function installAnsibleRulebook(ws: WebSocket, collections: string[] = [])
                   return;
                 }
 
-                sendProgress(`Installing ${collections.length} collection(s): ${collections.join(', ')}`);
+                sendProgress(
+                  `Installing ${collections.length} collection(s): ${collections.join(', ')}`
+                );
                 sendProgress(`Collections will be installed to: ${collectionsPath}`);
 
-                const ansibleGalaxyPath = path.join(venvDir, binDir, isWindows ? 'ansible-galaxy.exe' : 'ansible-galaxy');
+                const ansibleGalaxyPath = path.join(
+                  venvDir,
+                  binDir,
+                  isWindows ? 'ansible-galaxy.exe' : 'ansible-galaxy'
+                );
 
                 // Try with SSL verification disabled to avoid certificate issues
-                const args = ['collection', 'install', ...collections, '-p', collectionsPath, '--ignore-certs'];
+                const args = [
+                  'collection',
+                  'install',
+                  ...collections,
+                  '-p',
+                  collectionsPath,
+                  '--ignore-certs',
+                ];
                 const galaxyInstall = spawn(ansibleGalaxyPath, args, {
                   env: {
                     ...process.env,
                     VIRTUAL_ENV: venvDir,
                     ANSIBLE_COLLECTIONS_PATH: collectionsPath,
-                    PYTHONHTTPSVERIFY: '0'
-                  }
+                    PYTHONHTTPSVERIFY: '0',
+                  },
                 });
 
                 galaxyInstall.stdout.on('data', (data) => {
@@ -478,7 +509,7 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
   const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
     let body = '';
 
-    req.on('data', chunk => {
+    req.on('data', (chunk) => {
       body += chunk.toString();
     });
 
@@ -502,7 +533,7 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
         if (body) {
           payload = JSON.parse(body);
         }
-      } catch (e) {
+      } catch {
         // Keep as string if not JSON
       }
 
@@ -513,7 +544,7 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
         url: req.url,
         headers: req.headers,
         payload: payload,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       // Check current forwarding configuration
@@ -544,7 +575,9 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
           console.log(`   Method: ${req.method}`);
           console.log(`   Headers:`, JSON.stringify(forwardHeaders, null, 2));
           console.log(`   Body Length: ${body.length} bytes`);
-          console.log(`   Body Content: ${body.substring(0, 500)}${body.length > 500 ? '...' : ''}`);
+          console.log(
+            `   Body Content: ${body.substring(0, 500)}${body.length > 500 ? '...' : ''}`
+          );
 
           const forwardResponse = await fetch(forwardUrl, {
             method: req.method,
@@ -556,8 +589,13 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
 
           console.log(`\n📥 Forward Response:`);
           console.log(`   Status: ${forwardResponse.status} ${forwardResponse.statusText}`);
-          console.log(`   Headers:`, JSON.stringify(Object.fromEntries(forwardResponse.headers.entries()), null, 2));
-          console.log(`   Body: ${forwardResponseText.substring(0, 500)}${forwardResponseText.length > 500 ? '...' : ''}`);
+          console.log(
+            `   Headers:`,
+            JSON.stringify(Object.fromEntries(forwardResponse.headers.entries()), null, 2)
+          );
+          console.log(
+            `   Body: ${forwardResponseText.substring(0, 500)}${forwardResponseText.length > 500 ? '...' : ''}`
+          );
           console.log(`✅ SUCCESSFULLY FORWARDED TO PORT ${forwardToPort}`);
           console.log(`${'='.repeat(80)}\n`);
 
@@ -575,7 +613,6 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
 
           res.writeHead(forwardResponse.status, responseHeaders);
           res.end(forwardResponseText);
-
         } catch (forwardError) {
           const err = forwardError as Error & { code?: string };
           console.error(`\n❌ FORWARDING FAILED TO PORT ${forwardToPort}`);
@@ -591,22 +628,26 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
           broadcastMessage.forwardError = `${err.code || err.name}: ${err.message}`;
 
           res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({
-            success: false,
-            message: 'Webhook received but forwarding failed',
-            error: err.message,
-            errorCode: err.code,
-            port: port,
-            targetPort: forwardToPort
-          }));
+          res.end(
+            JSON.stringify({
+              success: false,
+              message: 'Webhook received but forwarding failed',
+              error: err.message,
+              errorCode: err.code,
+              port: port,
+              targetPort: forwardToPort,
+            })
+          );
         }
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          success: true,
-          message: 'Webhook received',
-          port: port
-        }));
+        res.end(
+          JSON.stringify({
+            success: true,
+            message: 'Webhook received',
+            port: port,
+          })
+        );
       }
 
       broadcastToUI(broadcastMessage);
@@ -641,7 +682,9 @@ function createTunnelHttpServer(port: number): Promise<HttpServer> {
         console.log(`   Forwarding enabled: ${currentForwardTo ? 'YES' : 'NO'}`);
         if (currentForwardTo) {
           console.log(`   Forwarding target: localhost:${currentForwardTo}`);
-          console.log(`   ⚠️  Make sure ansible-rulebook is listening on port ${currentForwardTo}!`);
+          console.log(
+            `   ⚠️  Make sure ansible-rulebook is listening on port ${currentForwardTo}!`
+          );
         }
         console.log(``);
         resolve(server);
@@ -672,14 +715,14 @@ if (IS_PRODUCTION) {
   const { createServer: createViteServer } = await import('vite');
   const vite = await createViteServer({
     server: { middlewareMode: true },
-    appType: 'spa'
+    appType: 'spa',
   });
 
   app.use(vite.middlewares);
 }
 
 // WebSocket connection handling
-wss.on('connection', (ws: WebSocket, _req) => {
+wss.on('connection', (ws: WebSocket) => {
   const clientId = uuidv4();
   console.log(`New connection: ${clientId}`);
 
@@ -697,7 +740,10 @@ wss.on('connection', (ws: WebSocket, _req) => {
         console.log(`${'='.repeat(80)}\n`);
       }
 
-      console.log(`[${clientId}] Received message type: ${data.type}`, data.type === 'update_tunnel_forwarding' ? JSON.stringify(data) : '');
+      console.log(
+        `[${clientId}] Received message type: ${data.type}`,
+        data.type === 'update_tunnel_forwarding' ? JSON.stringify(data) : ''
+      );
 
       if (data.type !== 'SessionStats' && data.type !== 'heartbeat') {
         console.log(`Received from ${clientId}:`, data.type);
@@ -709,15 +755,19 @@ wss.on('connection', (ws: WebSocket, _req) => {
           clients.set(clientId, { type: 'ui', ws });
           ws.send(JSON.stringify({ type: 'registered', clientId }));
           // Send binary status to UI
-          ws.send(JSON.stringify({
-            type: 'binary_status',
-            found: ansibleBinaryFound
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'binary_status',
+              found: ansibleBinaryFound,
+            })
+          );
           // Send log level configuration to browser
-          ws.send(JSON.stringify({
-            type: 'log_level_config',
-            logLevel: BROWSER_LOG_LEVEL
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'log_level_config',
+              logLevel: BROWSER_LOG_LEVEL,
+            })
+          );
           break;
 
         case 'Worker':
@@ -731,17 +781,23 @@ wss.on('connection', (ws: WebSocket, _req) => {
             execution.workerClientId = clientId;
 
             const rulebookData = Buffer.from(execution.rulebook).toString('base64');
-            ws.send(JSON.stringify({
-              type: 'Rulebook',
-              data: rulebookData
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'Rulebook',
+                data: rulebookData,
+              })
+            );
 
             if (execution.extraVars && Object.keys(execution.extraVars).length > 0) {
-              const extraVarsData = Buffer.from(JSON.stringify(execution.extraVars)).toString('base64');
-              ws.send(JSON.stringify({
-                type: 'ExtraVars',
-                data: extraVarsData
-              }));
+              const extraVarsData = Buffer.from(JSON.stringify(execution.extraVars)).toString(
+                'base64'
+              );
+              ws.send(
+                JSON.stringify({
+                  type: 'ExtraVars',
+                  data: extraVarsData,
+                })
+              );
             }
 
             // Send ControllerInfo if EDA_CONTROLLER environment variables are set
@@ -753,50 +809,67 @@ wss.on('connection', (ws: WebSocket, _req) => {
             // Check for controller environment variables in execution.envVars
             if (execution.envVars) {
               if (execution.envVars.EDA_CONTROLLER_URL) {
-                (controllerInfo as Record<string, string>).url = execution.envVars.EDA_CONTROLLER_URL;
+                (controllerInfo as Record<string, string>).url =
+                  execution.envVars.EDA_CONTROLLER_URL;
                 hasControllerInfo = true;
               }
               if (execution.envVars.EDA_CONTROLLER_TOKEN) {
-                (controllerInfo as Record<string, string>).token = execution.envVars.EDA_CONTROLLER_TOKEN;
+                (controllerInfo as Record<string, string>).token =
+                  execution.envVars.EDA_CONTROLLER_TOKEN;
                 hasControllerInfo = true;
               }
               if (execution.envVars.EDA_CONTROLLER_SSL_VERIFY !== undefined) {
-                (controllerInfo as Record<string, string>).ssl_verify = execution.envVars.EDA_CONTROLLER_SSL_VERIFY;
+                (controllerInfo as Record<string, string>).ssl_verify =
+                  execution.envVars.EDA_CONTROLLER_SSL_VERIFY;
                 hasControllerInfo = true;
               }
               if (execution.envVars.EDA_CONTROLLER_USERNAME) {
-                (controllerInfo as Record<string, string>).username = execution.envVars.EDA_CONTROLLER_USERNAME;
+                (controllerInfo as Record<string, string>).username =
+                  execution.envVars.EDA_CONTROLLER_USERNAME;
                 hasControllerInfo = true;
               }
               if (execution.envVars.EDA_CONTROLLER_PASSWORD) {
-                (controllerInfo as Record<string, string>).password = execution.envVars.EDA_CONTROLLER_PASSWORD;
+                (controllerInfo as Record<string, string>).password =
+                  execution.envVars.EDA_CONTROLLER_PASSWORD;
                 hasControllerInfo = true;
               }
             }
 
             if (hasControllerInfo) {
-              console.log(`✅ Sending ControllerInfo to worker ${executionId}:`,
-                Object.keys(controllerInfo).map(k => k === 'token' || k === 'password' ? `${k}=***` : `${k}=${(controllerInfo as Record<string, string>)[k]}`).join(', '));
-              ws.send(JSON.stringify({
-                type: 'ControllerInfo',
-                ...controllerInfo
-              }));
+              console.log(
+                `✅ Sending ControllerInfo to worker ${executionId}:`,
+                Object.keys(controllerInfo)
+                  .map((k) =>
+                    k === 'token' || k === 'password'
+                      ? `${k}=***`
+                      : `${k}=${(controllerInfo as Record<string, string>)[k]}`
+                  )
+                  .join(', ')
+              );
+              ws.send(
+                JSON.stringify({
+                  type: 'ControllerInfo',
+                  ...controllerInfo,
+                })
+              );
             } else {
               console.log(`No ControllerInfo to send (no EDA_CONTROLLER_* env vars found)`);
             }
 
-            ws.send(JSON.stringify({
-              type: 'EndOfResponse'
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'EndOfResponse',
+              })
+            );
 
             broadcastToUI({
               type: 'worker_connected',
-              executionId
+              executionId,
             });
           }
           break;
 
-        case 'start_execution':
+        case 'start_execution': {
           const killPromises: Promise<void>[] = [];
           executions.forEach((execution, id) => {
             if (execution.status === 'running' && execution.process && execution.process.pid) {
@@ -808,7 +881,7 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
           if (killPromises.length > 0) {
             await Promise.all(killPromises);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 500));
           }
 
           executionId = uuidv4();
@@ -828,19 +901,22 @@ wss.on('connection', (ws: WebSocket, _req) => {
             workerConnected: false,
             createdAt: new Date(),
             uiClientId: clientId,
-            process: null
+            process: null,
           });
 
           spawnAnsibleRulebook(executionId);
 
-          ws.send(JSON.stringify({
-            type: 'execution_started',
-            executionId,
-            wsUrl: `ws://localhost:${PORT}`,
-            command: `ansible-rulebook --worker --id ${executionId} --websocket-url ws://localhost:${PORT}`,
-            autoStarted: true
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'execution_started',
+              executionId,
+              wsUrl: `ws://localhost:${PORT}`,
+              command: `ansible-rulebook --worker --id ${executionId} --websocket-url ws://localhost:${PORT}`,
+              autoStarted: true,
+            })
+          );
           break;
+        }
 
         case 'stop_execution':
           if (executions.has(data.executionId)) {
@@ -854,7 +930,9 @@ wss.on('connection', (ws: WebSocket, _req) => {
             }
 
             if (execution.process && execution.process.pid) {
-              console.log(`Killing ansible-rulebook process tree for ${data.executionId} (PID: ${execution.process.pid})`);
+              console.log(
+                `Killing ansible-rulebook process tree for ${data.executionId} (PID: ${execution.process.pid})`
+              );
 
               killProcessTree(execution.process.pid, 'SIGTERM').then(() => {
                 console.log(`Process tree ${execution.process!.pid} terminated gracefully`);
@@ -871,7 +949,7 @@ wss.on('connection', (ws: WebSocket, _req) => {
             execution.status = 'stopped';
             broadcastToUI({
               type: 'execution_stopped',
-              executionId: data.executionId
+              executionId: data.executionId,
             });
           }
           break;
@@ -880,7 +958,7 @@ wss.on('connection', (ws: WebSocket, _req) => {
         case 'AnsibleEvent':
         case 'ProcessedEvent':
         case 'Action':
-        case 'Shutdown':
+        case 'Shutdown': {
           const activationId = data.activation_id || data.activation_instance_id || executionId;
 
           if (activationId && executions.has(activationId)) {
@@ -888,20 +966,23 @@ wss.on('connection', (ws: WebSocket, _req) => {
             execution.events.push({
               type: data.type,
               data: data,
-              timestamp: new Date()
+              timestamp: new Date(),
             });
 
             broadcastToUI({
               type: 'rulebook_event',
               executionId: activationId,
-              event: data
+              event: data,
             });
 
             console.log(`Event ${data.type} broadcasted for execution ${activationId}`);
           } else {
-            console.log(`Event received but no execution found: ${data.type}, activation_id: ${activationId}`);
+            console.log(
+              `Event received but no execution found: ${data.type}, activation_id: ${activationId}`
+            );
           }
           break;
+        }
 
         case 'SessionStats':
           if (data.activation_id && executions.has(data.activation_id)) {
@@ -913,12 +994,12 @@ wss.on('connection', (ws: WebSocket, _req) => {
               type: 'session_stats',
               executionId: data.activation_id,
               stats: data.stats,
-              reportedAt: data.reported_at
+              reportedAt: data.reported_at,
             });
           }
           break;
 
-        case 'send_webhook':
+        case 'send_webhook': {
           const webhookUrl = `http://localhost:${data.port}/endpoint`;
           console.log(`Proxying webhook POST to ${webhookUrl}`);
 
@@ -934,22 +1015,27 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
             const responseText = await webhookResponse.text();
 
-            ws.send(JSON.stringify({
-              type: 'webhook_response',
-              success: webhookResponse.ok,
-              status: webhookResponse.status,
-              statusText: webhookResponse.statusText,
-              body: responseText,
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'webhook_response',
+                success: webhookResponse.ok,
+                status: webhookResponse.status,
+                statusText: webhookResponse.statusText,
+                body: responseText,
+              })
+            );
           } catch (error) {
             console.error(`Webhook proxy error:`, error);
-            ws.send(JSON.stringify({
-              type: 'webhook_response',
-              success: false,
-              error: (error as Error).message,
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'webhook_response',
+                success: false,
+                error: (error as Error).message,
+              })
+            );
           }
           break;
+        }
 
         case 'heartbeat':
           ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
@@ -957,7 +1043,8 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
         case 'check_binary': {
           // Re-check binary (e.g., after settings update)
-          const pathToCheck = (data as CheckBinaryMessage).ansibleRulebookPath || 'ansible-rulebook';
+          const pathToCheck =
+            (data as CheckBinaryMessage).ansibleRulebookPath || 'ansible-rulebook';
           const checkResult = await checkAnsibleBinary(pathToCheck);
           ansibleBinaryFound = checkResult.found;
 
@@ -967,22 +1054,22 @@ wss.on('connection', (ws: WebSocket, _req) => {
             console.log(`⚠️  Binary check: ${checkResult.error}`);
           }
 
-
-
           // Broadcast updated status to all UI clients
           clients.forEach((client) => {
             if (client.type === 'ui' && client.ws.readyState === WebSocket.OPEN) {
-              client.ws.send(JSON.stringify({
-                type: 'binary_status',
-                found: checkResult.found,
-                error: checkResult.error
-              }));
+              client.ws.send(
+                JSON.stringify({
+                  type: 'binary_status',
+                  found: checkResult.found,
+                  error: checkResult.error,
+                })
+              );
             }
           });
           break;
         }
 
-        case 'check_prerequisites':
+        case 'check_prerequisites': {
           // Check if required dependencies are installed for the execution mode
           const modeToCheck = data.executionMode || 'custom';
           console.log(`Checking prerequisites for execution mode: ${modeToCheck}`);
@@ -992,21 +1079,27 @@ wss.on('connection', (ws: WebSocket, _req) => {
           if (prereqResult.valid) {
             console.log(`✅ All prerequisites met for ${modeToCheck} mode`);
           } else {
-            console.log(`⚠️  Missing prerequisites for ${modeToCheck} mode:`, prereqResult.missing.join(', '));
+            console.log(
+              `⚠️  Missing prerequisites for ${modeToCheck} mode:`,
+              prereqResult.missing.join(', ')
+            );
           }
 
           if (prereqResult.warnings.length > 0) {
             console.log(`⚠️  Warnings:`, prereqResult.warnings.join(', '));
           }
 
-          ws.send(JSON.stringify({
-            type: 'prerequisites_status',
-            executionMode: modeToCheck,
-            valid: prereqResult.valid,
-            missing: prereqResult.missing,
-            warnings: prereqResult.warnings
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'prerequisites_status',
+              executionMode: modeToCheck,
+              valid: prereqResult.valid,
+              missing: prereqResult.missing,
+              warnings: prereqResult.warnings,
+            })
+          );
           break;
+        }
 
         case 'install_ansible_rulebook':
           console.log('📦 Starting ansible-rulebook installation...');
@@ -1020,10 +1113,11 @@ wss.on('connection', (ws: WebSocket, _req) => {
           }
           break;
 
-        case 'get_ansible_version':
+        case 'get_ansible_version': {
           const executionMode = data.executionMode || 'custom';
           const containerImage = data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
-          const ansiblePath = data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
+          const ansiblePath =
+            data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
 
           let versionCommand;
           if (executionMode === 'container') {
@@ -1035,16 +1129,18 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
               console.log(`Getting version from container: ${versionCommand}`);
 
-              exec(versionCommand, (error, stdout, _stderr) => {
+              exec(versionCommand, (error, stdout) => {
                 if (error) {
                   console.error('Error getting ansible-rulebook version from container:', error);
-                  ws.send(JSON.stringify({
-                    type: 'ansible_version_response',
-                    success: false,
-                    version: 'Unknown',
-                    fullVersion: 'Unable to retrieve version information',
-                    error: error.message
-                  }));
+                  ws.send(
+                    JSON.stringify({
+                      type: 'ansible_version_response',
+                      success: false,
+                      version: 'Unknown',
+                      fullVersion: 'Unable to retrieve version information',
+                      error: error.message,
+                    })
+                  );
                   return;
                 }
 
@@ -1061,13 +1157,14 @@ wss.on('connection', (ws: WebSocket, _req) => {
                   ansibleCoreVersion: '',
                   pythonVersion: '',
                   pythonExecutable: '',
-                  platform: ''
+                  platform: '',
                 };
 
-                lines.forEach(line => {
+                lines.forEach((line) => {
                   const trimmed = line.trim();
                   if (trimmed.startsWith('Executable location =')) {
-                    versionInfo.executableLocation = 'Container: ' + containerImage + ' (' + trimmed.split('=')[1].trim() + ')';
+                    versionInfo.executableLocation =
+                      'Container: ' + containerImage + ' (' + trimmed.split('=')[1].trim() + ')';
                   } else if (trimmed.startsWith('Drools_jpy version =')) {
                     versionInfo.droolsJpyVersion = trimmed.split('=')[1].trim();
                   } else if (trimmed.startsWith('Java home =')) {
@@ -1085,13 +1182,15 @@ wss.on('connection', (ws: WebSocket, _req) => {
                   }
                 });
 
-                ws.send(JSON.stringify({
-                  type: 'ansible_version_response',
-                  success: true,
-                  version: firstLine,
-                  fullVersion: stdout.trim(),
-                  versionInfo: versionInfo
-                }));
+                ws.send(
+                  JSON.stringify({
+                    type: 'ansible_version_response',
+                    success: true,
+                    version: firstLine,
+                    fullVersion: stdout.trim(),
+                    versionInfo: versionInfo,
+                  })
+                );
               });
             });
           } else {
@@ -1100,16 +1199,18 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
             console.log(`Getting version from path: ${versionCommand}`);
 
-            exec(versionCommand, (error, stdout, _stderr) => {
+            exec(versionCommand, (error, stdout) => {
               if (error) {
                 console.error('Error getting ansible-rulebook version:', error);
-                ws.send(JSON.stringify({
-                  type: 'ansible_version_response',
-                  success: false,
-                  version: 'Unknown',
-                  fullVersion: 'Unable to retrieve version information',
-                  error: error.message
-                }));
+                ws.send(
+                  JSON.stringify({
+                    type: 'ansible_version_response',
+                    success: false,
+                    version: 'Unknown',
+                    fullVersion: 'Unable to retrieve version information',
+                    error: error.message,
+                  })
+                );
                 return;
               }
 
@@ -1126,10 +1227,10 @@ wss.on('connection', (ws: WebSocket, _req) => {
                 ansibleCoreVersion: '',
                 pythonVersion: '',
                 pythonExecutable: '',
-                platform: ''
+                platform: '',
               };
 
-              lines.forEach(line => {
+              lines.forEach((line) => {
                 const trimmed = line.trim();
                 if (trimmed.startsWith('Executable location =')) {
                   versionInfo.executableLocation = trimmed.split('=')[1].trim();
@@ -1150,21 +1251,26 @@ wss.on('connection', (ws: WebSocket, _req) => {
                 }
               });
 
-              ws.send(JSON.stringify({
-                type: 'ansible_version_response',
-                success: true,
-                version: firstLine,
-                fullVersion: stdout.trim(),
-                versionInfo: versionInfo
-              }));
+              ws.send(
+                JSON.stringify({
+                  type: 'ansible_version_response',
+                  success: true,
+                  version: firstLine,
+                  fullVersion: stdout.trim(),
+                  versionInfo: versionInfo,
+                })
+              );
             });
           }
           break;
+        }
 
-        case 'get_collection_list':
+        case 'get_collection_list': {
           const collectionExecutionMode = data.executionMode || 'custom';
-          const collectionContainerImage = data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
-          const collectionAnsiblePath = data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
+          const collectionContainerImage =
+            data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
+          const collectionAnsiblePath =
+            data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
 
           let collectionCommand;
           if (collectionExecutionMode === 'container') {
@@ -1175,15 +1281,17 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
               console.log(`Getting collection list from container: ${collectionCommand}`);
 
-              exec(collectionCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, _stderr) => {
+              exec(collectionCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout) => {
                 if (error) {
                   console.error('Error getting collection list from container:', error);
-                  ws.send(JSON.stringify({
-                    type: 'collection_list_response',
-                    success: false,
-                    collections: [],
-                    error: error.message
-                  }));
+                  ws.send(
+                    JSON.stringify({
+                      type: 'collection_list_response',
+                      success: false,
+                      collections: [],
+                      error: error.message,
+                    })
+                  );
                   return;
                 }
 
@@ -1191,11 +1299,13 @@ wss.on('connection', (ws: WebSocket, _req) => {
                 const collections = parseCollectionList(stdout);
                 console.log(`Found ${collections.length} collections in container`);
 
-                ws.send(JSON.stringify({
-                  type: 'collection_list_response',
-                  success: true,
-                  collections: collections
-                }));
+                ws.send(
+                  JSON.stringify({
+                    type: 'collection_list_response',
+                    success: true,
+                    collections: collections,
+                  })
+                );
               });
             });
           } else {
@@ -1210,15 +1320,17 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
             console.log(`Getting collection list from path: ${collectionCommand}`);
 
-            exec(collectionCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, _stderr) => {
+            exec(collectionCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout) => {
               if (error) {
                 console.error('Error getting collection list:', error);
-                ws.send(JSON.stringify({
-                  type: 'collection_list_response',
-                  success: false,
-                  collections: [],
-                  error: error.message
-                }));
+                ws.send(
+                  JSON.stringify({
+                    type: 'collection_list_response',
+                    success: false,
+                    collections: [],
+                    error: error.message,
+                  })
+                );
                 return;
               }
 
@@ -1226,14 +1338,17 @@ wss.on('connection', (ws: WebSocket, _req) => {
               const collections = parseCollectionList(stdout);
               console.log(`Found ${collections.length} collections`);
 
-              ws.send(JSON.stringify({
-                type: 'collection_list_response',
-                success: true,
-                collections: collections
-              }));
+              ws.send(
+                JSON.stringify({
+                  type: 'collection_list_response',
+                  success: true,
+                  collections: collections,
+                })
+              );
             });
           }
           break;
+        }
 
         case 'test_tunnel':
           console.log(`Sending test payload to ${data.url}...`);
@@ -1249,26 +1364,30 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
             const responseText = await testResponse.text();
 
-            ws.send(JSON.stringify({
-              type: 'test_tunnel_response',
-              success: testResponse.ok,
-              status: testResponse.status,
-              statusText: testResponse.statusText,
-              body: responseText,
-              port: data.port,
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'test_tunnel_response',
+                success: testResponse.ok,
+                status: testResponse.status,
+                statusText: testResponse.statusText,
+                body: responseText,
+                port: data.port,
+              })
+            );
           } catch (error) {
             console.error(`Test tunnel error:`, error);
-            ws.send(JSON.stringify({
-              type: 'test_tunnel_response',
-              success: false,
-              error: (error as Error).message,
-              port: data.port,
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'test_tunnel_response',
+                success: false,
+                error: (error as Error).message,
+                port: data.port,
+              })
+            );
           }
           break;
 
-        case 'create_tunnel':
+        case 'create_tunnel': {
           const forwardToPort = data.forwardTo || null;
           const forwardMsg = forwardToPort ? ` with forwarding to port ${forwardToPort}` : '';
           console.log(`\n${'='.repeat(80)}`);
@@ -1276,7 +1395,9 @@ wss.on('connection', (ws: WebSocket, _req) => {
           console.log(`${'='.repeat(80)}`);
           console.log(`   Tunnel Port: ${data.port}`);
           console.log(`   Forward To Port: ${forwardToPort || 'NONE (no forwarding)'}`);
-          console.log(`   Ngrok Token: ${data.ngrokApiToken ? '***' + data.ngrokApiToken.slice(-4) : 'NOT PROVIDED'}`);
+          console.log(
+            `   Ngrok Token: ${data.ngrokApiToken ? '***' + data.ngrokApiToken.slice(-4) : 'NOT PROVIDED'}`
+          );
           console.log(`${'='.repeat(80)}\n`);
 
           try {
@@ -1287,18 +1408,22 @@ wss.on('connection', (ws: WebSocket, _req) => {
             if (ngrokTunnels.has(data.port)) {
               const existingTunnel = ngrokTunnels.get(data.port)!;
               console.log(`Tunnel already exists for port ${data.port}: ${existingTunnel.url}`);
-              ws.send(JSON.stringify({
-                type: 'tunnel_created',
-                success: true,
-                port: data.port,
-                publicUrl: existingTunnel.url,
-                tunnelId: existingTunnel.tunnelId
-              }));
+              ws.send(
+                JSON.stringify({
+                  type: 'tunnel_created',
+                  success: true,
+                  port: data.port,
+                  publicUrl: existingTunnel.url,
+                  tunnelId: existingTunnel.tunnelId,
+                })
+              );
               break;
             }
 
             if (httpServers.has(data.port)) {
-              console.log(`HTTP server already running on port ${data.port}, closing it to recreate with new config`);
+              console.log(
+                `HTTP server already running on port ${data.port}, closing it to recreate with new config`
+              );
               const oldServer = httpServers.get(data.port)!;
               oldServer.close();
               httpServers.delete(data.port);
@@ -1317,7 +1442,7 @@ wss.on('connection', (ws: WebSocket, _req) => {
             const listener = await ngrok.forward({
               addr: data.port,
               authtoken: data.ngrokApiToken,
-              proto: 'http'
+              proto: 'http',
             });
 
             const publicUrl = listener.url() || '';
@@ -1327,19 +1452,23 @@ wss.on('connection', (ws: WebSocket, _req) => {
               listener,
               url: publicUrl,
               tunnelId,
-              forwardToPort: forwardToPort || undefined
+              forwardToPort: forwardToPort || undefined,
             });
 
-            console.log(`✅ Tunnel created: ${publicUrl} → localhost:${data.port}${forwardToPort ? ` → localhost:${forwardToPort}` : ''}`);
+            console.log(
+              `✅ Tunnel created: ${publicUrl} → localhost:${data.port}${forwardToPort ? ` → localhost:${forwardToPort}` : ''}`
+            );
 
-            ws.send(JSON.stringify({
-              type: 'tunnel_created',
-              success: true,
-              port: data.port,
-              publicUrl: publicUrl,
-              tunnelId: tunnelId,
-              forwardToPort: forwardToPort
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'tunnel_created',
+                success: true,
+                port: data.port,
+                publicUrl: publicUrl,
+                tunnelId: tunnelId,
+                forwardToPort: forwardToPort,
+              })
+            );
           } catch (error) {
             console.error(`Failed to create ngrok tunnel:`, error);
 
@@ -1349,21 +1478,26 @@ wss.on('connection', (ws: WebSocket, _req) => {
                 try {
                   httpServer.close();
                   httpServers.delete(data.port);
-                  console.log(`Cleaned up HTTP server on port ${data.port} after tunnel creation failure`);
+                  console.log(
+                    `Cleaned up HTTP server on port ${data.port} after tunnel creation failure`
+                  );
                 } catch (closeError) {
                   console.error(`Error closing HTTP server:`, closeError);
                 }
               }
             }
 
-            ws.send(JSON.stringify({
-              type: 'tunnel_created',
-              success: false,
-              port: data.port,
-              error: (error as Error).message
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'tunnel_created',
+                success: false,
+                port: data.port,
+                error: (error as Error).message,
+              })
+            );
           }
           break;
+        }
 
         case 'delete_tunnel':
           console.log(`Deleting ngrok tunnel for port ${data.port}...`);
@@ -1385,19 +1519,23 @@ wss.on('connection', (ws: WebSocket, _req) => {
 
             console.log(`Tunnel for port ${data.port} deleted`);
 
-            ws.send(JSON.stringify({
-              type: 'tunnel_deleted',
-              success: true,
-              port: data.port
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'tunnel_deleted',
+                success: true,
+                port: data.port,
+              })
+            );
           } catch (error) {
             console.error(`Failed to delete ngrok tunnel:`, error);
-            ws.send(JSON.stringify({
-              type: 'tunnel_deleted',
-              success: false,
-              port: data.port,
-              error: (error as Error).message
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'tunnel_deleted',
+                success: false,
+                port: data.port,
+                error: (error as Error).message,
+              })
+            );
           }
           break;
 
@@ -1412,30 +1550,36 @@ wss.on('connection', (ws: WebSocket, _req) => {
             // Update forwarding configuration
             if (data.forwardTo) {
               tunnelForwardingConfig.set(data.port, data.forwardTo);
-              console.log(`✅ Forwarding enabled for port ${data.port} → localhost:${data.forwardTo}`);
+              console.log(
+                `✅ Forwarding enabled for port ${data.port} → localhost:${data.forwardTo}`
+              );
             } else {
               tunnelForwardingConfig.delete(data.port);
               console.log(`✅ Forwarding disabled for port ${data.port}`);
             }
 
-            ws.send(JSON.stringify({
-              type: 'tunnel_forwarding_updated',
-              success: true,
-              port: data.port,
-              forwardTo: data.forwardTo || null
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'tunnel_forwarding_updated',
+                success: true,
+                port: data.port,
+                forwardTo: data.forwardTo || null,
+              })
+            );
           } catch (error) {
             console.error(`Failed to update tunnel forwarding:`, error);
-            ws.send(JSON.stringify({
-              type: 'tunnel_forwarding_updated',
-              success: false,
-              port: data.port,
-              error: (error as Error).message
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'tunnel_forwarding_updated',
+                success: false,
+                port: data.port,
+                error: (error as Error).message,
+              })
+            );
           }
           break;
 
-        case 'get_tunnel_state':
+        case 'get_tunnel_state': {
           // Return current tunnel state
           console.log('Frontend requesting tunnel state...');
           const tunnels: TunnelInfo[] = [];
@@ -1444,17 +1588,23 @@ wss.on('connection', (ws: WebSocket, _req) => {
               port: port,
               publicUrl: tunnel.url,
               tunnelId: tunnel.tunnelId,
-              forwardTo: tunnelForwardingConfig.get(port) || null
+              forwardTo: tunnelForwardingConfig.get(port) || null,
             });
           });
 
-          console.log(`Returning ${tunnels.length} active tunnel(s):`, tunnels.map(t => `port ${t.port} (forward to ${t.forwardTo || 'none'})`).join(', '));
+          console.log(
+            `Returning ${tunnels.length} active tunnel(s):`,
+            tunnels.map((t) => `port ${t.port} (forward to ${t.forwardTo || 'none'})`).join(', ')
+          );
 
-          ws.send(JSON.stringify({
-            type: 'tunnel_state',
-            tunnels: tunnels
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'tunnel_state',
+              tunnels: tunnels,
+            })
+          );
           break;
+        }
 
         default:
           console.log('Unknown message type:', (data as { type?: string }).type);
@@ -1498,9 +1648,8 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
 
   console.log(`Spawning ansible-rulebook for execution ${executionId}`);
 
-  const ansibleRulebookPath = execution.ansibleRulebookPath ||
-    process.env.ANSIBLE_RULEBOOK_PATH ||
-    'ansible-rulebook';
+  const ansibleRulebookPath =
+    execution.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
 
   // For container mode with --network host, get the actual host IP address
   let wsUrl = `ws://localhost:${PORT}`;
@@ -1526,11 +1675,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
     wsUrl = `ws://${hostIp}:${PORT}`;
   }
 
-  const args = [
-    '--worker',
-    '--id', executionId,
-    '--websocket-url', wsUrl
-  ];
+  const args = ['--worker', '--id', executionId, '--websocket-url', wsUrl];
 
   if (execution.heartbeat && execution.heartbeat > 0) {
     args.push('--heartbeat', execution.heartbeat.toString());
@@ -1538,7 +1683,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
 
   if (execution.extraCliArgs && execution.extraCliArgs.trim()) {
     const extraArgs = execution.extraCliArgs.trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-    extraArgs.forEach(arg => {
+    extraArgs.forEach((arg) => {
       const cleanArg = arg.replace(/^"(.*)"$/, '$1');
       args.push(cleanArg);
     });
@@ -1549,15 +1694,21 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
   // These modes inherit the full process environment plus user-defined vars
   const localProcessEnv = {
     ...process.env,
-    ...execution.envVars
+    ...execution.envVars,
   };
 
   // If using venv execution mode, automatically set ANSIBLE_COLLECTIONS_PATH
   // Only applies when we installed ansible-rulebook in a temporary venv
   // Expected path format: /path/to/venv/bin/ansible-rulebook or /path/to/venv/Scripts/ansible-rulebook.exe
-  if (execution.executionMode === 'venv' &&
-      (ansibleRulebookPath.includes('/bin/ansible-rulebook') || ansibleRulebookPath.includes('\\Scripts\\ansible-rulebook'))) {
-    const venvDir = ansibleRulebookPath.replace(/[\/\\](bin|Scripts)[\/\\]ansible-rulebook(\.exe)?$/, '');
+  if (
+    execution.executionMode === 'venv' &&
+    (ansibleRulebookPath.includes('/bin/ansible-rulebook') ||
+      ansibleRulebookPath.includes('\\Scripts\\ansible-rulebook'))
+  ) {
+    const venvDir = ansibleRulebookPath.replace(
+      /[/\\](bin|Scripts)[/\\]ansible-rulebook(\.exe)?$/,
+      ''
+    );
     const collectionsPath = path.join(venvDir, 'collections');
 
     console.log(`Detected venv installation path: ${venvDir}`);
@@ -1566,7 +1717,9 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
     // Check if collections directory exists
     if (fs.existsSync(collectionsPath)) {
       localProcessEnv.ANSIBLE_COLLECTIONS_PATH = collectionsPath;
-      console.log(`✅ Auto-setting ANSIBLE_COLLECTIONS_PATH for venv installation: ${collectionsPath}`);
+      console.log(
+        `✅ Auto-setting ANSIBLE_COLLECTIONS_PATH for venv installation: ${collectionsPath}`
+      );
 
       // Verify the ansible.eda collection exists
       const edaCollectionPath = path.join(collectionsPath, 'ansible_collections', 'ansible', 'eda');
@@ -1601,16 +1754,12 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
           console.log(`Podman not found, using docker`);
         }
       });
-    } catch (e) {
+    } catch {
       containerRuntime = 'docker';
     }
 
     command = containerRuntime;
-    commandArgs = [
-      'run',
-      '--rm',
-      '-i',
-    ];
+    commandArgs = ['run', '--rm', '-i'];
 
     // Extract webhook ports from the rulebook for port mapping
     const webhookPorts = new Set();
@@ -1626,14 +1775,16 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
             console.log(`  Found ${ruleset.sources.length} source(s)`);
             for (const source of ruleset.sources) {
               // Check for webhook sources (generic, webhook, alertmanager, etc.)
-              const sourceKeys = Object.keys(source).filter(k => k !== 'name' && k !== 'filters');
+              const sourceKeys = Object.keys(source).filter((k) => k !== 'name' && k !== 'filters');
               console.log(`  Source keys:`, sourceKeys);
               for (const sourceKey of sourceKeys) {
                 const sourceConfig = source[sourceKey];
                 console.log(`  Checking source ${sourceKey}, config:`, sourceConfig);
                 if (sourceConfig && typeof sourceConfig === 'object' && sourceConfig.port) {
                   webhookPorts.add(sourceConfig.port);
-                  console.log(`✅ Detected webhook port ${sourceConfig.port} from source ${sourceKey}`);
+                  console.log(
+                    `✅ Detected webhook port ${sourceConfig.port} from source ${sourceKey}`
+                  );
                 }
               }
             }
@@ -1642,7 +1793,9 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
       }
       console.log(`Total webhook ports detected: ${webhookPorts.size}`, Array.from(webhookPorts));
     } catch (error) {
-      console.log(`Warning: Could not parse rulebook for webhook ports: ${(error as Error).message}`);
+      console.log(
+        `Warning: Could not parse rulebook for webhook ports: ${(error as Error).message}`
+      );
     }
 
     // On macOS (Darwin), --network host doesn't work (Podman runs in VM)
@@ -1653,8 +1806,10 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
       // macOS: Use explicit port mappings for webhook sources
       // Note: --network host doesn't work on macOS because Podman runs in a VM
       if (webhookPorts.size > 0) {
-        console.log(`macOS detected: Adding port mappings for ${webhookPorts.size} webhook port(s)`);
-        webhookPorts.forEach(port => {
+        console.log(
+          `macOS detected: Adding port mappings for ${webhookPorts.size} webhook port(s)`
+        );
+        webhookPorts.forEach((port) => {
           commandArgs.push('-p', `${port}:${port}`);
           console.log(`Added port mapping: -p ${port}:${port}`);
         });
@@ -1670,7 +1825,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
     // Add environment variables for container mode
     // Only pass user-defined environment variables, not the full process environment
     if (execution.envVars && Object.keys(execution.envVars).length > 0) {
-      Object.keys(execution.envVars).forEach(key => {
+      Object.keys(execution.envVars).forEach((key) => {
         commandArgs.push('-e', `${key}=${execution.envVars[key]}`);
       });
       console.log(`Container environment variables: ${Object.keys(execution.envVars).join(', ')}`);
@@ -1703,7 +1858,10 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
   }
 
   console.log(`Working directory: ${execution.workingDirectory || 'current directory'}`);
-  console.log(`Environment variables for ${executionId}:`, Object.keys(execution.envVars || {}).join(', ') || 'none');
+  console.log(
+    `Environment variables for ${executionId}:`,
+    Object.keys(execution.envVars || {}).join(', ') || 'none'
+  );
   if (localProcessEnv.ANSIBLE_COLLECTIONS_PATH) {
     console.log(`ANSIBLE_COLLECTIONS_PATH: ${localProcessEnv.ANSIBLE_COLLECTIONS_PATH}`);
   }
@@ -1714,10 +1872,14 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
     cwd?: string;
   } = {
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: execution.executionMode === 'container' ? process.env : localProcessEnv
+    env: execution.executionMode === 'container' ? process.env : localProcessEnv,
   };
 
-  if (execution.workingDirectory && execution.workingDirectory.trim() && execution.executionMode !== 'container') {
+  if (
+    execution.workingDirectory &&
+    execution.workingDirectory.trim() &&
+    execution.executionMode !== 'container'
+  ) {
     spawnOptions.cwd = execution.workingDirectory;
   }
 
@@ -1730,7 +1892,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
       type: 'process_output',
       executionId,
       stream: 'stdout',
-      data: output
+      data: output,
     });
   });
 
@@ -1741,7 +1903,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
       type: 'process_output',
       executionId,
       stream: 'stderr',
-      data: output
+      data: output,
     });
   });
 
@@ -1750,7 +1912,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
     broadcastToUI({
       type: 'process_error',
       executionId,
-      error: error.message
+      error: error.message,
     });
     execution.status = 'error';
     execution.error = error.message;
@@ -1764,7 +1926,7 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
       type: 'process_exited',
       executionId,
       exitCode: code,
-      signal
+      signal,
     });
   });
 
@@ -1775,19 +1937,22 @@ function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
 }
 
 // Cleanup old executions periodically
-setInterval(() => {
-  const now = new Date();
-  executions.forEach((execution, id) => {
-    const age = (now.getTime() - execution.createdAt.getTime()) / 1000 / 60;
-    if (age > 60 && execution.status !== 'running') {
-      console.log(`Cleaning up old execution: ${id}`);
-      if (execution.process && execution.process.pid && !execution.process.killed) {
-        killProcessTree(execution.process.pid, 'SIGKILL');
+setInterval(
+  () => {
+    const now = new Date();
+    executions.forEach((execution, id) => {
+      const age = (now.getTime() - execution.createdAt.getTime()) / 1000 / 60;
+      if (age > 60 && execution.status !== 'running') {
+        console.log(`Cleaning up old execution: ${id}`);
+        if (execution.process && execution.process.pid && !execution.process.killed) {
+          killProcessTree(execution.process.pid, 'SIGKILL');
+        }
+        executions.delete(id);
       }
-      executions.delete(id);
-    }
-  });
-}, 5 * 60 * 1000);
+    });
+  },
+  5 * 60 * 1000
+);
 
 // Graceful shutdown
 let isShuttingDown = false;
@@ -1811,7 +1976,9 @@ process.on('SIGINT', async () => {
     const killPromises: Promise<void>[] = [];
     executions.forEach((execution, id) => {
       if (execution.process && execution.process.pid && !execution.process.killed) {
-        console.log(`Killing ansible-rulebook process tree for execution ${id} (PID: ${execution.process.pid})`);
+        console.log(
+          `Killing ansible-rulebook process tree for execution ${id} (PID: ${execution.process.pid})`
+        );
         killPromises.push(killProcessTree(execution.process.pid, 'SIGTERM'));
       }
     });
