@@ -6,7 +6,6 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { spawn, exec } from 'child_process';
 import type { ChildProcess, ExecException } from 'child_process';
-import ngrok from '@ngrok/ngrok';
 import http from 'http';
 import type { IncomingMessage, ServerResponse, Server as HttpServer } from 'http';
 import os from 'os';
@@ -24,21 +23,14 @@ import type {
   AnsibleCollection,
   IncomingMessage as WSIncomingMessage,
   ExecutionMode,
-  CheckBinaryMessage,
-  TunnelInfo,
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '..');
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5555;
+export const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5555;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-// Browser log level configuration
-// Set LOG_LEVEL environment variable to control browser console logging
-// Valid values: DEBUG, INFO, WARN, ERROR, NONE
-const BROWSER_LOG_LEVEL = process.env.LOG_LEVEL || 'INFO';
 
 // Store active connections and execution data
 const executions = new Map<string, Execution>();
@@ -178,7 +170,7 @@ export function checkExecutionModePrerequisites(
 }
 
 // Helper function to kill a process and all its children
-function killProcessTree(pid: number, signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
+export function killProcessTree(pid: number, signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
   return new Promise((resolve) => {
     exec(`pkill -${signal === 'SIGKILL' ? '9' : 'TERM'} -P ${pid}`, () => {
       try {
@@ -245,7 +237,10 @@ export function parseCollectionList(output: string): AnsibleCollection[] {
 }
 
 // Function to install ansible-rulebook in a private virtual environment
-async function installAnsibleRulebook(ws: WebSocket, collections: string[] = []): Promise<boolean> {
+export async function installAnsibleRulebook(
+  ws: WebSocket,
+  collections: string[] = []
+): Promise<boolean> {
   const sendProgress = (message: string): void => {
     console.log(`[Installation] ${message}`);
     try {
@@ -505,7 +500,7 @@ async function installAnsibleRulebook(ws: WebSocket, collections: string[] = [])
 }
 
 // Helper function to create HTTP server for tunnel port
-function createTunnelHttpServer(port: number): Promise<HttpServer> {
+export function createTunnelHttpServer(port: number): Promise<HttpServer> {
   const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
     let body = '';
 
@@ -722,6 +717,10 @@ if (IS_PRODUCTION) {
 }
 
 // WebSocket connection handling
+// Import message handlers
+import { messageHandlers } from './handlers/index.js';
+import type { MessageHandlerContext } from './handlers/types.js';
+
 wss.on('connection', (ws: WebSocket) => {
   const clientId = uuidv4();
   console.log(`New connection: ${clientId}`);
@@ -749,6 +748,33 @@ wss.on('connection', (ws: WebSocket) => {
         console.log(`Received from ${clientId}:`, data.type);
       }
 
+      // Track connection type for close handler
+      if (data.type === 'register_ui') {
+        connectionType = 'ui';
+      } else if (data.type === 'Worker') {
+        connectionType = 'worker';
+        executionId = data.activation_id as string;
+      }
+
+      // Create context object for handlers
+      const context: MessageHandlerContext = {
+        executions,
+        clients,
+        ngrokTunnels,
+        httpServers,
+        tunnelForwardingConfig,
+        ansibleBinaryFound,
+      };
+
+      // Look up and execute handler
+      const handler = messageHandlers[data.type];
+      if (handler) {
+        await handler(ws, data as unknown as Record<string, unknown>, clientId, context);
+      } else {
+        console.log('Unknown message type:', data.type);
+      }
+
+      /* OLD SWITCH STATEMENT - REPLACED BY HANDLER REGISTRY
       switch (data.type) {
         case 'register_ui':
           connectionType = 'ui';
@@ -1609,6 +1635,7 @@ wss.on('connection', (ws: WebSocket) => {
         default:
           console.log('Unknown message type:', (data as { type?: string }).type);
       }
+      END OF OLD SWITCH STATEMENT */
     } catch (error) {
       console.error('Error processing message:', error);
     }
@@ -1631,7 +1658,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-function broadcastToUI(message: Record<string, unknown>): void {
+export function broadcastToUI(message: Record<string, unknown>): void {
   clients.forEach((client) => {
     if (client.type === 'ui' && client.ws.readyState === WebSocket.OPEN) {
       client.ws.send(JSON.stringify(message));
@@ -1639,7 +1666,7 @@ function broadcastToUI(message: Record<string, unknown>): void {
   });
 }
 
-function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
+export function spawnAnsibleRulebook(executionId: string): ChildProcess | null {
   const execution = executions.get(executionId);
   if (!execution) {
     console.error(`Execution ${executionId} not found`);
