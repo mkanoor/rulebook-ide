@@ -7,3 +7,4 @@ export * from './useServerSettings';
 export * from './useModalState';
 export * from './useExecutionState';
 export * from './useTunnelState';
+export * from './useWebSocketConnection';
