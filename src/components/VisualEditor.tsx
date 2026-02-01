@@ -668,15 +668,17 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       if (level !== undefined) {
         logger.setLogLevel(level);
       }
-    }, []);
+    }, [serverSettings.browserLogLevel]);
 
     // WebSocket auto-connect and cleanup is now handled by useWebSocketConnection hook
 
     // Auto-scroll event log
+    // eventsEndRef is a ref and doesn't need to be in the dependency array
     useEffect(() => {
       if (showEventLog) {
         eventsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [events, showEventLog]);
 
     // Handle event log resize
@@ -780,7 +782,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       } else {
         setSelectedWebhookPort(null);
       }
-    }, [rulesets]);
+    }, [rulesets, selectedWebhookPort]);
 
     // Notify parent component when stats change
     useEffect(() => {
@@ -855,7 +857,9 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
-    }, [isRunning, executionId]);
+      // wsRef is a ref and doesn't need to be in the dependency array
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isRunning, executionId, sendMessage]);
 
     const installAnsibleRulebook = () => {
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -896,8 +900,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         setConfirmationModal({
           isOpen: true,
           title: 'Invalid Conditions',
-          message:
-            `❌ Cannot start execution with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before starting execution.`,
+          message: `❌ Cannot start execution with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before starting execution.`,
           confirmText: 'Go to First Error',
           onConfirm: () => {
             if (location) {

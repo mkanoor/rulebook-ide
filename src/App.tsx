@@ -9,7 +9,12 @@ import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
 import { getCurrentSourceNameFormat, convertAllSources } from './utils/sourceNameConverter';
-import { validateAllConditions, formatConditionErrors, getConditionErrorSummary, getFirstInvalidConditionLocation } from './utils/rulebookValidator';
+import {
+  validateAllConditions,
+  formatConditionErrors,
+  getConditionErrorSummary,
+  getFirstInvalidConditionLocation,
+} from './utils/rulebookValidator';
 import './App.css';
 
 function App() {
@@ -19,8 +24,8 @@ function App() {
   });
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [ansibleVersion, setAnsibleVersion] = useState<string>('v1.0.0');
-  const [ansibleVersionInfo, setAnsibleVersionInfo] = useState<any>(null);
-  const [collectionList, setCollectionList] = useState<any[]>([]);
+  const [ansibleVersionInfo, setAnsibleVersionInfo] = useState<unknown>(null);
+  const [collectionList, setCollectionList] = useState<unknown[]>([]);
   const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -50,9 +55,7 @@ function App() {
     },
   ]);
 
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  );
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentFilename, setCurrentFilename] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialRulesets, setInitialRulesets] = useState<string>('');
@@ -73,7 +76,7 @@ function App() {
   const [jsonPathPrefix, setJsonPathPrefix] = useState('event');
   const [unreadWebhooks, setUnreadWebhooks] = useState(0);
   const [hasNewWebhook, setHasNewWebhook] = useState(false);
-  const [rulesetStats, setRulesetStats] = useState<Map<string, any>>(new Map());
+  const [rulesetStats, setRulesetStats] = useState<Map<string, unknown>>(new Map());
 
   // Confirmation modal state
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -147,7 +150,11 @@ function App() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (showThemeSelector && !target.closest('.theme-selector-dropdown') && !target.closest('button[title="Change Theme"]')) {
+      if (
+        showThemeSelector &&
+        !target.closest('.theme-selector-dropdown') &&
+        !target.closest('button[title="Change Theme"]')
+      ) {
         setShowThemeSelector(false);
       }
     };
@@ -201,7 +208,9 @@ function App() {
     rulesets.forEach((rs, idx) => {
       const trimmedName = rs.name.trim();
       if (rulesetNames.has(trimmedName)) {
-        duplicateRulesets.push(`"${trimmedName}" (rulesets #${rulesetNames.get(trimmedName)! + 1} and #${idx + 1})`);
+        duplicateRulesets.push(
+          `"${trimmedName}" (rulesets #${rulesetNames.get(trimmedName)! + 1} and #${idx + 1})`
+        );
       } else {
         rulesetNames.set(trimmedName, idx);
       }
@@ -214,7 +223,9 @@ function App() {
       rs.rules.forEach((rule, ruleIdx) => {
         const trimmedName = rule.name.trim();
         if (ruleNames.has(trimmedName)) {
-          duplicateRules.push(`"${trimmedName}" in ruleset "${rs.name}" (rules #${ruleNames.get(trimmedName)! + 1} and #${ruleIdx + 1})`);
+          duplicateRules.push(
+            `"${trimmedName}" in ruleset "${rs.name}" (rules #${ruleNames.get(trimmedName)! + 1} and #${ruleIdx + 1})`
+          );
         } else {
           ruleNames.set(trimmedName, ruleIdx);
         }
@@ -225,10 +236,14 @@ function App() {
     if (duplicateRulesets.length > 0 || duplicateRules.length > 0) {
       let errorMsg = 'Cannot export with duplicate names:\n\n';
       if (duplicateRulesets.length > 0) {
-        errorMsg += 'Duplicate Ruleset Names:\n' + duplicateRulesets.map(d => `  • ${d}`).join('\n') + '\n\n';
+        errorMsg +=
+          'Duplicate Ruleset Names:\n' +
+          duplicateRulesets.map((d) => `  • ${d}`).join('\n') +
+          '\n\n';
       }
       if (duplicateRules.length > 0) {
-        errorMsg += 'Duplicate Rule Names:\n' + duplicateRules.map(d => `  • ${d}`).join('\n') + '\n\n';
+        errorMsg +=
+          'Duplicate Rule Names:\n' + duplicateRules.map((d) => `  • ${d}`).join('\n') + '\n\n';
       }
       errorMsg += 'Please fix these issues before exporting.';
 
@@ -246,8 +261,7 @@ function App() {
       setConfirmationModal({
         isOpen: true,
         title: 'Invalid Conditions',
-        message:
-          `❌ Cannot export rulebook with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before exporting your rulebook.`,
+        message: `❌ Cannot export rulebook with invalid conditions!\n\n${summary}\n${details}\n\n⚠️ Please fix these condition errors before exporting your rulebook.`,
         confirmText: 'Go to First Error',
         onConfirm: () => {
           if (location && visualEditorRef.current) {
@@ -275,6 +289,7 @@ function App() {
         // Use File System Access API if available
         if ('showSaveFilePicker' in window) {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const handle = await (window as any).showSaveFilePicker({
               suggestedName: currentFilename || 'rulebook.yml',
               types: [
@@ -449,7 +464,7 @@ function App() {
 
         setMessage({
           type: 'error',
-          text: `Template load failed, created empty rulebook: ${error instanceof Error ? error.message : String(error)}`
+          text: `Template load failed, created empty rulebook: ${error instanceof Error ? error.message : String(error)}`,
         });
         setTimeout(() => setMessage(null), 5000);
       }
@@ -460,7 +475,8 @@ function App() {
       setConfirmationModal({
         isOpen: true,
         title: 'Unsaved Changes',
-        message: 'You have unsaved changes. Creating a new rulebook will discard them.\n\nAre you sure you want to continue?',
+        message:
+          'You have unsaved changes. Creating a new rulebook will discard them.\n\nAre you sure you want to continue?',
         confirmText: 'Discard Changes',
         onConfirm: () => {
           setConfirmationModal({ ...confirmationModal, isOpen: false });
@@ -536,7 +552,7 @@ function App() {
       }
 
       // Update webhook notification state
-      setUnreadWebhooks(prev => prev + 1);
+      setUnreadWebhooks((prev) => prev + 1);
       setHasNewWebhook(true);
 
       // Clear animation after 3 seconds
@@ -567,12 +583,12 @@ function App() {
     }
   };
 
-  const handleVersionInfoReceived = (version: string, versionInfo: any) => {
+  const handleVersionInfoReceived = (version: string, versionInfo: unknown) => {
     setAnsibleVersion(version);
     setAnsibleVersionInfo(versionInfo);
   };
 
-  const handleCollectionListReceived = (collections: any[]) => {
+  const handleCollectionListReceived = (collections: unknown[]) => {
     setCollectionList(collections);
   };
 
@@ -585,9 +601,13 @@ function App() {
           {currentFilename && (
             <span
               className="app-header-filename"
-              title={hasUnsavedChanges ? "Unsaved changes" : "No unsaved changes"}
+              title={hasUnsavedChanges ? 'Unsaved changes' : 'No unsaved changes'}
             >
-              📄 <strong>{currentFilename}{hasUnsavedChanges ? ' *' : ''}</strong>
+              📄{' '}
+              <strong>
+                {currentFilename}
+                {hasUnsavedChanges ? ' *' : ''}
+              </strong>
             </span>
           )}
           {!currentFilename && hasUnsavedChanges && (
@@ -637,7 +657,11 @@ function App() {
       </div>
 
       <div className="toolbar">
-        <button className="btn btn-primary btn-icon" onClick={handleNewRulebook} data-title="New Rulebook">
+        <button
+          className="btn btn-primary btn-icon"
+          onClick={handleNewRulebook}
+          data-title="New Rulebook"
+        >
           📄
         </button>
         <button
@@ -647,13 +671,25 @@ function App() {
         >
           ➕
         </button>
-        <button className="btn btn-outline btn-icon" onClick={handleViewYAML} data-title="View Rulebook YAML">
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={handleViewYAML}
+          data-title="View Rulebook YAML"
+        >
           👁️
         </button>
-        <button className="btn btn-outline btn-icon" onClick={handleExportYAML} data-title="Export Rulebook">
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={handleExportYAML}
+          data-title="Export Rulebook"
+        >
           💾
         </button>
-        <label className="btn btn-outline btn-icon" style={{ cursor: 'pointer' }} data-title="Import Rulebook">
+        <label
+          className="btn btn-outline btn-icon"
+          style={{ cursor: 'pointer' }}
+          data-title="Import Rulebook"
+        >
           📁
           <input
             ref={fileInputRef}
@@ -681,9 +717,7 @@ function App() {
           style={{ position: 'relative' }}
         >
           🔍
-          {unreadWebhooks > 0 && (
-            <span className="notification-badge">{unreadWebhooks}</span>
-          )}
+          {unreadWebhooks > 0 && <span className="notification-badge">{unreadWebhooks}</span>}
         </button>
         {hasNgrokToken && (
           <button
@@ -706,12 +740,19 @@ function App() {
             disabled={executionState.executionMode !== 'container' && !executionState.binaryFound}
             data-title={
               executionState.executionMode !== 'container' && !executionState.binaryFound
-                ? (executionState.binaryError || 'Please set the path of ansible-rulebook in Settings')
+                ? executionState.binaryError ||
+                  'Please set the path of ansible-rulebook in Settings'
                 : 'Start Execution'
             }
             style={{
-              opacity: executionState.executionMode === 'container' || executionState.binaryFound ? 1 : 0.5,
-              cursor: executionState.executionMode === 'container' || executionState.binaryFound ? 'pointer' : 'not-allowed'
+              opacity:
+                executionState.executionMode === 'container' || executionState.binaryFound
+                  ? 1
+                  : 0.5,
+              cursor:
+                executionState.executionMode === 'container' || executionState.binaryFound
+                  ? 'pointer'
+                  : 'not-allowed',
             }}
           >
             ▶
@@ -731,8 +772,18 @@ function App() {
             onClick={() => visualEditorRef.current?.openWebhookModal()}
             data-title="Send Webhook"
           >
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '18px', height: '18px' }}>
-              <path fillRule="evenodd" clipRule="evenodd" d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z" fill="currentColor"></path>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ width: '18px', height: '18px' }}
+            >
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z"
+                fill="currentColor"
+              ></path>
             </svg>
           </button>
         )}
@@ -797,10 +848,7 @@ function App() {
         title="JSON Path Explorer"
         size="large"
         footer={
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowJsonPathExplorer(false)}
-          >
+          <button className="btn btn-primary" onClick={() => setShowJsonPathExplorer(false)}>
             Close
           </button>
         }
@@ -829,186 +877,276 @@ function App() {
         }
       >
         <div>
-              {ansibleVersionInfo ? (
-                <div style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-                  <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ fontSize: '16px', marginBottom: '12px', color: currentTheme.colors.primary }}>
-                      Ansible Rulebook
-                    </h3>
-                    <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', marginBottom: '8px' }}>
-                      <strong>Version:</strong> {ansibleVersionInfo.version}
-                    </div>
-                    {ansibleVersionInfo.executableLocation && (
-                      <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
-                        <strong>Location:</strong> {ansibleVersionInfo.executableLocation}
-                      </div>
-                    )}
-                  </div>
-
-                  {ansibleVersionInfo.droolsJpyVersion && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: '16px', marginBottom: '8px', color: currentTheme.colors.primary }}>
-                        Drools JPY
-                      </h3>
-                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px' }}>
-                        <strong>Version:</strong> {ansibleVersionInfo.droolsJpyVersion}
-                      </div>
-                    </div>
-                  )}
-
-                  {ansibleVersionInfo.javaVersion && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: '16px', marginBottom: '8px', color: currentTheme.colors.primary }}>
-                        Java
-                      </h3>
-                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', marginBottom: '8px' }}>
-                        <strong>Version:</strong> {ansibleVersionInfo.javaVersion}
-                      </div>
-                      {ansibleVersionInfo.javaHome && (
-                        <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
-                          <strong>Home:</strong> {ansibleVersionInfo.javaHome}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {ansibleVersionInfo.ansibleCoreVersion && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: '16px', marginBottom: '8px', color: currentTheme.colors.primary }}>
-                        Ansible Core
-                      </h3>
-                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px' }}>
-                        <strong>Version:</strong> {ansibleVersionInfo.ansibleCoreVersion}
-                      </div>
-                    </div>
-                  )}
-
-                  {ansibleVersionInfo.pythonVersion && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: '16px', marginBottom: '8px', color: currentTheme.colors.primary }}>
-                        Python
-                      </h3>
-                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', marginBottom: '8px' }}>
-                        <strong>Version:</strong> {ansibleVersionInfo.pythonVersion}
-                      </div>
-                      {ansibleVersionInfo.pythonExecutable && (
-                        <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
-                          <strong>Executable:</strong> {ansibleVersionInfo.pythonExecutable}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {ansibleVersionInfo.platform && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: '16px', marginBottom: '8px', color: currentTheme.colors.primary }}>
-                        Platform
-                      </h3>
-                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px' }}>
-                        {ansibleVersionInfo.platform}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Ansible Collections Section */}
-                  <div style={{ marginTop: '24px', borderTop: '2px solid #e2e8f0', paddingTop: '20px' }}>
-                    <h3 style={{ fontSize: '16px', marginBottom: '12px', color: currentTheme.colors.primary }}>
-                      Ansible Collections
-                    </h3>
-
-                    {collectionList.length > 0 ? (
-                      <>
-                        {/* Search box */}
-                        <input
-                          type="text"
-                          placeholder="Search collections..."
-                          value={collectionSearchTerm}
-                          onChange={(e) => setCollectionSearchTerm(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            marginBottom: '12px',
-                            border: '1px solid #cbd5e0',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            fontFamily: 'monospace'
-                          }}
-                        />
-
-                        {/* Collection list */}
-                        <div style={{
-                          maxHeight: '300px',
-                          overflowY: 'auto',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          backgroundColor: '#f7fafc'
-                        }}>
-                          {collectionList
-                            .filter(col => {
-                              const searchLower = collectionSearchTerm.toLowerCase();
-                              return col.name?.toLowerCase().includes(searchLower) ||
-                                     col.version?.toLowerCase().includes(searchLower);
-                            })
-                            .map((col, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  padding: '10px 12px',
-                                  borderBottom: idx < collectionList.length - 1 ? '1px solid #e2e8f0' : 'none',
-                                  fontSize: '12px'
-                                }}
-                              >
-                                <div style={{ fontWeight: 600, color: '#2d3748', marginBottom: '2px' }}>
-                                  {col.name}
-                                </div>
-                                <div style={{ color: '#718096', fontSize: '11px' }}>
-                                  Version: {col.version}
-                                </div>
-                              </div>
-                            ))}
-
-                          {collectionList.filter(col => {
-                            const searchLower = collectionSearchTerm.toLowerCase();
-                            return col.name?.toLowerCase().includes(searchLower) ||
-                                   col.version?.toLowerCase().includes(searchLower);
-                          }).length === 0 && (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#a0aec0', fontSize: '12px' }}>
-                              No collections match your search
-                            </div>
-                          )}
-                        </div>
-
-                        <div style={{ marginTop: '8px', fontSize: '11px', color: '#718096' }}>
-                          Showing {collectionList.filter(col => {
-                            const searchLower = collectionSearchTerm.toLowerCase();
-                            return col.name?.toLowerCase().includes(searchLower) ||
-                                   col.version?.toLowerCase().includes(searchLower);
-                          }).length} of {collectionList.length} collections
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', color: '#718096', fontSize: '12px' }}>
-                        No collections found or not yet loaded
-                      </div>
-                    )}
-                  </div>
+          {ansibleVersionInfo ? (
+            <div style={{ fontFamily: 'monospace', fontSize: '13px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h3
+                  style={{
+                    fontSize: '16px',
+                    marginBottom: '12px',
+                    color: currentTheme.colors.primary,
+                  }}
+                >
+                  Ansible Rulebook
+                </h3>
+                <div
+                  style={{
+                    padding: '12px',
+                    backgroundColor: '#f7fafc',
+                    borderRadius: '6px',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <strong>Version:</strong> {ansibleVersionInfo.version}
                 </div>
-              ) : (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
-                  <p>Version information not available.</p>
-                  <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                    Connect to the server to retrieve version details.
-                  </p>
+                {ansibleVersionInfo.executableLocation && (
+                  <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
+                    <strong>Location:</strong> {ansibleVersionInfo.executableLocation}
+                  </div>
+                )}
+              </div>
+
+              {ansibleVersionInfo.droolsJpyVersion && (
+                <div style={{ marginBottom: '16px' }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      marginBottom: '8px',
+                      color: currentTheme.colors.primary,
+                    }}
+                  >
+                    Drools JPY
+                  </h3>
+                  <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px' }}>
+                    <strong>Version:</strong> {ansibleVersionInfo.droolsJpyVersion}
+                  </div>
                 </div>
               )}
+
+              {ansibleVersionInfo.javaVersion && (
+                <div style={{ marginBottom: '16px' }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      marginBottom: '8px',
+                      color: currentTheme.colors.primary,
+                    }}
+                  >
+                    Java
+                  </h3>
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: '#f7fafc',
+                      borderRadius: '6px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <strong>Version:</strong> {ansibleVersionInfo.javaVersion}
+                  </div>
+                  {ansibleVersionInfo.javaHome && (
+                    <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
+                      <strong>Home:</strong> {ansibleVersionInfo.javaHome}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ansibleVersionInfo.ansibleCoreVersion && (
+                <div style={{ marginBottom: '16px' }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      marginBottom: '8px',
+                      color: currentTheme.colors.primary,
+                    }}
+                  >
+                    Ansible Core
+                  </h3>
+                  <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px' }}>
+                    <strong>Version:</strong> {ansibleVersionInfo.ansibleCoreVersion}
+                  </div>
+                </div>
+              )}
+
+              {ansibleVersionInfo.pythonVersion && (
+                <div style={{ marginBottom: '16px' }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      marginBottom: '8px',
+                      color: currentTheme.colors.primary,
+                    }}
+                  >
+                    Python
+                  </h3>
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: '#f7fafc',
+                      borderRadius: '6px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <strong>Version:</strong> {ansibleVersionInfo.pythonVersion}
+                  </div>
+                  {ansibleVersionInfo.pythonExecutable && (
+                    <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
+                      <strong>Executable:</strong> {ansibleVersionInfo.pythonExecutable}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ansibleVersionInfo.platform && (
+                <div style={{ marginBottom: '16px' }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      marginBottom: '8px',
+                      color: currentTheme.colors.primary,
+                    }}
+                  >
+                    Platform
+                  </h3>
+                  <div style={{ padding: '12px', backgroundColor: '#f7fafc', borderRadius: '6px' }}>
+                    {ansibleVersionInfo.platform}
+                  </div>
+                </div>
+              )}
+
+              {/* Ansible Collections Section */}
+              <div
+                style={{ marginTop: '24px', borderTop: '2px solid #e2e8f0', paddingTop: '20px' }}
+              >
+                <h3
+                  style={{
+                    fontSize: '16px',
+                    marginBottom: '12px',
+                    color: currentTheme.colors.primary,
+                  }}
+                >
+                  Ansible Collections
+                </h3>
+
+                {collectionList.length > 0 ? (
+                  <>
+                    {/* Search box */}
+                    <input
+                      type="text"
+                      placeholder="Search collections..."
+                      value={collectionSearchTerm}
+                      onChange={(e) => setCollectionSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        marginBottom: '12px',
+                        border: '1px solid #cbd5e0',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontFamily: 'monospace',
+                      }}
+                    />
+
+                    {/* Collection list */}
+                    <div
+                      style={{
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        backgroundColor: '#f7fafc',
+                      }}
+                    >
+                      {collectionList
+                        .filter((col) => {
+                          const searchLower = collectionSearchTerm.toLowerCase();
+                          return (
+                            col.name?.toLowerCase().includes(searchLower) ||
+                            col.version?.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((col, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom:
+                                idx < collectionList.length - 1 ? '1px solid #e2e8f0' : 'none',
+                              fontSize: '12px',
+                            }}
+                          >
+                            <div style={{ fontWeight: 600, color: '#2d3748', marginBottom: '2px' }}>
+                              {col.name}
+                            </div>
+                            <div style={{ color: '#718096', fontSize: '11px' }}>
+                              Version: {col.version}
+                            </div>
+                          </div>
+                        ))}
+
+                      {collectionList.filter((col) => {
+                        const searchLower = collectionSearchTerm.toLowerCase();
+                        return (
+                          col.name?.toLowerCase().includes(searchLower) ||
+                          col.version?.toLowerCase().includes(searchLower)
+                        );
+                      }).length === 0 && (
+                        <div
+                          style={{
+                            padding: '20px',
+                            textAlign: 'center',
+                            color: '#a0aec0',
+                            fontSize: '12px',
+                          }}
+                        >
+                          No collections match your search
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#718096' }}>
+                      Showing{' '}
+                      {
+                        collectionList.filter((col) => {
+                          const searchLower = collectionSearchTerm.toLowerCase();
+                          return (
+                            col.name?.toLowerCase().includes(searchLower) ||
+                            col.version?.toLowerCase().includes(searchLower)
+                          );
+                        }).length
+                      }{' '}
+                      of {collectionList.length} collections
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: '#f7fafc',
+                      borderRadius: '6px',
+                      color: '#718096',
+                      fontSize: '12px',
+                    }}
+                  >
+                    No collections found or not yet loaded
+                  </div>
+                )}
+              </div>
             </div>
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
+              <p>Version information not available.</p>
+              <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                Connect to the server to retrieve version details.
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* Help Modal */}
-      <HelpModal
-        isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
+      <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
 
       {/* Confirmation Modal */}
       <Modal

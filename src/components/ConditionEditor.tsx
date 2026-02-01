@@ -12,10 +12,7 @@ interface ConditionEditorProps {
 
 type ConditionTypeOption = 'simple' | 'any' | 'all' | 'not_all';
 
-export const ConditionEditor: React.FC<ConditionEditorProps> = ({
-  condition,
-  onChange,
-}) => {
+export const ConditionEditor: React.FC<ConditionEditorProps> = ({ condition, onChange }) => {
   const [conditionType, setConditionType] = useState<ConditionTypeOption>(() => {
     const type = getConditionType(condition);
     if (type === 'string' || type === 'boolean') return 'simple';
@@ -68,7 +65,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const validateConditionString = (conditionStr: string, index: number) => {
     if (!conditionStr || conditionStr.trim() === '') {
       // Clear error for empty conditions
-      setValidationErrors(prev => {
+      setValidationErrors((prev) => {
         const newErrors = new Map(prev);
         newErrors.delete(index);
         return newErrors;
@@ -79,13 +76,13 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     const result = validateCondition(conditionStr, { friendlyErrors: true });
 
     if (!result.isValid && result.error) {
-      setValidationErrors(prev => {
+      setValidationErrors((prev) => {
         const newErrors = new Map(prev);
         newErrors.set(index, result.error!.friendlyMessage || result.error!.message);
         return newErrors;
       });
     } else {
-      setValidationErrors(prev => {
+      setValidationErrors((prev) => {
         const newErrors = new Map(prev);
         newErrors.delete(index);
         return newErrors;
@@ -94,9 +91,13 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   };
 
   // Sync state when condition prop changes (e.g., when loading a new rulebook)
+  // This is a legitimate use of setState in an effect - we need to synchronize
+  // local component state with external props when they change
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const type = getConditionType(condition);
-    const newType = (type === 'string' || type === 'boolean') ? 'simple' : type as ConditionTypeOption;
+    const newType =
+      type === 'string' || type === 'boolean' ? 'simple' : (type as ConditionTypeOption);
     setConditionType(newType);
 
     // Clear validation errors when condition changes
@@ -125,14 +126,11 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
       setConditions(['']);
       setTimeout('');
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [condition]);
 
   // Update parent when internal state changes
-  const updateCondition = (
-    type: ConditionTypeOption,
-    conds: string[],
-    timeoutValue: string
-  ) => {
+  const updateCondition = (type: ConditionTypeOption, conds: string[], timeoutValue: string) => {
     if (type === 'simple') {
       // For simple conditions, use the first condition string
       const value = conds[0] || '';
@@ -145,13 +143,13 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         onChange(value);
       }
     } else if (type === 'any') {
-      const filteredConds = conds.filter(c => c.trim() !== '');
+      const filteredConds = conds.filter((c) => c.trim() !== '');
       const anyCondition: AnyCondition = {
         any: filteredConds.length > 0 ? filteredConds : [''], // Ensure at least one condition
       };
       onChange(anyCondition);
     } else if (type === 'all') {
-      const filteredConds = conds.filter(c => c.trim() !== '');
+      const filteredConds = conds.filter((c) => c.trim() !== '');
       const allCondition: AllCondition = {
         all: filteredConds.length > 0 ? filteredConds : [''], // Ensure at least one condition
       };
@@ -160,7 +158,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
       }
       onChange(allCondition);
     } else if (type === 'not_all') {
-      const filteredConds = conds.filter(c => c.trim() !== '');
+      const filteredConds = conds.filter((c) => c.trim() !== '');
       const notAllCondition: NotAllCondition = {
         not_all: filteredConds.length > 0 ? filteredConds : [''], // Ensure at least one condition
         timeout: timeoutValue || '10 seconds', // Default timeout
@@ -284,7 +282,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                 padding: '2px 8px',
                 backgroundColor: '#EBF8FF',
                 borderRadius: '4px',
-                border: '1px solid #BEE3F8'
+                border: '1px solid #BEE3F8',
               }}
               title="Press Ctrl+Space for intelligent autocomplete suggestions. Suggestions appear automatically as you type."
             >
@@ -304,18 +302,20 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
             title="Enter a condition expression using event properties - press Ctrl+Space for autocomplete suggestions"
           />
           {validationErrors.has(0) && (
-            <div style={{
-              color: '#e53e3e',
-              fontSize: '12px',
-              marginTop: '4px',
-              padding: '8px',
-              backgroundColor: '#fff5f5',
-              border: '1px solid #feb2b2',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'start',
-              gap: '6px'
-            }}>
+            <div
+              style={{
+                color: '#e53e3e',
+                fontSize: '12px',
+                marginTop: '4px',
+                padding: '8px',
+                backgroundColor: '#fff5f5',
+                border: '1px solid #feb2b2',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '6px',
+              }}
+            >
               <span style={{ flexShrink: 0 }}>⚠️</span>
               <span>{validationErrors.get(0)}</span>
             </div>
@@ -338,7 +338,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                   padding: '2px 8px',
                   backgroundColor: '#EBF8FF',
                   borderRadius: '4px',
-                  border: '1px solid #BEE3F8'
+                  border: '1px solid #BEE3F8',
                 }}
                 title="Press Ctrl+Space for intelligent autocomplete suggestions. Suggestions appear automatically as you type."
               >
@@ -367,24 +367,30 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                     onClick={() => handleDeleteCondition(index)}
                     disabled={conditions.length === 1}
                     style={{ minWidth: '80px' }}
-                    title={conditions.length === 1 ? "Cannot delete the last condition" : "Remove this condition from the list"}
+                    title={
+                      conditions.length === 1
+                        ? 'Cannot delete the last condition'
+                        : 'Remove this condition from the list'
+                    }
                   >
                     Delete
                   </button>
                 </div>
                 {validationErrors.has(index) && (
-                  <div style={{
-                    color: '#e53e3e',
-                    fontSize: '12px',
-                    marginTop: '4px',
-                    padding: '8px',
-                    backgroundColor: '#fff5f5',
-                    border: '1px solid #feb2b2',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'start',
-                    gap: '6px'
-                  }}>
+                  <div
+                    style={{
+                      color: '#e53e3e',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      padding: '8px',
+                      backgroundColor: '#fff5f5',
+                      border: '1px solid #feb2b2',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'start',
+                      gap: '6px',
+                    }}
+                  >
                     <span style={{ flexShrink: 0 }}>⚠️</span>
                     <span>{validationErrors.get(index)}</span>
                   </div>
@@ -400,14 +406,18 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
             >
               + Add Condition
             </button>
-            <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+            <small
+              style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '8px' }}
+            >
               Enter condition expressions using event data (e.g., event.alert.code == 1001)
             </small>
           </div>
 
           {(conditionType === 'all' || conditionType === 'not_all') && (
             <div className="form-group">
-              <label className={`form-label ${conditionType === 'not_all' ? 'form-label-required' : ''}`}>
+              <label
+                className={`form-label ${conditionType === 'not_all' ? 'form-label-required' : ''}`}
+              >
                 Timeout
               </label>
               <input
@@ -417,11 +427,15 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
                 onChange={handleTimeoutChange}
                 placeholder="e.g., 10 seconds, 5 minutes, 1 hour"
                 required={conditionType === 'not_all'}
-                title={conditionType === 'all'
-                  ? "Optional: Time window to wait for all conditions to be met"
-                  : "Required: Time window to check if not all conditions are met"}
+                title={
+                  conditionType === 'all'
+                    ? 'Optional: Time window to wait for all conditions to be met'
+                    : 'Required: Time window to check if not all conditions are met'
+                }
               />
-              <small style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+              <small
+                style={{ color: '#718096', fontSize: '12px', display: 'block', marginTop: '4px' }}
+              >
                 Time duration (e.g., "10 seconds", "5 minutes", "1 hour", "2 days")
                 {conditionType === 'not_all' && ' - Required for not_all conditions'}
               </small>
