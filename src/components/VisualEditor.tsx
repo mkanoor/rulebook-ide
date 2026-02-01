@@ -222,7 +222,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     // WebSocket connection hook
     const {
       wsRef,
-      sendMessage: _sendMessage,
+      sendMessage,
       isConnected: _wsIsConnected,
       connectWebSocket,
     } = useWebSocketConnection(
@@ -245,9 +245,13 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         setPrerequisitesWarnings,
         setCurrentConfigHash,
         addEvent,
-        setEvents,
-        setTriggeredRules,
-        setRulesetStats,
+        setEvents: setEvents as (value: React.SetStateAction<unknown[]>) => void,
+        setTriggeredRules: setTriggeredRules as (
+          fn: React.SetStateAction<Map<string, unknown>>
+        ) => void,
+        setRulesetStats: setRulesetStats as (
+          fn: React.SetStateAction<Map<string, unknown>>
+        ) => void,
         setNgrokTunnels,
         setTunnelCreating,
         setTunnelError,
@@ -652,19 +656,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       }
     }, []);
 
-    // Auto-connect WebSocket on mount
-    useEffect(() => {
-      connectWebSocket();
-    }, []);
-
-    // Cleanup WebSocket on unmount
-    useEffect(() => {
-      return () => {
-        if (wsRef.current) {
-          wsRef.current.close();
-        }
-      };
-    }, []);
+    // WebSocket auto-connect and cleanup is now handled by useWebSocketConnection hook
 
     // Auto-scroll event log
     useEffect(() => {
@@ -734,12 +726,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             let detectedPort: number | null = null;
 
             // The new structure has the port directly in the webhook config
-            if (webhookConfig && typeof webhookConfig === 'object' && webhookConfig.port) {
-              detectedPort = Number(webhookConfig.port);
+            if (
+              webhookConfig &&
+              typeof webhookConfig === 'object' &&
+              (webhookConfig as Record<string, unknown>).port
+            ) {
+              detectedPort = Number((webhookConfig as Record<string, unknown>).port);
             }
             // Legacy support: check for args.port
-            else if (webhookConfig && webhookConfig.args && webhookConfig.args.port) {
-              detectedPort = Number(webhookConfig.args.port);
+            else if (
+              webhookConfig &&
+              (webhookConfig as Record<string, unknown>).args &&
+              ((webhookConfig as Record<string, unknown>).args as Record<string, unknown>).port
+            ) {
+              detectedPort = Number(
+                ((webhookConfig as Record<string, unknown>).args as Record<string, unknown>).port
+              );
             }
 
             if (detectedPort && !isNaN(detectedPort)) {
@@ -824,12 +826,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
           // Try to send stop message (best effort - may not complete)
           if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(
-              JSON.stringify({
-                type: 'stop_execution',
-                executionId: executionId,
-              })
-            );
+            sendMessage({
+              type: 'stop_execution',
+              executionId: executionId,
+            });
           }
 
           return '';
@@ -859,12 +859,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         .map((c) => c.trim())
         .filter((c) => c.length > 0);
 
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'install_ansible_rulebook',
-          collections: collections,
-        })
-      );
+      sendMessage({
+        type: 'install_ansible_rulebook',
+        collections: collections,
+      });
       console.log('[Install] Installation message sent to server with collections:', collections);
     };
 
@@ -972,20 +970,18 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         noRefs: true,
       });
 
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'start_execution',
-          rulebook: rulebookYaml,
-          extraVars: extraVarsObj,
-          envVars: envVarsObj,
-          executionMode: serverSettings.executionMode,
-          containerImage: serverSettings.containerImage,
-          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-          workingDirectory: serverSettings.workingDirectory,
-          heartbeat: serverSettings.heartbeat,
-          extraCliArgs: extraCliArgs.trim(),
-        })
-      );
+      sendMessage({
+        type: 'start_execution',
+        rulebook: rulebookYaml,
+        extraVars: extraVarsObj,
+        envVars: envVarsObj,
+        executionMode: serverSettings.executionMode,
+        containerImage: serverSettings.containerImage,
+        ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+        workingDirectory: serverSettings.workingDirectory,
+        heartbeat: serverSettings.heartbeat,
+        extraCliArgs: extraCliArgs.trim(),
+      });
 
       setShowEventLog(true);
     };
@@ -997,12 +993,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       }
 
       if (wsRef.current && executionId) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: 'stop_execution',
-            executionId,
-          })
-        );
+        sendMessage({
+          type: 'stop_execution',
+          executionId,
+        });
       }
     };
 
@@ -1065,14 +1059,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         }
 
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({
-              type: 'send_webhook',
-              url: url,
-              port: port,
-              payload: payloadObj,
-            })
-          );
+          sendMessage({
+            type: 'send_webhook',
+            url: url,
+            port: port,
+            payload: payloadObj,
+          });
         } else {
           addEvent('Error', `[Port ${port}] WebSocket disconnected during webhook sending`);
           break;
@@ -1181,7 +1173,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         tunnelRequest.forwardTo = forwardToPort;
       }
 
-      wsRef.current.send(JSON.stringify(tunnelRequest));
+      sendMessage(tunnelRequest);
     };
 
     const deleteNgrokTunnel = async (port: number) => {
@@ -1201,12 +1193,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       addEvent('Ngrok', `Deleting tunnel for port ${port}...`);
 
       // Send delete_tunnel message to WebSocket server
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'delete_tunnel',
-          port: port,
-        })
-      );
+      sendMessage({
+        type: 'delete_tunnel',
+        port: port,
+      });
     };
 
     const updateTunnelForwarding = async (port: number, forwardTo: number | null) => {
@@ -1269,7 +1259,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
       try {
         // Send update_tunnel_forwarding message to WebSocket server
-        wsRef.current.send(JSON.stringify(message));
+        sendMessage(message);
         console.log('WebSocket message sent successfully');
       } catch (error) {
         console.error('Error sending WebSocket message:', error);
@@ -1300,14 +1290,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       addEvent('Ngrok', `🧪 Sending test payload to ${tunnel.url}...`);
 
       // Send test request via WebSocket server to avoid CORS issues
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'test_tunnel',
-          url: tunnel.url,
-          port: port,
-          payload: testPayload,
-        })
-      );
+      sendMessage({
+        type: 'test_tunnel',
+        url: tunnel.url,
+        port: port,
+        payload: testPayload,
+      });
     };
 
     const isRuleTriggered = (rulesetName: string, ruleName: string): boolean => {
@@ -1407,7 +1395,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
       if (keys.length > 0) {
         const type = keys[0];
-        const args = rest[type];
+        const args = rest[type] as Record<string, unknown>;
         return { type, args };
       }
 
@@ -2714,12 +2702,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
                   // Trigger binary check after settings update
                   if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    wsRef.current.send(
-                      JSON.stringify({
-                        type: 'check_binary',
-                        ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-                      })
-                    );
+                    sendMessage({
+                      type: 'check_binary',
+                      ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                    });
 
                     // Only fetch if config changed
                     if (newConfigHash !== currentConfigHash) {
@@ -2730,28 +2716,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                       if (cachedVersion && onVersionInfoReceived) {
                         onVersionInfoReceived(cachedVersion.version, cachedVersion.versionInfo);
                       } else {
-                        wsRef.current.send(
-                          JSON.stringify({
-                            type: 'get_ansible_version',
-                            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-                            executionMode: serverSettings.executionMode,
-                            containerImage: serverSettings.containerImage,
-                          })
-                        );
+                        sendMessage({
+                          type: 'get_ansible_version',
+                          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                          executionMode: serverSettings.executionMode,
+                          containerImage: serverSettings.containerImage,
+                        });
                       }
 
                       const cachedCollections = getCachedCollectionList(newConfigHash);
                       if (cachedCollections && onCollectionListReceived) {
                         onCollectionListReceived(cachedCollections);
                       } else {
-                        wsRef.current.send(
-                          JSON.stringify({
-                            type: 'get_collection_list',
-                            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-                            executionMode: serverSettings.executionMode,
-                            containerImage: serverSettings.containerImage,
-                          })
-                        );
+                        sendMessage({
+                          type: 'get_collection_list',
+                          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                          executionMode: serverSettings.executionMode,
+                          containerImage: serverSettings.containerImage,
+                        });
                       }
                     }
                   }
@@ -2815,12 +2797,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
                   // Check prerequisites for the new execution mode
                   if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    wsRef.current.send(
-                      JSON.stringify({
-                        type: 'check_prerequisites',
-                        executionMode: newMode,
-                      })
-                    );
+                    sendMessage({
+                      type: 'check_prerequisites',
+                      executionMode: newMode,
+                    });
 
                     // Only fetch if config changed
                     if (newConfigHash !== currentConfigHash) {
@@ -2831,28 +2811,24 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                       if (cachedVersion && onVersionInfoReceived) {
                         onVersionInfoReceived(cachedVersion.version, cachedVersion.versionInfo);
                       } else {
-                        wsRef.current.send(
-                          JSON.stringify({
-                            type: 'get_ansible_version',
-                            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-                            executionMode: newMode,
-                            containerImage: serverSettings.containerImage,
-                          })
-                        );
+                        sendMessage({
+                          type: 'get_ansible_version',
+                          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                          executionMode: newMode,
+                          containerImage: serverSettings.containerImage,
+                        });
                       }
 
                       const cachedCollections = getCachedCollectionList(newConfigHash);
                       if (cachedCollections && onCollectionListReceived) {
                         onCollectionListReceived(cachedCollections);
                       } else {
-                        wsRef.current.send(
-                          JSON.stringify({
-                            type: 'get_collection_list',
-                            ansibleRulebookPath: serverSettings.ansibleRulebookPath,
-                            executionMode: newMode,
-                            containerImage: serverSettings.containerImage,
-                          })
-                        );
+                        sendMessage({
+                          type: 'get_collection_list',
+                          ansibleRulebookPath: serverSettings.ansibleRulebookPath,
+                          executionMode: newMode,
+                          containerImage: serverSettings.containerImage,
+                        });
                       }
                     }
                   }
@@ -3442,7 +3418,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                 className="btn btn-secondary"
                 onClick={() => {
                   if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                    wsRef.current.send(JSON.stringify({ type: 'get_tunnel_state' }));
+                    sendMessage({ type: 'get_tunnel_state' });
                     addEvent('System', 'Refreshing tunnel state from backend...');
                   }
                 }}

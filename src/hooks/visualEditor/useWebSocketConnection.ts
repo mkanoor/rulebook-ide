@@ -564,7 +564,13 @@ export const useWebSocketConnection = (
 
   const sendMessage = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      logger.debug('Sending WebSocket message:', message.type);
       wsRef.current.send(JSON.stringify(message));
+    } else {
+      logger.error(
+        'Cannot send message - WebSocket not connected. State:',
+        wsRef.current?.readyState
+      );
     }
   }, []);
 
@@ -582,7 +588,8 @@ export const useWebSocketConnection = (
         wsRef.current.close();
       }
     };
-  }, [connectWebSocket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   return {
     wsRef,
