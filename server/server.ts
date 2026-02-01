@@ -52,7 +52,7 @@ let ansibleBinaryFound: boolean = false;
 
 // Check if ansible-rulebook binary exists at given path
 // Returns: { found: boolean, error: string|null, isFullPath: boolean }
-function checkAnsibleBinary(path: string = 'ansible-rulebook'): Promise<BinaryCheckResult> {
+export function checkAnsibleBinary(path: string = 'ansible-rulebook'): Promise<BinaryCheckResult> {
   return new Promise((resolve) => {
     const isFullPath = path.includes('/');
 
@@ -84,7 +84,7 @@ function checkAnsibleBinary(path: string = 'ansible-rulebook'): Promise<BinaryCh
 
 // Check if required dependencies are installed based on execution mode
 // Returns: { valid: boolean, missing: string[], warnings: string[] }
-function checkExecutionModePrerequisites(
+export function checkExecutionModePrerequisites(
   executionMode: ExecutionMode
 ): Promise<PrerequisitesCheckResult> {
   return new Promise((resolve) => {
@@ -198,7 +198,7 @@ function killProcessTree(pid: number, signal: NodeJS.Signals = 'SIGTERM'): Promi
 // ----------------- -------
 // ansible.builtin   2.14.0
 // community.general 6.0.0
-function parseCollectionList(output: string): AnsibleCollection[] {
+export function parseCollectionList(output: string): AnsibleCollection[] {
   const collections: AnsibleCollection[] = [];
   const lines = output.split('\n');
   let inCollectionSection = false;
@@ -2035,26 +2035,32 @@ process.on('SIGINT', async () => {
   }
 });
 
-// Start server
-server.listen(PORT, '0.0.0.0', async () => {
-  console.log(`\n${'='.repeat(80)}`);
-  console.log(`🚀 Ansible Rulebook IDE Server`);
-  console.log(`${'='.repeat(80)}`);
-  console.log(`   Mode: ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-  console.log(`   Port: ${PORT}`);
-  console.log(`   URL: http://localhost:${PORT}`);
-  console.log(`   WebSocket: ws://localhost:${PORT}`);
-  console.log(`   Binding: 0.0.0.0 (accepts connections from all network interfaces)`);
-  console.log(`${'='.repeat(80)}\n`);
+// Export server components for testing
+export { app, server, wss, executions, clients, ngrokTunnels, httpServers };
 
-  // Check for ansible-rulebook binary (initial check uses default command name)
-  const initialCheck = await checkAnsibleBinary();
-  ansibleBinaryFound = initialCheck.found;
-  if (initialCheck.found) {
-    console.log('✅ ansible-rulebook binary found in PATH');
-  } else {
-    console.log('⚠️  ansible-rulebook binary NOT found in PATH');
-    console.log('   Please configure the path in Settings');
-  }
-  console.log('');
-});
+// Only start server if this file is run directly (not imported for testing)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // Start server
+  server.listen(PORT, '0.0.0.0', async () => {
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🚀 Ansible Rulebook IDE Server`);
+    console.log(`${'='.repeat(80)}`);
+    console.log(`   Mode: ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+    console.log(`   Port: ${PORT}`);
+    console.log(`   URL: http://localhost:${PORT}`);
+    console.log(`   WebSocket: ws://localhost:${PORT}`);
+    console.log(`   Binding: 0.0.0.0 (accepts connections from all network interfaces)`);
+    console.log(`${'='.repeat(80)}\n`);
+
+    // Check for ansible-rulebook binary (initial check uses default command name)
+    const initialCheck = await checkAnsibleBinary();
+    ansibleBinaryFound = initialCheck.found;
+    if (initialCheck.found) {
+      console.log('✅ ansible-rulebook binary found in PATH');
+    } else {
+      console.log('⚠️  ansible-rulebook binary NOT found in PATH');
+      console.log('   Please configure the path in Settings');
+    }
+    console.log('');
+  });
+}
