@@ -15,12 +15,18 @@ import {
 } from '../utils/rulebookValidator';
 import { logger, LogLevel } from '../utils/logger';
 import {
+  generateConfigHash,
+  getCachedVersionInfo,
+  getCachedCollectionList,
+} from '../utils/configCache';
+import {
   useServerSettings,
   useModalState,
   useExecutionState,
   useTunnelState,
   useWebSocketConnection,
   type ServerSettings,
+  type RuleTrigger,
 } from '../hooks/visualEditor';
 import '../styles/VisualEditor.css';
 
@@ -84,6 +90,7 @@ export const VisualEditor = forwardRef<VisualEditorRef, VisualEditorProps>(
       setServerSettings,
       updateSettings: _updateSettings,
       saveSettings,
+      resetSettings,
     } = useServerSettings();
 
     // Execution state hook
@@ -155,12 +162,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       closeSettings: _closeSettings,
       openEventLog: _openEventLog,
       closeEventLog: _closeEventLog,
-      openWebhook: _openWebhook,
-      closeWebhook: _closeWebhook,
+      openWebhookModal: _openWebhookModal,
+      closeWebhookModal: _closeWebhookModal,
       openCloudTunnel: _openCloudTunnel,
       closeCloudTunnel: _closeCloudTunnel,
-      openStats: _openStats,
-      closeStats: _closeStats,
+      openStatsModal: _openStatsModal,
+      closeStatsModal: _closeStatsModal,
     } = useModalState();
 
     const [eventLogHeight, setEventLogHeight] = useState(250); // Default height in pixels
@@ -997,17 +1004,6 @@ EDA_CONTROLLER_SSL_VERIFY=`);
           })
         );
       }
-    };
-
-    const clearEvents = () => {
-      setEvents([]);
-      setTriggeredRules(new Map());
-      setRulesetStats(new Map());
-      setExecutionSummary({
-        rulesTriggered: 0,
-        eventsProcessed: 0,
-        actionsExecuted: 0,
-      });
     };
 
     const sendWebhookPayload = async () => {
@@ -2683,7 +2679,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               <button
                 className="btn btn-outline"
                 onClick={() => {
-                  setServerSettings(DEFAULT_SETTINGS);
+                  resetSettings();
                 }}
               >
                 Reset to Defaults

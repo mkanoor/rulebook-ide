@@ -34,9 +34,9 @@ export interface WebSocketHandlers {
 
   // Event management
   addEvent: (type: string, data: string | object) => void;
-  setEvents: (value: unknown[]) => void;
-  setTriggeredRules: (fn: (prev: Map<string, unknown>) => Map<string, unknown>) => void;
-  setRulesetStats: (fn: (prev: Map<string, unknown>) => Map<string, unknown>) => void;
+  setEvents: (value: React.SetStateAction<unknown[]>) => void;
+  setTriggeredRules: (fn: React.SetStateAction<Map<string, unknown>>) => void;
+  setRulesetStats: (fn: React.SetStateAction<Map<string, unknown>>) => void;
 
   // Tunnel management
   setNgrokTunnels: (
