@@ -84,10 +84,15 @@ export const useServerSettings = () => {
     saveSettings(DEFAULT_SETTINGS);
   }, []);
 
+  const saveSettingsCallback = useCallback((settings: ServerSettings) => {
+    saveSettings(settings);
+  }, []);
+
   return {
     serverSettings,
     setServerSettings,
     updateSettings,
     resetSettings,
+    saveSettings: saveSettingsCallback,
   };
 };
