@@ -9,10 +9,7 @@ interface ThrottleEditorProps {
 
 type ThrottleType = 'once_within' | 'once_after' | 'accumulate_within' | '';
 
-export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
-  throttle,
-  onChange,
-}) => {
+export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({ throttle, onChange }) => {
   // Determine initial throttle type from throttle object
   const getInitialThrottleType = (): ThrottleType => {
     if (!throttle) return '';
@@ -36,28 +33,32 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
   );
 
   // Sync state when throttle prop changes
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     setEnabled(!!throttle);
     setThrottleType(getInitialThrottleType());
     setTimePeriod(getInitialTimePeriod());
     setThreshold(throttle?.threshold?.toString() || '');
     setGroupByAttributes(throttle?.group_by_attributes?.join(', ') || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [throttle]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const updateThrottle = (updates: Partial<{
-    enabled: boolean;
-    throttleType: ThrottleType;
-    timePeriod: string;
-    threshold: string;
-    groupByAttributes: string;
-  }>) => {
+  const updateThrottle = (
+    updates: Partial<{
+      enabled: boolean;
+      throttleType: ThrottleType;
+      timePeriod: string;
+      threshold: string;
+      groupByAttributes: string;
+    }>
+  ) => {
     const newEnabled = updates.enabled !== undefined ? updates.enabled : enabled;
-    const newThrottleType = updates.throttleType !== undefined ? updates.throttleType : throttleType;
+    const newThrottleType =
+      updates.throttleType !== undefined ? updates.throttleType : throttleType;
     const newTimePeriod = updates.timePeriod !== undefined ? updates.timePeriod : timePeriod;
     const newThreshold = updates.threshold !== undefined ? updates.threshold : threshold;
-    const newGroupByAttributes = updates.groupByAttributes !== undefined ? updates.groupByAttributes : groupByAttributes;
+    const newGroupByAttributes =
+      updates.groupByAttributes !== undefined ? updates.groupByAttributes : groupByAttributes;
 
     if (!newEnabled) {
       onChange(undefined);
@@ -90,8 +91,8 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
       // Parse comma-separated list
       const attrs = newGroupByAttributes
         .split(',')
-        .map(attr => attr.trim())
-        .filter(attr => attr.length > 0);
+        .map((attr) => attr.trim())
+        .filter((attr) => attr.length > 0);
       if (attrs.length > 0) {
         newThrottle.group_by_attributes = attrs;
       }
@@ -153,7 +154,9 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
               <option value="once_after">Once After</option>
               <option value="accumulate_within">Accumulate Within</option>
             </select>
-            <small style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}>
+            <small
+              style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}
+            >
               {throttleType === 'once_within' && 'Trigger at most once within the time period'}
               {throttleType === 'once_after' && 'Wait this long before allowing the next trigger'}
               {throttleType === 'accumulate_within' && 'Accumulate events within the time window'}
@@ -177,7 +180,9 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
                 }}
                 placeholder="e.g., 5 minutes, 1 hour, 30 seconds"
               />
-              <small style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}>
+              <small
+                style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}
+              >
                 Examples: "30 seconds", "5 minutes", "1 hour", "2 days"
               </small>
             </div>
@@ -201,7 +206,9 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
                 placeholder="e.g., 3, 10"
                 min="1"
               />
-              <small style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}>
+              <small
+                style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}
+              >
                 Number of events needed to trigger within the accumulate window
               </small>
             </div>
@@ -222,7 +229,9 @@ export const ThrottleEditor: React.FC<ThrottleEditorProps> = ({
               }}
               placeholder="e.g., event.host, event.severity"
             />
-            <small style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}>
+            <small
+              style={{ display: 'block', color: '#718096', fontSize: '0.85em', marginTop: '4px' }}
+            >
               Comma-separated event attributes to group throttling by
             </small>
           </div>

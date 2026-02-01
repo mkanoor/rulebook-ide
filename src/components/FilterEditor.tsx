@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { loadEventFilterSchema, getAllEventFilterSchemas, type JsonSchema } from '../utils/schemaLoader';
+import {
+  loadEventFilterSchema,
+  getAllEventFilterSchemas,
+  type JsonSchema,
+} from '../utils/schemaLoader';
 import { SchemaForm } from './SchemaForm';
 import {
   loadAndProcessSchemaFromUrl,
@@ -31,11 +35,10 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
   const schemaFileInputRefs = React.useRef<Map<number, HTMLInputElement | null>>(new Map());
 
   // Load all available filter schemas on mount
-   
+
   useEffect(() => {
     getAllEventFilterSchemas().then(setAvailableSchemas);
   }, []);
-   
 
   // Parse filters into filter states
   useEffect(() => {
@@ -48,7 +51,8 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
             const args = filter[filterType];
             const schema = await loadEventFilterSchema(filterType);
 
-            const filterArgs = typeof args === 'object' && args !== null ? args as Record<string, unknown> : {};
+            const filterArgs =
+              typeof args === 'object' && args !== null ? (args as Record<string, unknown>) : {};
             const isCustom = !schema;
 
             return {
@@ -57,14 +61,14 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
               schema,
               isCustom,
               customArgsText: isCustom ? JSON.stringify(filterArgs, null, 2) : undefined,
-              customArgsError: null
+              customArgsError: null,
             };
           }
           return {
             type: '',
             args: {},
             schema: null,
-            isCustom: false
+            isCustom: false,
           };
         })
       );
@@ -75,7 +79,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
   }, [filters]);
 
   const handleAddFilter = (filterType: string) => {
-    loadEventFilterSchema(filterType).then(schema => {
+    loadEventFilterSchema(filterType).then((schema) => {
       if (schema) {
         // Initialize with default values from schema
         const defaultArgs: Record<string, unknown> = {};
@@ -91,14 +95,14 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
           type: filterType,
           args: defaultArgs,
           schema,
-          isCustom: false
+          isCustom: false,
         };
 
         const newStates = [...filterStates, newFilterState];
         setFilterStates(newStates);
 
         // Remove hidden fields before storing
-        const { filter_type, ...cleanArgs } = defaultArgs;
+        const { filter_type: _filter_type, ...cleanArgs } = defaultArgs;
         const newFilter = { [filterType]: cleanArgs };
         onChange([...filters, newFilter]);
         setShowFilterSelector(false);
@@ -116,7 +120,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       customArgsError: null,
       customSchemaUrl: '',
       customSchemaError: null,
-      loadingCustomSchema: false
+      loadingCustomSchema: false,
     };
 
     const newStates = [...filterStates, newFilterState];
@@ -129,7 +133,11 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
 
   const handleLoadCustomFilterSchema = async (filterIndex: number, schemaUrl: string) => {
     const newStates = [...filterStates];
-    newStates[filterIndex] = { ...newStates[filterIndex], loadingCustomSchema: true, customSchemaError: null };
+    newStates[filterIndex] = {
+      ...newStates[filterIndex],
+      loadingCustomSchema: true,
+      customSchemaError: null,
+    };
     setFilterStates(newStates);
 
     const result = await loadAndProcessSchemaFromUrl(schemaUrl);
@@ -138,7 +146,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       newStates[filterIndex] = {
         ...newStates[filterIndex],
         customSchemaError: result.error,
-        loadingCustomSchema: false
+        loadingCustomSchema: false,
       };
       setFilterStates(newStates);
       return;
@@ -150,23 +158,32 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       schema: result.schema,
       args: result.defaultArgs,
       loadingCustomSchema: false,
-      customSchemaError: null
+      customSchemaError: null,
     };
     setFilterStates(newStates);
 
     // Update the filter
-    const { filter_type, ...cleanArgs } = result.defaultArgs;
+    const { filter_type: _filter_type, ...cleanArgs } = result.defaultArgs;
     const newFilters = [...filters];
-    newFilters[filterIndex] = newStates[filterIndex].type ? { [newStates[filterIndex].type]: cleanArgs } : {};
+    newFilters[filterIndex] = newStates[filterIndex].type
+      ? { [newStates[filterIndex].type]: cleanArgs }
+      : {};
     onChange(newFilters);
   };
 
-  const handleSchemaFileSelect = async (filterIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSchemaFileSelect = async (
+    filterIndex: number,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const newStates = [...filterStates];
-    newStates[filterIndex] = { ...newStates[filterIndex], loadingCustomSchema: true, customSchemaError: null };
+    newStates[filterIndex] = {
+      ...newStates[filterIndex],
+      loadingCustomSchema: true,
+      customSchemaError: null,
+    };
     setFilterStates(newStates);
 
     const result = await loadAndProcessSchemaFromFile(file);
@@ -175,7 +192,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       newStates[filterIndex] = {
         ...newStates[filterIndex],
         customSchemaError: result.error,
-        loadingCustomSchema: false
+        loadingCustomSchema: false,
       };
       setFilterStates(newStates);
       event.target.value = '';
@@ -189,14 +206,16 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       args: result.defaultArgs,
       loadingCustomSchema: false,
       customSchemaError: null,
-      customSchemaUrl: file.name
+      customSchemaUrl: file.name,
     };
     setFilterStates(newStates);
 
     // Update the filter
-    const { filter_type, ...cleanArgs } = result.defaultArgs;
+    const { filter_type: _filter_type, ...cleanArgs } = result.defaultArgs;
     const newFilters = [...filters];
-    newFilters[filterIndex] = newStates[filterIndex].type ? { [newStates[filterIndex].type]: cleanArgs } : {};
+    newFilters[filterIndex] = newStates[filterIndex].type
+      ? { [newStates[filterIndex].type]: cleanArgs }
+      : {};
     onChange(newFilters);
 
     // Reset the input so the same file can be selected again
@@ -208,7 +227,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
     if (!filterState) return;
 
     // Remove hidden fields before storing
-    const { filter_type, ...cleanArgs } = newArgs;
+    const { filter_type: _filter_type, ...cleanArgs } = newArgs;
 
     const newFilters = [...filters];
     newFilters[filterIndex] = { [filterState.type]: cleanArgs };
@@ -263,9 +282,12 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       const newFilters = [...filters];
       newFilters[filterIndex] = filterState.type ? { [filterState.type]: parsed } : {};
       onChange(newFilters);
-    } catch (error) {
+    } catch {
       // Just set the error, don't update the filter
-      newStates[filterIndex] = { ...newStates[filterIndex], customArgsError: 'Invalid JSON format' };
+      newStates[filterIndex] = {
+        ...newStates[filterIndex],
+        customArgsError: 'Invalid JSON format',
+      };
       setFilterStates(newStates);
     }
   };
@@ -294,7 +316,9 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                     {' - '}
                     <span style={{ fontSize: '14px' }}>Custom Filter</span>
                     <br />
-                    <small style={{ color: '#718096' }}>{filterState.type || '(no type set)'}</small>
+                    <small style={{ color: '#718096' }}>
+                      {filterState.type || '(no type set)'}
+                    </small>
                   </>
                 ) : filterState.schema ? (
                   <>
@@ -324,7 +348,14 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                     onChange={(e) => handleCustomFilterTypeChange(filterIndex, e.target.value)}
                     placeholder="e.g., eda.builtin.custom_filter"
                   />
-                  <small style={{ color: '#718096', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  <small
+                    style={{
+                      color: '#718096',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      display: 'block',
+                    }}
+                  >
                     Enter the full filter type name
                   </small>
                 </div>
@@ -340,7 +371,10 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                           value={filterState.customSchemaUrl || ''}
                           onChange={(e) => {
                             const newStates = [...filterStates];
-                            newStates[filterIndex] = { ...filterState, customSchemaUrl: e.target.value };
+                            newStates[filterIndex] = {
+                              ...filterState,
+                              customSchemaUrl: e.target.value,
+                            };
                             setFilterStates(newStates);
                           }}
                           placeholder="e.g., /schemas/my-filter.json or https://example.com/schema.json"
@@ -357,7 +391,12 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                         <button
                           type="button"
                           className="btn btn-primary btn-small"
-                          onClick={() => handleLoadCustomFilterSchema(filterIndex, filterState.customSchemaUrl || '')}
+                          onClick={() =>
+                            handleLoadCustomFilterSchema(
+                              filterIndex,
+                              filterState.customSchemaUrl || ''
+                            )
+                          }
                           disabled={filterState.loadingCustomSchema}
                         >
                           {filterState.loadingCustomSchema ? 'Loading...' : 'Load'}
@@ -373,11 +412,26 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                         style={{ display: 'none' }}
                       />
                       {filterState.customSchemaError && (
-                        <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px', whiteSpace: 'pre-line' }}>
+                        <div
+                          className="error-message"
+                          style={{
+                            color: '#e53e3e',
+                            fontSize: '12px',
+                            marginTop: '4px',
+                            whiteSpace: 'pre-line',
+                          }}
+                        >
                           {filterState.customSchemaError}
                         </div>
                       )}
-                      <small style={{ color: '#718096', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      <small
+                        style={{
+                          color: '#718096',
+                          fontSize: '12px',
+                          marginTop: '4px',
+                          display: 'block',
+                        }}
+                      >
                         Enter a URL/path or click Browse to select a local JSON schema file
                       </small>
                     </div>
@@ -389,22 +443,44 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                         value={filterState.customArgsText || '{}'}
                         onChange={(e) => handleCustomFilterArgsChange(filterIndex, e.target.value)}
                         rows={6}
-                        style={{ borderColor: filterState.customArgsError ? '#fc8181' : undefined, borderWidth: filterState.customArgsError ? '2px' : undefined }}
+                        style={{
+                          borderColor: filterState.customArgsError ? '#fc8181' : undefined,
+                          borderWidth: filterState.customArgsError ? '2px' : undefined,
+                        }}
                         placeholder='{\n  "param": "value"\n}'
                       />
                       {filterState.customArgsError && (
-                        <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+                        <div
+                          className="error-message"
+                          style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+                        >
                           {filterState.customArgsError}
                         </div>
                       )}
-                      <small style={{ color: '#718096', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      <small
+                        style={{
+                          color: '#718096',
+                          fontSize: '12px',
+                          marginTop: '4px',
+                          display: 'block',
+                        }}
+                      >
                         Configuration arguments for the filter type
                       </small>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#e6ffed', borderRadius: '4px', marginBottom: '12px', fontSize: '12px', color: '#22543d' }}>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#e6ffed',
+                        borderRadius: '4px',
+                        marginBottom: '12px',
+                        fontSize: '12px',
+                        color: '#22543d',
+                      }}
+                    >
                       ✓ Using custom schema from: {filterState.customSchemaUrl}
                     </div>
                     <SchemaForm
@@ -424,7 +500,14 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                 hideFields={['filter_type']}
               />
             ) : (
-              <div style={{ padding: '12px', backgroundColor: '#fff5f5', borderRadius: '4px', color: '#e53e3e' }}>
+              <div
+                style={{
+                  padding: '12px',
+                  backgroundColor: '#fff5f5',
+                  borderRadius: '4px',
+                  color: '#e53e3e',
+                }}
+              >
                 Schema not found for filter type: {filterState.type}
               </div>
             )}
@@ -433,9 +516,22 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
       )}
 
       {showFilterSelector ? (
-        <div style={{ marginTop: '16px', padding: '16px', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '4px' }}>
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '16px',
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderRadius: '4px',
+          }}
+        >
           <h4 style={{ marginBottom: '12px' }}>Select Filter Type</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '8px',
+            }}
+          >
             {Object.entries(availableSchemas).map(([filterType, schema]) => (
               <button
                 key={filterType}
@@ -448,7 +544,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                   height: 'auto',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px'
+                  gap: '4px',
                 }}
               >
                 <strong style={{ fontSize: '13px' }}>{schema.title}</strong>
@@ -467,7 +563,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
                 flexDirection: 'column',
                 gap: '4px',
                 border: '2px dashed',
-                borderColor: 'currentColor'
+                borderColor: 'currentColor',
               }}
             >
               <strong style={{ fontSize: '13px' }}>Custom Filter</strong>
@@ -484,10 +580,7 @@ export const FilterEditor: React.FC<FilterEditorProps> = ({ filters, onChange })
           </button>
         </div>
       ) : (
-        <button
-          className="btn btn-secondary btn-small"
-          onClick={() => setShowFilterSelector(true)}
-        >
+        <button className="btn btn-secondary btn-small" onClick={() => setShowFilterSelector(true)}>
           + Add Filter
         </button>
       )}

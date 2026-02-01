@@ -17,7 +17,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   schema,
   value,
   onChange,
-  hideFields = []
+  hideFields = [],
 }) => {
   const [errors, setErrors] = useState<ValidationError[]>([]);
 
@@ -35,7 +35,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
         const prop = properties[fieldName];
         newErrors.push({
           field: fieldName,
-          message: `${prop?.description || fieldName} is required`
+          message: `${prop?.description || fieldName} is required`,
         });
       }
     });
@@ -57,13 +57,13 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
       }
       if (!oneOfValid && oneOf.length > 0) {
         const requiredOptions = oneOf
-          .map((opt: any) => opt.required?.join(' or '))
+          .map((opt: { required?: string[] }) => opt.required?.join(' or '))
           .filter(Boolean)
           .join(', or ');
         if (requiredOptions) {
           newErrors.push({
             field: '_oneOf',
-            message: `One of the following is required: ${requiredOptions}`
+            message: `One of the following is required: ${requiredOptions}`,
           });
         }
       }
@@ -73,17 +73,17 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   };
 
   // Validate on value change
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     const validationErrors = validate(value);
     setErrors(validationErrors);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, schema]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const handleFieldChange = (fieldName: string, fieldValue: any) => {
+  const handleFieldChange = (fieldName: string, fieldValue: unknown) => {
     onChange({
       ...value,
-      [fieldName]: fieldValue
+      [fieldName]: fieldValue,
     });
   };
 
@@ -106,10 +106,12 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
       return (
         <div key={fieldName} className="form-group">
           <label className={`form-label ${isRequired ? 'form-label-required' : ''}`}>
-            {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
           </label>
           {prop.description && (
-            <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}>
+            <small
+              style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}
+            >
               {prop.description}
             </small>
           )}
@@ -127,7 +129,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
             ))}
           </select>
           {fieldError && (
-            <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+            <div
+              className="error-message"
+              style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+            >
               {fieldError.message}
             </div>
           )}
@@ -136,22 +141,27 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
     }
 
     const types = Array.isArray(prop.type) ? prop.type : [prop.type];
-    const primaryType = types.find(t => t !== 'null') || types[0];
+    const primaryType = types.find((t) => t !== 'null') || types[0];
 
     switch (primaryType) {
       case 'boolean':
         return (
           <div key={fieldName} className="form-group">
-            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label
+              className="form-label"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
               <input
                 type="checkbox"
                 checked={fieldValue === true}
                 onChange={(e) => handleFieldChange(fieldName, e.target.checked)}
               />
-              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
             </label>
             {prop.description && (
-              <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginTop: '4px' }}>
+              <small
+                style={{ display: 'block', color: '#718096', fontSize: '12px', marginTop: '4px' }}
+              >
                 {prop.description}
               </small>
             )}
@@ -163,10 +173,17 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
         return (
           <div key={fieldName} className="form-group">
             <label className={`form-label ${isRequired ? 'form-label-required' : ''}`}>
-              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
             </label>
             {prop.description && (
-              <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}>
+              <small
+                style={{
+                  display: 'block',
+                  color: '#718096',
+                  fontSize: '12px',
+                  marginBottom: '4px',
+                }}
+              >
                 {prop.description}
               </small>
             )}
@@ -174,13 +191,23 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
               type="number"
               className="form-input"
               value={fieldValue}
-              onChange={(e) => handleFieldChange(fieldName, primaryType === 'integer' ? parseInt(e.target.value) || 0 : parseFloat(e.target.value) || 0)}
+              onChange={(e) =>
+                handleFieldChange(
+                  fieldName,
+                  primaryType === 'integer'
+                    ? parseInt(e.target.value) || 0
+                    : parseFloat(e.target.value) || 0
+                )
+              }
               min={prop.minimum}
               max={prop.maximum}
               style={{ borderColor: fieldError ? '#fc8181' : undefined }}
             />
             {fieldError && (
-              <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+              <div
+                className="error-message"
+                style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+              >
                 {fieldError.message}
               </div>
             )}
@@ -194,10 +221,17 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
           return (
             <div key={fieldName} className="form-group">
               <label className={`form-label ${isRequired ? 'form-label-required' : ''}`}>
-                {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
               </label>
               {prop.description && (
-                <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}>
+                <small
+                  style={{
+                    display: 'block',
+                    color: '#718096',
+                    fontSize: '12px',
+                    marginBottom: '4px',
+                  }}
+                >
                   {prop.description}
                 </small>
               )}
@@ -218,7 +252,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
                     type="button"
                     className="btn btn-danger btn-small"
                     onClick={() => {
-                      const newArray = arrayValue.filter((_: any, i: number) => i !== idx);
+                      const newArray = arrayValue.filter((_: unknown, i: number) => i !== idx);
                       handleFieldChange(fieldName, newArray);
                     }}
                   >
@@ -236,7 +270,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
                 + Add Item
               </button>
               {fieldError && (
-                <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+                <div
+                  className="error-message"
+                  style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+                >
                   {fieldError.message}
                 </div>
               )}
@@ -247,16 +284,25 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
         return (
           <div key={fieldName} className="form-group">
             <label className={`form-label ${isRequired ? 'form-label-required' : ''}`}>
-              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} (JSON)
+              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())} (JSON)
             </label>
             {prop.description && (
-              <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}>
+              <small
+                style={{
+                  display: 'block',
+                  color: '#718096',
+                  fontSize: '12px',
+                  marginBottom: '4px',
+                }}
+              >
                 {prop.description}
               </small>
             )}
             <textarea
               className="form-textarea"
-              value={typeof fieldValue === 'string' ? fieldValue : JSON.stringify(fieldValue, null, 2)}
+              value={
+                typeof fieldValue === 'string' ? fieldValue : JSON.stringify(fieldValue, null, 2)
+              }
               onChange={(e) => {
                 try {
                   const parsed = JSON.parse(e.target.value);
@@ -269,7 +315,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
               style={{ borderColor: fieldError ? '#fc8181' : undefined }}
             />
             {fieldError && (
-              <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+              <div
+                className="error-message"
+                style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+              >
                 {fieldError.message}
               </div>
             )}
@@ -281,16 +330,27 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
         return (
           <div key={fieldName} className="form-group">
             <label className={`form-label ${isRequired ? 'form-label-required' : ''}`}>
-              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} (JSON)
+              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())} (JSON)
             </label>
             {prop.description && (
-              <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}>
+              <small
+                style={{
+                  display: 'block',
+                  color: '#718096',
+                  fontSize: '12px',
+                  marginBottom: '4px',
+                }}
+              >
                 {prop.description}
               </small>
             )}
             <textarea
               className="form-textarea"
-              value={typeof fieldValue === 'string' ? fieldValue : JSON.stringify(fieldValue || {}, null, 2)}
+              value={
+                typeof fieldValue === 'string'
+                  ? fieldValue
+                  : JSON.stringify(fieldValue || {}, null, 2)
+              }
               onChange={(e) => {
                 try {
                   const parsed = JSON.parse(e.target.value);
@@ -303,7 +363,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
               style={{ borderColor: fieldError ? '#fc8181' : undefined }}
             />
             {fieldError && (
-              <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+              <div
+                className="error-message"
+                style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+              >
                 {fieldError.message}
               </div>
             )}
@@ -315,10 +378,17 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
         return (
           <div key={fieldName} className="form-group">
             <label className={`form-label ${isRequired ? 'form-label-required' : ''}`}>
-              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
             </label>
             {prop.description && (
-              <small style={{ display: 'block', color: '#718096', fontSize: '12px', marginBottom: '4px' }}>
+              <small
+                style={{
+                  display: 'block',
+                  color: '#718096',
+                  fontSize: '12px',
+                  marginBottom: '4px',
+                }}
+              >
                 {prop.description}
               </small>
             )}
@@ -330,7 +400,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
               style={{ borderColor: fieldError ? '#fc8181' : undefined }}
             />
             {fieldError && (
-              <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+              <div
+                className="error-message"
+                style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+              >
                 {fieldError.message}
               </div>
             )}
@@ -345,7 +418,17 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   return (
     <div>
       {oneOfError && (
-        <div className="error-message" style={{ color: '#e53e3e', fontSize: '14px', marginBottom: '16px', padding: '8px', backgroundColor: '#fff5f5', borderRadius: '4px' }}>
+        <div
+          className="error-message"
+          style={{
+            color: '#e53e3e',
+            fontSize: '14px',
+            marginBottom: '16px',
+            padding: '8px',
+            backgroundColor: '#fff5f5',
+            borderRadius: '4px',
+          }}
+        >
           {oneOfError.message}
         </div>
       )}

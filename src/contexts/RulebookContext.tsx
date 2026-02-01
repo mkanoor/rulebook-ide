@@ -180,6 +180,7 @@ export function RulebookProvider({
 /**
  * Hook to use the Rulebook context
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRulebook() {
   const context = useContext(RulebookContext);
   if (context === undefined) {

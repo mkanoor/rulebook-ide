@@ -16,7 +16,7 @@ export interface SchemaLoadError {
 export function extractDefaultArgs(schema: JsonSchema): Record<string, unknown> {
   const defaultArgs: Record<string, unknown> = {};
   if (schema.properties) {
-    Object.entries(schema.properties).forEach(([key, prop]: [string, any]) => {
+    Object.entries(schema.properties).forEach(([key, prop]: [string, { default?: unknown }]) => {
       if (prop.default !== undefined) {
         defaultArgs[key] = prop.default;
       }
@@ -33,7 +33,7 @@ export function processSchema(schema: unknown): SchemaLoadResult | SchemaLoadErr
   const validation = validateJsonSchema(schema);
   if (!validation.isValid) {
     return {
-      error: `Invalid JSON Schema:\n${validation.errors.join('\n')}`
+      error: `Invalid JSON Schema:\n${validation.errors.join('\n')}`,
     };
   }
 
@@ -42,14 +42,16 @@ export function processSchema(schema: unknown): SchemaLoadResult | SchemaLoadErr
 
   return {
     schema: schema as JsonSchema,
-    defaultArgs
+    defaultArgs,
   };
 }
 
 /**
  * Load and process a schema from a URL or file path
  */
-export async function loadAndProcessSchemaFromUrl(url: string): Promise<SchemaLoadResult | SchemaLoadError> {
+export async function loadAndProcessSchemaFromUrl(
+  url: string
+): Promise<SchemaLoadResult | SchemaLoadError> {
   if (!url.trim()) {
     return { error: 'Please enter a schema URL or file path' };
   }
@@ -66,7 +68,9 @@ export async function loadAndProcessSchemaFromUrl(url: string): Promise<SchemaLo
 /**
  * Load and process a schema from a File object
  */
-export async function loadAndProcessSchemaFromFile(file: File): Promise<SchemaLoadResult | SchemaLoadError> {
+export async function loadAndProcessSchemaFromFile(
+  file: File
+): Promise<SchemaLoadResult | SchemaLoadError> {
   console.log('schemaLoaderUtils: Starting to read file:', file.name);
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -99,6 +103,8 @@ export async function loadAndProcessSchemaFromFile(file: File): Promise<SchemaLo
 /**
  * Type guard to check if result is an error
  */
-export function isSchemaLoadError(result: SchemaLoadResult | SchemaLoadError): result is SchemaLoadError {
+export function isSchemaLoadError(
+  result: SchemaLoadResult | SchemaLoadError
+): result is SchemaLoadError {
   return 'error' in result;
 }

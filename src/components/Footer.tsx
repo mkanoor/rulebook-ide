@@ -6,7 +6,7 @@ interface FooterProps {
   isRunning: boolean;
   rulesetCount: number;
   ruleCount: number;
-  rulesetStats: Map<string, any>;
+  rulesetStats: Map<string, unknown>;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -19,15 +19,14 @@ export const Footer: React.FC<FooterProps> = ({
   // Force re-render every second to update relative time displays
   const [, setTick] = useState(0);
 
-   
   useEffect(() => {
     const timer = setInterval(() => {
-      setTick(t => t + 1);
+      setTick((t) => t + 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
-   
+
   // Aggregate stats across all rulesets
   const aggregatedStats = useMemo<{
     totalEventsProcessed: number;
@@ -171,18 +170,14 @@ export const Footer: React.FC<FooterProps> = ({
           title={isRunning ? 'Ansible Rulebook is running' : 'Ansible Rulebook is stopped'}
         >
           <span className={`execution-dot ${isRunning ? 'running' : 'stopped'}`}></span>
-          <span className="execution-text">
-            {isRunning ? 'Running' : 'Stopped'}
-          </span>
+          <span className="execution-text">{isRunning ? 'Running' : 'Stopped'}</span>
         </div>
         <div
           className={`footer-connection-status ${isConnected ? 'connected' : 'disconnected'}`}
           title={isConnected ? 'Connected to backend server' : 'Not connected to backend server'}
         >
           <span className={`connection-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-          <span className="connection-text">
-            {isConnected ? 'Connected' : 'Disconnected'}
-          </span>
+          <span className="connection-text">{isConnected ? 'Connected' : 'Disconnected'}</span>
         </div>
       </div>
     </div>

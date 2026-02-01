@@ -20,8 +20,8 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
   const [filterErrors, setFilterErrors] = useState<(string | null)[]>([]);
 
   // Extract source type and args
-  const getSourceTypeAndArgs = (): { type: string; args: any } => {
-    const { name, filters, ...rest } = source;
+  const getSourceTypeAndArgs = (): { type: string; args: unknown } => {
+    const { name: _name, filters: _filters, ...rest } = source;
     const keys = Object.keys(rest);
     if (keys.length > 0) {
       const type = keys[0];
@@ -38,7 +38,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
   const [sourceArgsError, setSourceArgsError] = useState<string | null>(null);
 
   // Update source type and args when source prop changes externally
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     const { type, args } = getSourceTypeAndArgs();
     const newArgsText = JSON.stringify(args, null, 2);
@@ -59,8 +59,8 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
       setSourceArgsText(newArgsText);
       setSourceArgsError(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(index, { ...source, name: e.target.value });
@@ -104,7 +104,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
 
       onChange(index, newSource);
       setSourceArgsError(null);
-    } catch (error) {
+    } catch {
       // Invalid JSON, show error but keep the text
       setSourceArgsError('Invalid JSON format');
     }
@@ -131,7 +131,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
       newErrors[filterIndex] = null;
       setFilterErrors(newErrors);
       onChange(index, { ...source, filters: newFilters });
-    } catch (error) {
+    } catch {
       const newErrors = [...filterErrors];
       newErrors[filterIndex] = 'Invalid JSON format';
       setFilterErrors(newErrors);
@@ -192,10 +192,16 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
           onChange={handleSourceArgsChange}
           placeholder='{\n  "port": 5000,\n  "host": "0.0.0.0"\n}'
           rows={8}
-          style={{ borderColor: sourceArgsError ? '#fc8181' : undefined, borderWidth: sourceArgsError ? '2px' : undefined }}
+          style={{
+            borderColor: sourceArgsError ? '#fc8181' : undefined,
+            borderWidth: sourceArgsError ? '2px' : undefined,
+          }}
         />
         {sourceArgsError && (
-          <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+          <div
+            className="error-message"
+            style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+          >
             {sourceArgsError}
           </div>
         )}
@@ -223,9 +229,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
         source.filters.map((filter, filterIndex) => (
           <div key={filterIndex} className="action-item" style={{ marginBottom: '10px' }}>
             <div className="action-header">
-              <span style={{ fontSize: '14px', fontWeight: '500' }}>
-                Filter #{filterIndex + 1}
-              </span>
+              <span style={{ fontSize: '14px', fontWeight: '500' }}>Filter #{filterIndex + 1}</span>
               <button
                 className="btn btn-danger btn-small"
                 onClick={() => handleDeleteFilter(filterIndex)}

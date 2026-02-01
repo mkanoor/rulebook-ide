@@ -5,7 +5,7 @@
  * Can be used with input fields, Monaco Editor, or any other text input.
  */
 
-// @ts-ignore - Generated parser doesn't have TypeScript types yet
+// @ts-expect-error - Generated parser doesn't have TypeScript types yet
 import * as parser from './condition-parser.js';
 
 export interface ValidationResult {
@@ -53,11 +53,7 @@ export function validateCondition(
   condition: string,
   options: ConditionValidatorOptions = {}
 ): ValidationResult {
-  const {
-    includeAST = false,
-    friendlyErrors = true,
-    maxLength = 10000
-  } = options;
+  const { includeAST = false, friendlyErrors = true, maxLength = 10000 } = options;
 
   // Empty string validation
   if (!condition || condition.trim().length === 0) {
@@ -65,8 +61,8 @@ export function validateCondition(
       isValid: false,
       error: {
         message: 'Condition cannot be empty',
-        friendlyMessage: 'Please enter a condition expression'
-      }
+        friendlyMessage: 'Please enter a condition expression',
+      },
     };
   }
 
@@ -76,8 +72,8 @@ export function validateCondition(
       isValid: false,
       error: {
         message: `Condition exceeds maximum length of ${maxLength} characters`,
-        friendlyMessage: `Your condition is too long. Please simplify it or break it into multiple rules.`
-      }
+        friendlyMessage: `Your condition is too long. Please simplify it or break it into multiple rules.`,
+      },
     };
   }
 
@@ -86,45 +82,51 @@ export function validateCondition(
 
     return {
       isValid: true,
-      ast: includeAST ? ast : undefined
+      ast: includeAST ? ast : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as {
+      message?: string;
+      location?: { start: { line: number; column: number; offset: number } };
+      expected?: Array<{ description?: string; text?: string }>;
+      found?: string;
+    };
     const validationError: ValidationError = {
-      message: error.message || 'Unknown parsing error'
+      message: err.message || 'Unknown parsing error',
     };
 
     // Extract location information if available
-    if (error.location) {
+    if (err.location) {
       validationError.location = {
-        line: error.location.start.line,
-        column: error.location.start.column,
-        offset: error.location.start.offset
+        line: err.location.start.line,
+        column: err.location.start.column,
+        offset: err.location.start.offset,
       };
     }
 
     // Extract expected tokens if available
-    if (error.expected) {
-      validationError.expected = error.expected
-        .map((e: any) => e.description || e.text)
-        .filter((e: string, i: number, arr: string[]) => arr.indexOf(e) === i); // unique
+    if (err.expected) {
+      validationError.expected = err.expected
+        .map((e: { description?: string; text?: string }) => e.description || e.text)
+        .filter(
+          (e: string | undefined, i: number, arr: Array<string | undefined>) =>
+            e && arr.indexOf(e) === i
+        ) as string[]; // unique
     }
 
     // Extract found token if available
-    if (error.found !== undefined) {
-      validationError.found = error.found;
+    if (err.found !== undefined) {
+      validationError.found = err.found;
     }
 
     // Generate friendly error message
     if (friendlyErrors) {
-      validationError.friendlyMessage = generateFriendlyErrorMessage(
-        condition,
-        validationError
-      );
+      validationError.friendlyMessage = generateFriendlyErrorMessage(condition, validationError);
     }
 
     return {
       isValid: false,
-      error: validationError
+      error: validationError,
     };
   }
 }
@@ -132,10 +134,7 @@ export function validateCondition(
 /**
  * Generate a user-friendly error message based on the parsing error
  */
-function generateFriendlyErrorMessage(
-  condition: string,
-  error: ValidationError
-): string {
+function generateFriendlyErrorMessage(condition: string, error: ValidationError): string {
   const { message, location, expected, found } = error;
 
   // Common error patterns and friendly messages
@@ -146,11 +145,14 @@ function generateFriendlyErrorMessage(
   }
 
   // Invalid variable prefix
-  if (location && condition.substring(location.offset, location.offset + 4) !== 'event' &&
-      condition.substring(location.offset, location.offset + 5) !== 'events' &&
-      condition.substring(location.offset, location.offset + 4) !== 'fact' &&
-      condition.substring(location.offset, location.offset + 5) !== 'facts' &&
-      condition.substring(location.offset, location.offset + 4) !== 'vars') {
+  if (
+    location &&
+    condition.substring(location.offset, location.offset + 4) !== 'event' &&
+    condition.substring(location.offset, location.offset + 5) !== 'events' &&
+    condition.substring(location.offset, location.offset + 4) !== 'fact' &&
+    condition.substring(location.offset, location.offset + 5) !== 'facts' &&
+    condition.substring(location.offset, location.offset + 4) !== 'vars'
+  ) {
     const nextWord = condition.substring(location.offset).match(/^\w+/)?.[0];
     if (nextWord && !['and', 'or', 'not', 'in', 'is', 'contains'].includes(nextWord)) {
       return `Variable "${nextWord}" must start with one of: event, events, fact, facts, or vars. Try: event.${nextWord}`;
@@ -158,7 +160,10 @@ function generateFriendlyErrorMessage(
   }
 
   // Missing operator
-  if (expected?.includes('operator') || expected?.some(e => ['==', '!=', '<', '>', 'and', 'or'].includes(e))) {
+  if (
+    expected?.includes('operator') ||
+    expected?.some((e) => ['==', '!=', '<', '>', 'and', 'or'].includes(e))
+  ) {
     return `Missing or invalid operator. Expected one of: ==, !=, <, >, <=, >=, and, or, in, contains`;
   }
 
@@ -189,7 +194,10 @@ function generateFriendlyErrorMessage(
 /**
  * Get a snippet of the condition showing where the error occurred
  */
-function getErrorSnippet(condition: string, location: { line: number; column: number; offset: number }): string {
+function getErrorSnippet(
+  condition: string,
+  location: { line: number; column: number; offset: number }
+): string {
   const lines = condition.split('\n');
   const errorLine = lines[location.line - 1] || '';
   const pointer = ' '.repeat(location.column - 1) + '^';
@@ -206,7 +214,7 @@ export function validateConditions(
 ): Array<ValidationResult & { index: number }> {
   return conditions.map((condition, index) => ({
     ...validateCondition(condition, options),
-    index
+    index,
   }));
 }
 
@@ -225,13 +233,7 @@ export function getValidationSuggestions(partialCondition: string): string[] {
 
   // If it's empty or very short, suggest variable prefixes
   if (partialCondition.trim().length < 3) {
-    return [
-      'event.',
-      'events.',
-      'fact.',
-      'facts.',
-      'vars.'
-    ];
+    return ['event.', 'events.', 'fact.', 'facts.', 'vars.'];
   }
 
   // Try to validate what we have
@@ -253,7 +255,7 @@ export function getValidationSuggestions(partialCondition: string): string[] {
       suggestions.push('Add a boolean: true or false');
     }
 
-    if (expected.some(e => ['==', '!=', '<', '>'].includes(e))) {
+    if (expected.some((e) => ['==', '!=', '<', '>'].includes(e))) {
       suggestions.push('Add a comparison operator: ==, !=, <, >, <=, >=');
     }
 
@@ -346,10 +348,12 @@ export function validateConditionObject(
     }
     return {
       isValid: false,
-      errors: [{
-        type: 'string',
-        error: result.error!
-      }]
+      errors: [
+        {
+          type: 'string',
+          error: result.error!,
+        },
+      ],
     };
   }
 
@@ -364,7 +368,7 @@ export function validateConditionObject(
         errors.push({
           type: 'all',
           index,
-          error: result.error!
+          error: result.error!,
         });
       }
     });
@@ -378,7 +382,7 @@ export function validateConditionObject(
         errors.push({
           type: 'any',
           index,
-          error: result.error!
+          error: result.error!,
         });
       }
     });
@@ -392,7 +396,7 @@ export function validateConditionObject(
         errors.push({
           type: 'not_all',
           index,
-          error: result.error!
+          error: result.error!,
         });
       }
     });
@@ -400,6 +404,6 @@ export function validateConditionObject(
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }

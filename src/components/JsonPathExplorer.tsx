@@ -8,7 +8,10 @@ interface JsonPathExplorerProps {
   pathPrefix?: string;
 }
 
-export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson, pathPrefix = 'event' }) => {
+export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({
+  initialJson,
+  pathPrefix = 'event',
+}) => {
   const editorRef = useRef<ReturnType<typeof createJSONEditor> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedPath, setSelectedPath] = useState<string>('root');
@@ -25,18 +28,17 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
           content: {
             json: initialJson || {
               event: {
-                message: "Example webhook payload",
-                user: { id: 123, name: "Alice" },
-                timestamp: "2026-01-19T12:00:00Z"
-              }
-            }
+                message: 'Example webhook payload',
+                user: { id: 123, name: 'Alice' },
+                timestamp: '2026-01-19T12:00:00Z',
+              },
+            },
           } as JSONContent,
           mode: 'tree' as unknown,
-          onSelect: (selection: any) => {
+          onSelect: (selection: { path?: string[] }) => {
             if (selection && selection.path) {
-              const formattedPath = selection.path.length > 0
-                ? pathPrefix + '.' + selection.path.join('.')
-                : 'root';
+              const formattedPath =
+                selection.path.length > 0 ? pathPrefix + '.' + selection.path.join('.') : 'root';
               setSelectedPath(formattedPath);
 
               // Get the value at the selected path
@@ -49,12 +51,12 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
                   }
                   setSelectedValue(value);
                 }
-              } catch (error) {
+              } catch {
                 setSelectedValue(null);
               }
             }
-          }
-        }
+          },
+        },
       });
 
       editorRef.current = editor;
@@ -66,20 +68,20 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
         editorRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update editor content when initialJson changes
-   
+
   useEffect(() => {
     if (editorRef.current && initialJson) {
       try {
         editorRef.current.set({ json: initialJson });
-      } catch (error) {
+      } catch {
         console.error('Error updating JSON editor:', error);
       }
     }
   }, [initialJson]);
-   
 
   const copyPath = () => {
     navigator.clipboard.writeText(selectedPath);
@@ -138,7 +140,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
         if (editorRef.current) {
           editorRef.current.set({ json });
         }
-      } catch (error) {
+      } catch {
         alert('Failed to parse file: ' + (error as Error).message);
       }
     };
@@ -154,23 +156,27 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{
-        background: '#2c3e50',
-        color: 'white',
-        padding: '12px',
-        borderRadius: '6px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
+      <div
+        style={{
+          background: '#2c3e50',
+          color: 'white',
+          padding: '12px',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         <div>
           <strong>Selected Path:</strong>{' '}
-          <span style={{
-            fontFamily: 'monospace',
-            color: '#3498db',
-            fontWeight: 'bold',
-            fontSize: '14px'
-          }}>
+          <span
+            style={{
+              fontFamily: 'monospace',
+              color: '#3498db',
+              fontWeight: 'bold',
+              fontSize: '14px',
+            }}
+          >
             {selectedPath}
           </span>
         </div>
@@ -182,16 +188,10 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
           >
             📁 Load File
           </button>
-          <button
-            className="btn btn-secondary btn-small"
-            onClick={copyPath}
-          >
+          <button className="btn btn-secondary btn-small" onClick={copyPath}>
             {copied ? '✓ Copied!' : 'Copy Path'}
           </button>
-          <button
-            className="btn btn-secondary btn-small"
-            onClick={copyPathAndValue}
-          >
+          <button className="btn btn-secondary btn-small" onClick={copyPathAndValue}>
             {copiedWithValue ? '✓ Copied!' : 'Copy Path & Value'}
           </button>
         </div>
@@ -209,11 +209,12 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({ initialJson,
           height: '400px',
           border: '1px solid #ddd',
           borderRadius: '6px',
-          overflow: 'hidden'
+          overflow: 'hidden',
         }}
       />
       <div style={{ fontSize: '0.85em', color: '#718096' }}>
-        💡 Click on any field in the JSON tree to see its path. Use this path in your rule conditions. You can load JSON or YAML files - YAML will be automatically converted to JSON.
+        💡 Click on any field in the JSON tree to see its path. Use this path in your rule
+        conditions. You can load JSON or YAML files - YAML will be automatically converted to JSON.
       </div>
     </div>
   );

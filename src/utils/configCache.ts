@@ -75,7 +75,9 @@ function isCacheValid(timestamp: number): boolean {
 /**
  * Get cached version info
  */
-export function getCachedVersionInfo(configHash: string): { version: string; versionInfo: any } | null {
+export function getCachedVersionInfo(
+  configHash: string
+): { version: string; versionInfo: unknown } | null {
   const cache = loadCache();
   const cached = cache.versions[configHash];
 
@@ -83,7 +85,7 @@ export function getCachedVersionInfo(configHash: string): { version: string; ver
     console.log(`Using cached version info for: ${configHash}`);
     return {
       version: cached.version,
-      versionInfo: cached.versionInfo
+      versionInfo: cached.versionInfo,
     };
   }
 
@@ -96,13 +98,13 @@ export function getCachedVersionInfo(configHash: string): { version: string; ver
 export function setCachedVersionInfo(
   configHash: string,
   version: string,
-  versionInfo: any
+  versionInfo: unknown
 ): void {
   const cache = loadCache();
   cache.versions[configHash] = {
     version,
     versionInfo,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
   saveCache(cache);
   console.log(`Cached version info for: ${configHash}`);
@@ -116,7 +118,9 @@ export function getCachedCollectionList(configHash: string): unknown[] | null {
   const cached = cache.collections[configHash];
 
   if (cached && isCacheValid(cached.timestamp)) {
-    console.log(`Using cached collection list for: ${configHash} (${cached.collections.length} collections)`);
+    console.log(
+      `Using cached collection list for: ${configHash} (${cached.collections.length} collections)`
+    );
     return cached.collections;
   }
 
@@ -126,14 +130,11 @@ export function getCachedCollectionList(configHash: string): unknown[] | null {
 /**
  * Cache collection list
  */
-export function setCachedCollectionList(
-  configHash: string,
-  collections: unknown[]
-): void {
+export function setCachedCollectionList(configHash: string, collections: unknown[]): void {
   const cache = loadCache();
   cache.collections[configHash] = {
     collections,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
   saveCache(cache);
   console.log(`Cached collection list for: ${configHash} (${collections.length} collections)`);

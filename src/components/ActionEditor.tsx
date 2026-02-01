@@ -39,7 +39,8 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   const [viewMode, setViewMode] = useState<'form' | 'json'>('form');
 
   // Determine if action type supports form editor
-  const hasFormEditor = currentType === 'run_job_template' || currentType === 'run_workflow_template';
+  const hasFormEditor =
+    currentType === 'run_job_template' || currentType === 'run_workflow_template';
 
   // Sync with external changes (e.g., when loading a file)
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -128,7 +129,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
       }
 
       onChange(index, parsed as Action);
-    } catch (error) {
+    } catch {
       setJsonError('Invalid JSON format');
       setSchemaErrors(null);
     }
@@ -150,11 +151,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
       <div className="form-group">
         <label className="form-label">Action Type</label>
-        <select
-          className="form-select"
-          value={currentType}
-          onChange={handleActionTypeChange}
-        >
+        <select className="form-select" value={currentType} onChange={handleActionTypeChange}>
           {ACTION_TYPES.map((type) => (
             <option key={type} value={type}>
               {type}
@@ -218,22 +215,24 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             onChange={handleJsonChange}
             rows={6}
             style={{
-              borderColor: jsonError || schemaErrors ? 'var(--color-error, #f56565)' : undefined
+              borderColor: jsonError || schemaErrors ? 'var(--color-error, #f56565)' : undefined,
             }}
           />
           {jsonError && <div className="error-message">{jsonError}</div>}
           {!jsonError && schemaErrors && (
-            <div style={{
-              backgroundColor: 'var(--color-warning-bg, #fffaf0)',
-              border: '1px solid var(--color-warning, #ed8936)',
-              color: 'var(--color-warning-text, #c05621)',
-              padding: '12px',
-              borderRadius: '4px',
-              marginTop: '8px',
-              fontSize: '13px',
-              whiteSpace: 'pre-line',
-              fontFamily: 'monospace'
-            }}>
+            <div
+              style={{
+                backgroundColor: 'var(--color-warning-bg, #fffaf0)',
+                border: '1px solid var(--color-warning, #ed8936)',
+                color: 'var(--color-warning-text, #c05621)',
+                padding: '12px',
+                borderRadius: '4px',
+                marginTop: '8px',
+                fontSize: '13px',
+                whiteSpace: 'pre-line',
+                fontFamily: 'monospace',
+              }}
+            >
               <strong>⚠️ Schema Validation Warnings:</strong>
               <div style={{ marginTop: '8px' }}>{schemaErrors}</div>
             </div>

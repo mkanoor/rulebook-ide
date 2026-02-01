@@ -30,9 +30,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ rulesets }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [events, setEvents] = useState<ExecutionEvent[]>([]);
-  const [triggeredRules, setTriggeredRules] = useState<Map<string, RuleTrigger>>(
-    new Map()
-  );
+  const [triggeredRules, setTriggeredRules] = useState<Map<string, RuleTrigger>>(new Map());
   const [extraVars, setExtraVars] = useState('{}');
   const [extraVarsFormat, setExtraVarsFormat] = useState<'json' | 'yaml'>('json');
   const [envVars, setEnvVars] = useState(`# EDA Controller Configuration
@@ -48,9 +46,13 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     actionsExecuted: 0,
   });
   const [webhookPayload, setWebhookPayload] = useState('{\n  "message": "test event"\n}');
-  const [webhookPorts, setWebhookPorts] = useState<Array<{ port: number; rulesetName: string; sourceName: string }>>([]);
+  const [webhookPorts, setWebhookPorts] = useState<
+    Array<{ port: number; rulesetName: string; sourceName: string }>
+  >([]);
   const [selectedWebhookPort, setSelectedWebhookPort] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'extra-vars' | 'env-vars' | 'webhook' | 'json-explorer'>('extra-vars');
+  const [activeTab, setActiveTab] = useState<
+    'extra-vars' | 'env-vars' | 'webhook' | 'json-explorer'
+  >('extra-vars');
   const wsRef = useRef<WebSocket | null>(null);
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const webhookFileInputRef = useRef<HTMLInputElement>(null);
@@ -80,16 +82,18 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       for (const source of ruleset.sources) {
         // Check if source is a webhook source
         const sourceName = source.name || '';
-        const isWebhook = sourceName === 'ansible.eda.webhook' ||
-                         sourceName === 'eda.builtin.webhook' ||
-                         'ansible.eda.webhook' in source ||
-                         'eda.builtin.webhook' in source;
+        const isWebhook =
+          sourceName === 'ansible.eda.webhook' ||
+          sourceName === 'eda.builtin.webhook' ||
+          'ansible.eda.webhook' in source ||
+          'eda.builtin.webhook' in source;
 
         if (isWebhook) {
           // Try to extract port from various possible locations
-          const webhookConfig = (source as unknown)['ansible.eda.webhook'] ||
-                               (source as unknown)['eda.builtin.webhook'] ||
-                               source;
+          const webhookConfig =
+            (source as unknown)['ansible.eda.webhook'] ||
+            (source as unknown)['eda.builtin.webhook'] ||
+            source;
 
           let detectedPort: number | null = null;
 
@@ -111,7 +115,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             detectedPorts.push({
               port: detectedPort,
               rulesetName: ruleset.name,
-              sourceName: sourceName || 'webhook'
+              sourceName: sourceName || 'webhook',
             });
           }
         }
@@ -174,7 +178,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             case 'worker_disconnected':
               // Worker WebSocket disconnects after receiving config, but process continues running
               // Don't set isRunning to false - only process_exited or execution_stopped should do that
-              addEvent('System', 'ansible-rulebook worker WebSocket disconnected (process still running)');
+              addEvent(
+                'System',
+                'ansible-rulebook worker WebSocket disconnected (process still running)'
+              );
               break;
 
             case 'execution_stopped':
@@ -187,10 +194,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               break;
 
             case 'process_output':
-              addEvent(
-                message.stream === 'stdout' ? 'Process' : 'Error',
-                message.data
-              );
+              addEvent(message.stream === 'stdout' ? 'Process' : 'Error', message.data);
               break;
 
             case 'process_error':
@@ -199,10 +203,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
               break;
 
             case 'process_exited':
-              addEvent(
-                'System',
-                `ansible-rulebook exited with code ${message.exitCode}`
-              );
+              addEvent('System', `ansible-rulebook exited with code ${message.exitCode}`);
               setIsRunning(false);
               break;
 
@@ -213,7 +214,10 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
             case 'webhook_response':
               if (message.success) {
-                addEvent('Webhook', `✅ Success (${message.status}): ${message.body || 'No response body'}`);
+                addEvent(
+                  'Webhook',
+                  `✅ Success (${message.status}): ${message.body || 'No response body'}`
+                );
               } else if (message.error) {
                 addEvent('Webhook', `❌ Error: ${message.error}`);
               } else {
@@ -224,7 +228,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             default:
               console.log('Unknown message type:', message.type);
           }
-        } catch (error) {
+        } catch {
           console.error('Error parsing message:', error);
         }
       };
@@ -241,7 +245,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       };
 
       wsRef.current = ws;
-    } catch (error) {
+    } catch {
       console.error('Failed to connect:', error);
       addEvent('Error', `Failed to connect: ${error}`);
     }
@@ -276,7 +280,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         Object.entries(matchingEvents).forEach(([, value]) => {
           const eventObj = value as Record<string, unknown>;
           // Remove meta to make it cleaner
-          const { meta, ...cleanEvent } = eventObj;
+          const { meta: _meta, ...cleanEvent } = eventObj;
           matchingEventStr = JSON.stringify(cleanEvent, null, 2);
         });
       }
@@ -285,13 +289,14 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       addEvent(
         'Action',
         `🎯 Rule "${ruleName}" → Action: ${actionType}\n` +
-        `📦 Triggered by event:\n${matchingEventStr || 'No event data'}`
+          `📦 Triggered by event:\n${matchingEventStr || 'No event data'}`
       );
 
       // Update execution summary
-      setExecutionSummary(prev => ({
+      setExecutionSummary((prev) => ({
         rulesTriggered: prev.rulesTriggered + 1,
-        eventsProcessed: prev.eventsProcessed + (matchingEvents ? Object.keys(matchingEvents).length : 0),
+        eventsProcessed:
+          prev.eventsProcessed + (matchingEvents ? Object.keys(matchingEvents).length : 0),
         actionsExecuted: prev.actionsExecuted + 1,
       }));
 
@@ -343,8 +348,11 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         // Parse YAML
         extraVarsObj = yaml.load(extraVars) as object;
       }
-    } catch (error) {
-      addEvent('Error', `Invalid ${extraVarsFormat.toUpperCase()} in extra vars: ${(error as Error).message}`);
+    } catch {
+      addEvent(
+        'Error',
+        `Invalid ${extraVarsFormat.toUpperCase()} in extra vars: ${(error as Error).message}`
+      );
       return;
     }
 
@@ -357,7 +365,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
           envVarsObj = JSON.parse(envVars);
         } else {
           // Parse KEY=VALUE format (one per line)
-          envVars.split('\n').forEach(line => {
+          envVars.split('\n').forEach((line) => {
             const trimmed = line.trim();
             if (trimmed && !trimmed.startsWith('#')) {
               const [key, ...valueParts] = trimmed.split('=');
@@ -367,7 +375,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             }
           });
         }
-      } catch (error) {
+      } catch {
         addEvent('Error', 'Invalid format in environment variables');
         return;
       }
@@ -424,7 +432,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
     let payloadObj;
     try {
       payloadObj = JSON.parse(webhookPayload);
-    } catch (error) {
+    } catch {
       addEvent('Error', 'Invalid JSON in webhook payload');
       return;
     }
@@ -467,7 +475,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
         // Convert to formatted JSON string for the textarea
         setWebhookPayload(JSON.stringify(jsonObj, null, 2));
-      } catch (error) {
+      } catch {
         addEvent('Error', 'Failed to parse file: ' + (error as Error).message);
       }
     };
@@ -534,7 +542,11 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                   fill="currentColor"
                   style={{ marginRight: '8px', verticalAlign: 'middle', display: 'inline-block' }}
                 >
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z"/>
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12.52 3.046a3 3 0 0 0-2.13 5.486 1 1 0 0 1 .306 1.38l-3.922 6.163a2 2 0 1 1-1.688-1.073l3.44-5.405a5 5 0 1 1 8.398-2.728 1 1 0 1 1-1.97-.348 3 3 0 0 0-2.433-3.475zM10 6a2 2 0 1 1 3.774.925l3.44 5.405a5 5 0 1 1-1.427 8.5 1 1 0 0 1 1.285-1.532 3 3 0 1 0 .317-4.83 1 1 0 0 1-1.38-.307l-3.923-6.163A2 2 0 0 1 10 6zm-5.428 6.9a1 1 0 0 1-.598 1.281A3 3 0 1 0 8.001 17a1 1 0 0 1 1-1h8.266a2 2 0 1 1 0 2H9.9a5 5 0 1 1-6.61-5.698 1 1 0 0 1 1.282.597Z"
+                  />
                 </svg>
                 Webhook Testing
               </button>
@@ -555,7 +567,15 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                   <label className="form-label" style={{ margin: 0, flex: 1 }}>
                     Extra Variables
                   </label>
-                  <div style={{ display: 'flex', gap: '4px', background: '#e2e8f0', borderRadius: '6px', padding: '2px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '4px',
+                      background: '#e2e8f0',
+                      borderRadius: '6px',
+                      padding: '2px',
+                    }}
+                  >
                     <button
                       className={`btn btn-small ${extraVarsFormat === 'json' ? 'btn-primary' : 'btn-secondary'}`}
                       onClick={() => {
@@ -565,7 +585,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                             const obj = yaml.load(extraVars);
                             setExtraVars(JSON.stringify(obj, null, 2));
                             setExtraVarsFormat('json');
-                          } catch (error) {
+                          } catch {
                             addEvent('Error', 'Cannot convert to JSON: Invalid YAML');
                           }
                         }
@@ -574,7 +594,9 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                       style={{
                         minWidth: '60px',
                         padding: '4px 12px',
-                        ...(extraVarsFormat === 'json' ? {} : { background: 'transparent', color: '#4a5568', border: 'none' })
+                        ...(extraVarsFormat === 'json'
+                          ? {}
+                          : { background: 'transparent', color: '#4a5568', border: 'none' }),
                       }}
                     >
                       JSON
@@ -588,7 +610,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                             const obj = JSON.parse(extraVars);
                             setExtraVars(yaml.dump(obj, { indent: 2, lineWidth: -1 }));
                             setExtraVarsFormat('yaml');
-                          } catch (error) {
+                          } catch {
                             addEvent('Error', 'Cannot convert to YAML: Invalid JSON');
                           }
                         }
@@ -597,7 +619,9 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                       style={{
                         minWidth: '60px',
                         padding: '4px 12px',
-                        ...(extraVarsFormat === 'yaml' ? {} : { background: 'transparent', color: '#4a5568', border: 'none' })
+                        ...(extraVarsFormat === 'yaml'
+                          ? {}
+                          : { background: 'transparent', color: '#4a5568', border: 'none' }),
                       }}
                     >
                       YAML
@@ -609,11 +633,20 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                   value={extraVars}
                   onChange={(e) => setExtraVars(e.target.value)}
                   rows={6}
-                  placeholder={extraVarsFormat === 'json' ? '{"var1": "value1"}' : 'var1: value1\nvar2: value2'}
+                  placeholder={
+                    extraVarsFormat === 'json' ? '{"var1": "value1"}' : 'var1: value1\nvar2: value2'
+                  }
                   disabled={isRunning}
                   style={{ fontFamily: 'monospace', fontSize: '13px' }}
                 />
-                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: '#718096',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Format: {extraVarsFormat.toUpperCase()}
                 </small>
               </div>
@@ -631,7 +664,14 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                   placeholder={'KEY1=value1\nKEY2=value2\n# or JSON: {"KEY1": "value1"}'}
                   disabled={isRunning}
                 />
-                <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: '#718096',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Format: KEY=VALUE (one per line) or JSON
                 </small>
               </div>
@@ -688,7 +728,8 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
                 {webhookPorts.length === 1 && (
                   <div style={{ marginBottom: '12px', fontSize: '0.9em', color: '#1e40af' }}>
-                    <strong>Port:</strong> {webhookPorts[0].port} ({webhookPorts[0].rulesetName} / {webhookPorts[0].sourceName})
+                    <strong>Port:</strong> {webhookPorts[0].port} ({webhookPorts[0].rulesetName} /{' '}
+                    {webhookPorts[0].sourceName})
                   </div>
                 )}
 
@@ -701,7 +742,14 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                   disabled={!isRunning}
                   style={{ fontFamily: 'monospace', fontSize: '13px' }}
                 />
-                <small style={{ color: '#1e40af', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: '#1e40af',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Will POST to: http://localhost:{selectedWebhookPort}/endpoint
                 </small>
               </div>
@@ -755,13 +803,15 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
           {/* Execution Summary */}
           {(executionSummary.rulesTriggered > 0 || executionSummary.actionsExecuted > 0) && (
-            <div style={{
-              backgroundColor: '#f7fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '12px',
-              marginBottom: '16px',
-            }}>
+            <div
+              style={{
+                backgroundColor: '#f7fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px',
+              }}
+            >
               <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9em', color: '#4a5568' }}>
                 Execution Summary
               </h4>
@@ -810,16 +860,18 @@ EDA_CONTROLLER_SSL_VERIFY=`);
                               <span className="action-badge">{trigger.actionType}</span>
                             )}
                             {trigger.matchingEvent && (
-                              <div style={{
-                                marginTop: '8px',
-                                padding: '8px',
-                                backgroundColor: '#fff3cd',
-                                border: '1px solid #ffc107',
-                                borderRadius: '4px',
-                                fontSize: '0.85em',
-                                whiteSpace: 'pre-wrap',
-                                fontFamily: 'monospace',
-                              }}>
+                              <div
+                                style={{
+                                  marginTop: '8px',
+                                  padding: '8px',
+                                  backgroundColor: '#fff3cd',
+                                  border: '1px solid #ffc107',
+                                  borderRadius: '4px',
+                                  fontSize: '0.85em',
+                                  whiteSpace: 'pre-wrap',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
                                 <strong>Matching Event:</strong>
                                 <pre style={{ margin: '4px 0 0 0', fontSize: '0.9em' }}>
                                   {trigger.matchingEvent}
@@ -834,30 +886,37 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
                         {/* Display actions */}
                         {getActionsArray(rule).length > 0 && (
-                          <div style={{
-                            marginTop: '8px',
-                            padding: '8px',
-                            backgroundColor: '#f7fafc',
-                            borderRadius: '4px',
-                            fontSize: '0.85em',
-                          }}>
+                          <div
+                            style={{
+                              marginTop: '8px',
+                              padding: '8px',
+                              backgroundColor: '#f7fafc',
+                              borderRadius: '4px',
+                              fontSize: '0.85em',
+                            }}
+                          >
                             <strong style={{ color: '#4a5568' }}>Actions:</strong>
                             <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px' }}>
                               {getActionsArray(rule).map((action, actionIndex) => {
                                 // Get the action type (first key in the action object)
                                 const actionType = Object.keys(action)[0];
                                 return (
-                                  <li key={actionIndex} style={{
-                                    marginTop: '4px',
-                                    color: '#2d3748',
-                                  }}>
-                                    <code style={{
-                                      backgroundColor: '#e2e8f0',
-                                      padding: '2px 6px',
-                                      borderRadius: '3px',
-                                      fontFamily: 'monospace',
-                                      fontSize: '0.9em',
-                                    }}>
+                                  <li
+                                    key={actionIndex}
+                                    style={{
+                                      marginTop: '4px',
+                                      color: '#2d3748',
+                                    }}
+                                  >
+                                    <code
+                                      style={{
+                                        backgroundColor: '#e2e8f0',
+                                        padding: '2px 6px',
+                                        borderRadius: '3px',
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.9em',
+                                      }}
+                                    >
                                       {actionType}
                                     </code>
                                   </li>
@@ -880,9 +939,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
           <div className="events-log">
             {events.map((event, index) => (
               <div key={index} className="event-item">
-                <span className="event-time">
-                  {event.timestamp.toLocaleTimeString()}
-                </span>
+                <span className="event-time">{event.timestamp.toLocaleTimeString()}</span>
                 <span className="event-type">[{event.type}]</span>
                 <pre className="event-data">{String(event.data)}</pre>
               </div>

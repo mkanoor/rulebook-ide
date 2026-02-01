@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Source } from '../../types/rulebook';
-import { loadEventSourceSchema, getAllEventSourceSchemas, type JsonSchema } from '../../utils/schemaLoader';
+import {
+  loadEventSourceSchema,
+  getAllEventSourceSchemas,
+  type JsonSchema,
+} from '../../utils/schemaLoader';
 import { SchemaForm } from '../SchemaForm';
 import { FilterEditor } from '../FilterEditor';
 import { useSchemaLoader } from '../../hooks/useSchemaLoader';
@@ -56,30 +60,36 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       if (source.name) newSource.name = source.name;
       if (customSourceType) {
         // Remove source_type from the args before storing
-        const { source_type, ...cleanArgs } = mergedArgs as unknown;
+        const { source_type: _source_type, ...cleanArgs } = mergedArgs as unknown;
         newSource[customSourceType] = cleanArgs;
       }
       if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
       onChange(newSource);
       console.log(`${logPrefix}: source updated`);
-    }
+    },
   });
 
   // Load all available source schemas on mount
-   
+
   useEffect(() => {
     console.log(`${logPrefix}: Loading schemas...`);
-    getAllEventSourceSchemas().then(schemas => {
+    getAllEventSourceSchemas().then((schemas) => {
       console.log(`${logPrefix}: Loaded schemas:`, Object.keys(schemas));
       setAvailableSchemas(schemas);
     });
   }, [logPrefix]);
-   
 
   // Extract source type and args from the source object
-   
+
   useEffect(() => {
-    console.log(`${logPrefix}: useEffect triggered - showSelector:`, showSourceTypeSelector, 'isCustom:', isCustomSource, 'customType:', customSourceType);
+    console.log(
+      `${logPrefix}: useEffect triggered - showSelector:`,
+      showSourceTypeSelector,
+      'isCustom:',
+      isCustomSource,
+      'customType:',
+      customSourceType
+    );
 
     // Don't auto-load if we're showing the source type selector
     if (showSourceTypeSelector) {
@@ -87,7 +97,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       return;
     }
 
-    const { name, filters, ...rest } = source;
+    const { name: _name, filters: _filters, ...rest } = source;
     const keys = Object.keys(rest);
     console.log(`${logPrefix}: Source changed, keys:`, keys);
 
@@ -106,7 +116,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       }
 
       // Load schema for this source type
-      loadEventSourceSchema(type).then(schema => {
+      loadEventSourceSchema(type).then((schema) => {
         if (schema) {
           console.log(`${logPrefix}: Loaded schema for`, type);
           setCurrentSchema(schema);
@@ -142,7 +152,6 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       }
     }
   }, [source, isCustomSource, currentSchema, customSourceType, showSourceTypeSelector, logPrefix]);
-   
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({ ...source, name: e.target.value });
@@ -151,7 +160,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
   const handleSourceTypeSelect = (sourceType: string) => {
     setSelectedSourceType(sourceType);
     setIsCustomSource(false);
-    loadEventSourceSchema(sourceType).then(schema => {
+    loadEventSourceSchema(sourceType).then((schema) => {
       if (schema) {
         setCurrentSchema(schema);
         setShowSourceTypeSelector(false);
@@ -194,7 +203,9 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
     if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
     onChange(newSource);
 
-    console.log(`${logPrefix}: Custom source state set - isCustomSource=true, showSelector=false, source cleared`);
+    console.log(
+      `${logPrefix}: Custom source state set - isCustomSource=true, showSelector=false, source cleared`
+    );
   };
 
   const handleCustomSourceTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,7 +245,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       if (customSourceType) newSource[customSourceType] = parsed;
       if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
       onChange(newSource);
-    } catch (error) {
+    } catch {
       setCustomSourceArgsError('Invalid JSON format');
     }
   };
@@ -243,7 +254,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
     setSourceArgs(newArgs);
 
     // Remove hidden fields before storing
-    const { source_type, ...cleanArgs } = newArgs;
+    const { source_type: _source_type, ...cleanArgs } = newArgs;
 
     // Update the source object
     const newSource: unknown = {};
@@ -257,7 +268,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
   const handleFiltersChange = (newFilters: Array<Record<string, unknown>>) => {
     onChange({
       ...source,
-      filters: newFilters.length > 0 ? newFilters : undefined
+      filters: newFilters.length > 0 ? newFilters : undefined,
     });
   };
 
@@ -277,7 +288,14 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       {showSourceTypeSelector ? (
         <div className="form-group">
           <label className="form-label form-label-required">Select Source Type</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '8px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '12px',
+              marginTop: '8px',
+            }}
+          >
             {Object.entries(availableSchemas).map(([sourceType, schema]) => (
               <button
                 key={sourceType}
@@ -290,7 +308,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
                   height: 'auto',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px'
+                  gap: '4px',
                 }}
               >
                 <strong>{schema.title}</strong>
@@ -309,7 +327,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
                 flexDirection: 'column',
                 gap: '4px',
                 border: '2px dashed',
-                borderColor: isCustomSource ? 'var(--color-primary)' : 'currentColor'
+                borderColor: isCustomSource ? 'var(--color-primary)' : 'currentColor',
               }}
             >
               <strong>Custom Source</strong>
@@ -329,15 +347,17 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
         </div>
       ) : isCustomSource ? (
         <div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: 'var(--color-bg-secondary)',
-            borderRadius: '4px'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderRadius: '4px',
+            }}
+          >
             <div>
               <strong>Custom Source</strong>
               <br />
@@ -374,6 +394,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
 
           {!currentSchema ? (
             <>
+              {/* eslint-disable react-hooks/refs */}
               <div className="form-group">
                 <label className="form-label">JSON Schema URL or File (Optional)</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -385,16 +406,19 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
                     placeholder={
                       customSourceType.startsWith('ansible.eda.')
                         ? `/schemas/external_event_sources/${customSourceType.split('.').pop()}.json`
-                        : "e.g., /schemas/my-source.json or https://example.com/schema.json"
+                        : 'e.g., /schemas/my-source.json or https://example.com/schema.json'
                     }
                     style={{ flex: 1 }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && schemaLoader.schemaUrl.trim() &&
-                          (schemaLoader.schemaUrl.startsWith('http://') ||
-                           schemaLoader.schemaUrl.startsWith('https://') ||
-                           schemaLoader.schemaUrl.startsWith('/') ||
-                           schemaLoader.schemaUrl.startsWith('./') ||
-                           schemaLoader.schemaUrl.startsWith('../'))) {
+                      if (
+                        e.key === 'Enter' &&
+                        schemaLoader.schemaUrl.trim() &&
+                        (schemaLoader.schemaUrl.startsWith('http://') ||
+                          schemaLoader.schemaUrl.startsWith('https://') ||
+                          schemaLoader.schemaUrl.startsWith('/') ||
+                          schemaLoader.schemaUrl.startsWith('./') ||
+                          schemaLoader.schemaUrl.startsWith('../'))
+                      ) {
                         schemaLoader.loadFromUrl(schemaLoader.schemaUrl);
                       }
                     }}
@@ -408,21 +432,22 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
                     {schemaLoader.loading ? 'Loading...' : 'Browse...'}
                   </button>
                   {schemaLoader.schemaUrl.trim() &&
-                   (schemaLoader.schemaUrl.startsWith('http://') ||
-                    schemaLoader.schemaUrl.startsWith('https://') ||
-                    schemaLoader.schemaUrl.startsWith('/') ||
-                    schemaLoader.schemaUrl.startsWith('./') ||
-                    schemaLoader.schemaUrl.startsWith('../')) && (
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => schemaLoader.loadFromUrl(schemaLoader.schemaUrl)}
-                      disabled={schemaLoader.loading}
-                    >
-                      Load
-                    </button>
-                  )}
+                    (schemaLoader.schemaUrl.startsWith('http://') ||
+                      schemaLoader.schemaUrl.startsWith('https://') ||
+                      schemaLoader.schemaUrl.startsWith('/') ||
+                      schemaLoader.schemaUrl.startsWith('./') ||
+                      schemaLoader.schemaUrl.startsWith('../')) && (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-small"
+                        onClick={() => schemaLoader.loadFromUrl(schemaLoader.schemaUrl)}
+                        disabled={schemaLoader.loading}
+                      >
+                        Load
+                      </button>
+                    )}
                 </div>
+                {}
                 <input
                   ref={schemaLoader.fileInputRef}
                   type="file"
@@ -431,7 +456,15 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
                   style={{ display: 'none' }}
                 />
                 {schemaLoader.schemaError && (
-                  <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px', whiteSpace: 'pre-line' }}>
+                  <div
+                    className="error-message"
+                    style={{
+                      color: '#e53e3e',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
                     {schemaLoader.schemaError}
                   </div>
                 )}
@@ -451,11 +484,17 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
                   value={customSourceArgsText}
                   onChange={handleCustomSourceArgsChange}
                   rows={10}
-                  style={{ borderColor: customSourceArgsError ? '#fc8181' : undefined, borderWidth: customSourceArgsError ? '2px' : undefined }}
+                  style={{
+                    borderColor: customSourceArgsError ? '#fc8181' : undefined,
+                    borderWidth: customSourceArgsError ? '2px' : undefined,
+                  }}
                   placeholder='{\n  "port": 5000,\n  "host": "0.0.0.0"\n}'
                 />
                 {customSourceArgsError && (
-                  <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+                  <div
+                    className="error-message"
+                    style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+                  >
                     {customSourceArgsError}
                   </div>
                 )}
@@ -466,9 +505,19 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
             </>
           ) : (
             <>
-              <div style={{ padding: '8px 12px', backgroundColor: '#e6ffed', borderRadius: '4px', marginBottom: '12px', fontSize: '12px', color: '#22543d' }}>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#e6ffed',
+                  borderRadius: '4px',
+                  marginBottom: '12px',
+                  fontSize: '12px',
+                  color: '#22543d',
+                }}
+              >
                 ✓ Using custom schema from: {schemaLoader.schemaUrl}
               </div>
+              {/* eslint-enable react-hooks/refs */}
               <SchemaForm
                 schema={currentSchema}
                 value={sourceArgs}
@@ -480,15 +529,17 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
         </div>
       ) : currentSchema ? (
         <div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: 'var(--color-bg-secondary)',
-            borderRadius: '4px'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderRadius: '4px',
+            }}
+          >
             <div>
               <strong>{currentSchema.title}</strong>
               <br />
@@ -525,10 +576,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
         Filters ({(source.filters || []).length})
       </div>
 
-      <FilterEditor
-        filters={source.filters || []}
-        onChange={handleFiltersChange}
-      />
+      <FilterEditor filters={source.filters || []} onChange={handleFiltersChange} />
     </>
   );
 
@@ -538,11 +586,7 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
   ) : (
     <>
       {editorContent}
-      <button
-        className="btn btn-danger"
-        onClick={onDelete}
-        style={{ marginTop: '20px' }}
-      >
+      <button className="btn btn-danger" onClick={onDelete} style={{ marginTop: '20px' }}>
         Delete Source
       </button>
     </>
