@@ -23,32 +23,32 @@ const VARIABLE_PREFIXES: AutocompleteSuggestion[] = [
     text: 'event.',
     displayText: 'event',
     description: 'Access fields from the current event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'events.',
     displayText: 'events',
     description: 'Access previous events from the event buffer',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'fact.',
     displayText: 'fact',
     description: 'Access Ansible facts',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'facts.',
     displayText: 'facts',
     description: 'Access multiple Ansible facts',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'vars.',
     displayText: 'vars',
     description: 'Access custom variables',
-    type: 'variable'
-  }
+    type: 'variable',
+  },
 ];
 
 /**
@@ -59,73 +59,73 @@ const COMPARISON_OPERATORS: AutocompleteSuggestion[] = [
     text: '==',
     displayText: '==',
     description: 'Equal to',
-    type: 'operator'
+    type: 'operator',
   },
   {
     text: '!=',
     displayText: '!=',
     description: 'Not equal to',
-    type: 'operator'
+    type: 'operator',
   },
   {
     text: '<',
     displayText: '<',
     description: 'Less than',
-    type: 'operator'
+    type: 'operator',
   },
   {
     text: '>',
     displayText: '>',
     description: 'Greater than',
-    type: 'operator'
+    type: 'operator',
   },
   {
     text: '<=',
     displayText: '<=',
     description: 'Less than or equal to',
-    type: 'operator'
+    type: 'operator',
   },
   {
     text: '>=',
     displayText: '>=',
     description: 'Greater than or equal to',
-    type: 'operator'
+    type: 'operator',
   },
   {
     text: 'in',
     displayText: 'in',
     description: 'Check if value is in a list or string',
     type: 'operator',
-    insertText: 'in '
+    insertText: 'in ',
   },
   {
     text: 'not in',
     displayText: 'not in',
     description: 'Check if value is not in a list or string',
     type: 'operator',
-    insertText: 'not in '
+    insertText: 'not in ',
   },
   {
     text: 'is',
     displayText: 'is',
     description: 'Identity comparison',
     type: 'operator',
-    insertText: 'is '
+    insertText: 'is ',
   },
   {
     text: 'is not',
     displayText: 'is not',
     description: 'Negative identity comparison',
     type: 'operator',
-    insertText: 'is not '
+    insertText: 'is not ',
   },
   {
     text: 'contains',
     displayText: 'contains',
     description: 'Check if a string or list contains a value',
     type: 'operator',
-    insertText: 'contains '
-  }
+    insertText: 'contains ',
+  },
 ];
 
 /**
@@ -137,22 +137,22 @@ const LOGICAL_OPERATORS: AutocompleteSuggestion[] = [
     displayText: 'and',
     description: 'Logical AND - both conditions must be true',
     type: 'operator',
-    insertText: 'and '
+    insertText: 'and ',
   },
   {
     text: 'or',
     displayText: 'or',
     description: 'Logical OR - at least one condition must be true',
     type: 'operator',
-    insertText: 'or '
+    insertText: 'or ',
   },
   {
     text: 'not',
     displayText: 'not',
     description: 'Logical NOT - negates the condition',
     type: 'operator',
-    insertText: 'not '
-  }
+    insertText: 'not ',
+  },
 ];
 
 /**
@@ -164,8 +164,15 @@ const FUNCTIONS: AutocompleteSuggestion[] = [
     displayText: 'selectattr',
     description: 'Filter list by attribute value',
     type: 'function',
-    insertText: 'selectattr("", "==", "")'
-  }
+    insertText: 'selectattr("", "==", "")',
+  },
+  {
+    text: 'select(',
+    displayText: 'select',
+    description: 'Filter list by condition (search, match, etc.)',
+    type: 'function',
+    insertText: 'select("", )',
+  },
 ];
 
 /**
@@ -176,26 +183,26 @@ const KEYWORDS: AutocompleteSuggestion[] = [
     text: 'true',
     displayText: 'true',
     description: 'Boolean true value',
-    type: 'keyword'
+    type: 'keyword',
   },
   {
     text: 'false',
     displayText: 'false',
     description: 'Boolean false value',
-    type: 'keyword'
+    type: 'keyword',
   },
   {
     text: 'null',
     displayText: 'null',
     description: 'Null value',
-    type: 'keyword'
+    type: 'keyword',
   },
   {
     text: 'None',
     displayText: 'None',
     description: 'Python None value',
-    type: 'keyword'
-  }
+    type: 'keyword',
+  },
 ];
 
 /**
@@ -206,44 +213,44 @@ const COMMON_EVENT_FIELDS: AutocompleteSuggestion[] = [
     text: 'event.type',
     displayText: 'event.type',
     description: 'Type of the event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'event.severity',
     displayText: 'event.severity',
     description: 'Severity level of the event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'event.status',
     displayText: 'event.status',
     description: 'Status of the event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'event.message',
     displayText: 'event.message',
     description: 'Message content from the event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'event.timestamp',
     displayText: 'event.timestamp',
     description: 'Timestamp of the event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'event.host',
     displayText: 'event.host',
     description: 'Hostname from the event',
-    type: 'variable'
+    type: 'variable',
   },
   {
     text: 'event.user',
     displayText: 'event.user',
     description: 'User information from the event',
-    type: 'variable'
-  }
+    type: 'variable',
+  },
 ];
 
 /**
@@ -286,9 +293,21 @@ export function getAutocompleteSuggestions(
     return [
       ...VARIABLE_PREFIXES,
       ...KEYWORDS,
-      { text: '""', displayText: '"..."', description: 'String value', type: 'value', insertText: '""' },
+      {
+        text: '""',
+        displayText: '"..."',
+        description: 'String value',
+        type: 'value',
+        insertText: '""',
+      },
       { text: '0', displayText: '123', description: 'Number value', type: 'value' },
-      { text: '[]', displayText: '[...]', description: 'List value', type: 'value', insertText: '[]' }
+      {
+        text: '[]',
+        displayText: '[...]',
+        description: 'List value',
+        type: 'value',
+        insertText: '[]',
+      },
     ];
   }
 
@@ -309,7 +328,7 @@ export function getAutocompleteSuggestions(
     ...COMPARISON_OPERATORS,
     ...LOGICAL_OPERATORS,
     ...KEYWORDS,
-    ...FUNCTIONS
+    ...FUNCTIONS,
   ];
 }
 
@@ -326,7 +345,7 @@ function getCurrentWord(text: string): string {
  */
 function isPartialVariablePrefix(word: string): boolean {
   const prefixes = ['event', 'events', 'fact', 'facts', 'vars'];
-  return prefixes.some(prefix => prefix.startsWith(word.toLowerCase()));
+  return prefixes.some((prefix) => prefix.startsWith(word.toLowerCase()));
 }
 
 /**
@@ -341,8 +360,20 @@ function looksLikeCompleteVariable(text: string): boolean {
  * Check if the text ends with an operator
  */
 function endsWithOperator(text: string): boolean {
-  const operators = ['==', '!=', '<', '>', '<=', '>=', ' in ', ' not in ', ' is ', ' is not ', ' contains '];
-  return operators.some(op => text.endsWith(op));
+  const operators = [
+    '==',
+    '!=',
+    '<',
+    '>',
+    '<=',
+    '>=',
+    ' in ',
+    ' not in ',
+    ' is ',
+    ' is not ',
+    ' contains ',
+  ];
+  return operators.some((op) => text.endsWith(op));
 }
 
 /**
@@ -363,13 +394,28 @@ function getFieldSuggestions(textBeforeDot: string): AutocompleteSuggestion[] {
   if (textBeforeDot.includes('event.')) {
     suggestions.push(
       { text: 'type', displayText: 'type', description: 'Event type', type: 'variable' },
-      { text: 'severity', displayText: 'severity', description: 'Event severity', type: 'variable' },
+      {
+        text: 'severity',
+        displayText: 'severity',
+        description: 'Event severity',
+        type: 'variable',
+      },
       { text: 'status', displayText: 'status', description: 'Event status', type: 'variable' },
       { text: 'message', displayText: 'message', description: 'Event message', type: 'variable' },
-      { text: 'timestamp', displayText: 'timestamp', description: 'Event timestamp', type: 'variable' },
+      {
+        text: 'timestamp',
+        displayText: 'timestamp',
+        description: 'Event timestamp',
+        type: 'variable',
+      },
       { text: 'host', displayText: 'host', description: 'Event host', type: 'variable' },
       { text: 'user', displayText: 'user', description: 'Event user', type: 'variable' },
-      { text: 'payload', displayText: 'payload', description: 'Event payload data', type: 'variable' }
+      {
+        text: 'payload',
+        displayText: 'payload',
+        description: 'Event payload data',
+        type: 'variable',
+      }
     );
   }
 
@@ -388,26 +434,42 @@ function getParserBasedSuggestions(input: string): AutocompleteSuggestion[] {
 
     // Map parser expected tokens to our suggestions
     // Add type guards to ensure elements are strings before calling .includes()
-    if (expected.includes('number') || expected.some(e => typeof e === 'string' && e.includes('digit'))) {
-      suggestions.push({ text: '0', displayText: '123', description: 'Number value', type: 'value' });
+    if (
+      expected.includes('number') ||
+      expected.some((e) => typeof e === 'string' && e.includes('digit'))
+    ) {
+      suggestions.push({
+        text: '0',
+        displayText: '123',
+        description: 'Number value',
+        type: 'value',
+      });
     }
 
     if (expected.includes('string') || expected.includes('"')) {
-      suggestions.push({ text: '""', displayText: '"text"', description: 'String value', type: 'value', insertText: '""' });
+      suggestions.push({
+        text: '""',
+        displayText: '"text"',
+        description: 'String value',
+        type: 'value',
+        insertText: '""',
+      });
     }
 
     if (expected.includes('boolean') || expected.includes('true') || expected.includes('false')) {
-      suggestions.push(...KEYWORDS.filter(k => k.text === 'true' || k.text === 'false'));
+      suggestions.push(...KEYWORDS.filter((k) => k.text === 'true' || k.text === 'false'));
     }
 
     // Look for operator suggestions
-    const operatorExpected = expected.filter(e =>
-      typeof e === 'string' && ['==', '!=', '<', '>', '<=', '>=', 'and', 'or', 'not', 'in', 'contains'].includes(e)
+    const operatorExpected = expected.filter(
+      (e) =>
+        typeof e === 'string' &&
+        ['==', '!=', '<', '>', '<=', '>=', 'and', 'or', 'not', 'in', 'contains'].includes(e)
     );
 
     if (operatorExpected.length > 0) {
-      const matchingOps = [...COMPARISON_OPERATORS, ...LOGICAL_OPERATORS].filter(op =>
-        operatorExpected.some(exp => typeof exp === 'string' && op.text.includes(exp))
+      const matchingOps = [...COMPARISON_OPERATORS, ...LOGICAL_OPERATORS].filter((op) =>
+        operatorExpected.some((exp) => typeof exp === 'string' && op.text.includes(exp))
       );
       suggestions.push(...matchingOps);
     }
@@ -426,16 +488,19 @@ function filterSuggestions(
   partial: string
 ): AutocompleteSuggestion[] {
   const lowerPartial = partial.toLowerCase();
-  return suggestions.filter(s =>
-    s.text.toLowerCase().startsWith(lowerPartial) ||
-    s.displayText.toLowerCase().startsWith(lowerPartial)
+  return suggestions.filter(
+    (s) =>
+      s.text.toLowerCase().startsWith(lowerPartial) ||
+      s.displayText.toLowerCase().startsWith(lowerPartial)
   );
 }
 
 /**
  * Get suggestions for a specific suggestion type
  */
-export function getSuggestionsByType(type: AutocompleteSuggestion['type']): AutocompleteSuggestion[] {
+export function getSuggestionsByType(
+  type: AutocompleteSuggestion['type']
+): AutocompleteSuggestion[] {
   switch (type) {
     case 'variable':
       return [...VARIABLE_PREFIXES, ...COMMON_EVENT_FIELDS];
