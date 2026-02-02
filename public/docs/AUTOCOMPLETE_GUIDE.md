@@ -257,6 +257,80 @@ select("equalto", event.status)
 - Use `selectattr()` when filtering by a specific attribute with a comparison
 - Use `select()` when applying pattern matching, searching, or complex filters
 
+#### Pattern Matching Functions
+
+These functions work with the `is` operator for pattern matching and searching.
+
+##### `search(pattern)`
+
+Search for a pattern in text (substring matching).
+
+**Syntax:** `field is search("pattern")`
+
+**Examples:**
+
+```
+# Check if message contains "error"
+event.message is search("error")
+
+# Check if hostname contains "prod"
+event.hostname is search("prod")
+```
+
+##### `match(pattern)`
+
+Match text against a pattern (full string matching).
+
+**Syntax:** `field is match("pattern")`
+
+**Examples:**
+
+```
+# Match hostname against a pattern
+event.hostname is match("server-.*")
+
+# Match status codes
+event.status is match("200")
+```
+
+##### `regex(pattern)`
+
+Match using a regular expression pattern.
+
+**Syntax:** `field is regex("pattern")`
+
+**Examples:**
+
+```
+# Match email addresses
+event.email is regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+
+# Match error codes starting with E
+event.code is regex("^E[0-9]+")
+
+# Case-insensitive regex (with ignorecase option)
+event.message is regex("ERROR", "ignorecase")
+```
+
+##### `defined` keyword
+
+Check if a field exists and has a value.
+
+**Syntax:** `field is defined` or `field is not defined`
+
+**Examples:**
+
+```
+# Check if optional field exists
+event.user_id is defined
+
+# Check if field is missing
+event.optional_field is not defined
+
+# Only process events with certain fields
+event.metadata is defined and event.metadata.priority == "high"
+```
+
 ## Tips and Tricks
 
 ### Tip 1: Filter Suggestions by Typing

@@ -173,6 +173,27 @@ const FUNCTIONS: AutocompleteSuggestion[] = [
     type: 'function',
     insertText: 'select("", )',
   },
+  {
+    text: 'search(',
+    displayText: 'search',
+    description: 'Search for pattern (use with "is" operator)',
+    type: 'function',
+    insertText: 'search("")',
+  },
+  {
+    text: 'match(',
+    displayText: 'match',
+    description: 'Match against pattern (use with "is" operator)',
+    type: 'function',
+    insertText: 'match("")',
+  },
+  {
+    text: 'regex(',
+    displayText: 'regex',
+    description: 'Match using regex pattern (use with "is" operator)',
+    type: 'function',
+    insertText: 'regex("")',
+  },
 ];
 
 /**
@@ -201,6 +222,12 @@ const KEYWORDS: AutocompleteSuggestion[] = [
     text: 'None',
     displayText: 'None',
     description: 'Python None value',
+    type: 'keyword',
+  },
+  {
+    text: 'defined',
+    displayText: 'defined',
+    description: 'Check if value is defined (use with "is" or "is not")',
     type: 'keyword',
   },
 ];
