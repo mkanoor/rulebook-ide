@@ -124,7 +124,7 @@ export function formatConditionErrors(errors: ConditionValidationError[]): strin
   const grouped = new Map<string, ConditionValidationError[]>();
 
   // Group errors by ruleset and rule
-  errors.forEach((_error) => {
+  errors.forEach((error) => {
     const key = `${error.rulesetName}::${error.ruleName}`;
     if (!grouped.has(key)) {
       grouped.set(key, []);
@@ -137,7 +137,7 @@ export function formatConditionErrors(errors: ConditionValidationError[]): strin
     const [rulesetName, ruleName] = key.split('::');
     message += `\n📋 Ruleset: "${rulesetName}" → Rule: "${ruleName}"\n`;
 
-    ruleErrors.forEach((_error) => {
+    ruleErrors.forEach((error) => {
       if (error.conditionType === 'simple') {
         message += `   ⚠️ Condition: "${error.conditionValue}"\n`;
       } else {

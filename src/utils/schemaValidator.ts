@@ -121,7 +121,7 @@ export function formatValidationErrors(errors: ValidationError[]): string {
   }
 
   return errors
-    .map((_error) => {
+    .map((error) => {
       const prefix = error.path ? `${error.path}: ` : '';
       return `• ${prefix}${error.message}`;
     })

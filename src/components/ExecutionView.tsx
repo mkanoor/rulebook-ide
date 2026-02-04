@@ -90,25 +90,22 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
         if (isWebhook) {
           // Try to extract port from various possible locations
-          const webhookConfig =
-            (source as Record<string, unknown>)['ansible.eda.webhook'] ||
-            (source as Record<string, unknown>)['eda.builtin.webhook'] ||
-            source;
+          const webhookConfig: Record<string, unknown> =
+            ((source as Record<string, unknown>)['ansible.eda.webhook'] as Record<
+              string,
+              unknown
+            >) ||
+            ((source as Record<string, unknown>)['eda.builtin.webhook'] as Record<
+              string,
+              unknown
+            >) ||
+            (source as Record<string, unknown>);
 
           let detectedPort: number | null = null;
 
-          if (
-            webhookConfig &&
-            typeof webhookConfig === 'object' &&
-            'port' in webhookConfig &&
-            typeof webhookConfig.port === 'number'
-          ) {
+          if ('port' in webhookConfig && typeof webhookConfig.port === 'number') {
             detectedPort = webhookConfig.port;
-          } else if (
-            webhookConfig &&
-            typeof webhookConfig === 'object' &&
-            'args' in webhookConfig
-          ) {
+          } else if ('args' in webhookConfig) {
             const args = webhookConfig.args as Record<string, unknown>;
             if (
               args &&
@@ -118,7 +115,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             ) {
               detectedPort = args.port;
             }
-          } else if (typeof webhookConfig === 'object' && webhookConfig) {
+          } else {
             // Look for port in any nested object
             for (const key in webhookConfig) {
               const nestedObj = webhookConfig[key];
