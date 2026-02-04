@@ -21,6 +21,9 @@
     "type-check": "tsc -b && tsc -p tsconfig.server.json --noEmit",
     "prepare": "husky"
   },
+  "overrides": {
+    "lodash-es": "^4.17.23"
+  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "prettier --write",
