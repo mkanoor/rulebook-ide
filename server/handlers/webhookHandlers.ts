@@ -15,7 +15,6 @@ export const handleSendWebhook: MessageHandler = async (ws, data, _clientId, _co
   console.log(`Proxying webhook POST to ${webhookUrl}`);
 
   try {
-    const fetch = (await import('node-fetch')).default;
     const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {

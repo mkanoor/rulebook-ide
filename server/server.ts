@@ -551,7 +551,6 @@ export function createTunnelHttpServer(port: number): Promise<HttpServer> {
         console.log(`${'='.repeat(80)}`);
 
         try {
-          const fetch = (await import('node-fetch')).default;
           const forwardUrl = `http://localhost:${forwardToPort}${req.url}`;
 
           const forwardHeaders: Record<string, string> = {
