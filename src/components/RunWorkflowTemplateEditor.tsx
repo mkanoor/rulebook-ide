@@ -71,19 +71,23 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       {/* Required Fields */}
-      <div style={{
-        padding: '15px',
-        background: 'var(--color-surface, white)',
-        borderRadius: '6px',
-        border: '2px solid var(--color-border, #e2e8f0)'
-      }}>
-        <h4 style={{
-          margin: '0 0 15px 0',
-          color: 'var(--color-text, #2d3748)',
-          fontSize: '16px',
-          borderBottom: '2px solid var(--color-border, #e2e8f0)',
-          paddingBottom: '8px'
-        }}>
+      <div
+        style={{
+          padding: '15px',
+          background: 'var(--color-surface, white)',
+          borderRadius: '6px',
+          border: '2px solid var(--color-border, #e2e8f0)',
+        }}
+      >
+        <h4
+          style={{
+            margin: '0 0 15px 0',
+            color: 'var(--color-text, #2d3748)',
+            fontSize: '16px',
+            borderBottom: '2px solid var(--color-border, #e2e8f0)',
+            paddingBottom: '8px',
+          }}
+        >
           Required Fields
         </h4>
 
@@ -111,19 +115,23 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
       </div>
 
       {/* Job Arguments */}
-      <div style={{
-        padding: '15px',
-        background: 'var(--color-surface, white)',
-        borderRadius: '6px',
-        border: '2px solid var(--color-border, #e2e8f0)'
-      }}>
-        <h4 style={{
-          margin: '0 0 15px 0',
-          color: 'var(--color-text, #2d3748)',
-          fontSize: '16px',
-          borderBottom: '2px solid var(--color-border, #e2e8f0)',
-          paddingBottom: '8px'
-        }}>
+      <div
+        style={{
+          padding: '15px',
+          background: 'var(--color-surface, white)',
+          borderRadius: '6px',
+          border: '2px solid var(--color-border, #e2e8f0)',
+        }}
+      >
+        <h4
+          style={{
+            margin: '0 0 15px 0',
+            color: 'var(--color-text, #2d3748)',
+            fontSize: '16px',
+            borderBottom: '2px solid var(--color-border, #e2e8f0)',
+            paddingBottom: '8px',
+          }}
+        >
           Workflow Arguments
         </h4>
 
@@ -131,7 +139,11 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
           <label className="form-label">Extra Variables (JSON)</label>
           <textarea
             className="form-textarea"
-            value={config.job_args?.extra_vars ? JSON.stringify(config.job_args.extra_vars, null, 2) : '{}'}
+            value={
+              config.job_args?.extra_vars
+                ? JSON.stringify(config.job_args.extra_vars, null, 2)
+                : '{}'
+            }
             onChange={(e) => {
               try {
                 const parsed = JSON.parse(e.target.value);
@@ -144,30 +156,49 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
             placeholder='{\n  "key": "value"\n}'
             style={{ fontFamily: 'monospace', fontSize: '13px' }}
           />
-          <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+          <small
+            style={{
+              color: 'var(--color-text-secondary, #718096)',
+              fontSize: '0.85em',
+              marginTop: '4px',
+              display: 'block',
+            }}
+          >
             Additional variables to pass to the workflow template
           </small>
         </div>
 
-        <small style={{ color: 'var(--color-info-text, #2c5282)', fontSize: '0.85em', display: 'block', marginTop: '8px' }}>
-          Note: Workflow templates may not support limit parameter. It will be removed if not accepted by the template.
+        <small
+          style={{
+            color: 'var(--color-info-text, #2c5282)',
+            fontSize: '0.85em',
+            display: 'block',
+            marginTop: '8px',
+          }}
+        >
+          Note: Workflow templates may not support limit parameter. It will be removed if not
+          accepted by the template.
         </small>
       </div>
 
       {/* Labels */}
-      <div style={{
-        padding: '15px',
-        background: 'var(--color-surface, white)',
-        borderRadius: '6px',
-        border: '2px solid var(--color-border, #e2e8f0)'
-      }}>
-        <h4 style={{
-          margin: '0 0 15px 0',
-          color: 'var(--color-text, #2d3748)',
-          fontSize: '16px',
-          borderBottom: '2px solid var(--color-border, #e2e8f0)',
-          paddingBottom: '8px'
-        }}>
+      <div
+        style={{
+          padding: '15px',
+          background: 'var(--color-surface, white)',
+          borderRadius: '6px',
+          border: '2px solid var(--color-border, #e2e8f0)',
+        }}
+      >
+        <h4
+          style={{
+            margin: '0 0 15px 0',
+            color: 'var(--color-text, #2d3748)',
+            fontSize: '16px',
+            borderBottom: '2px solid var(--color-border, #e2e8f0)',
+            paddingBottom: '8px',
+          }}
+        >
           Labels
         </h4>
 
@@ -180,7 +211,14 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
             onChange={(e) => handleLabelsChange(e.target.value)}
             placeholder="e.g., production, critical, network"
           />
-          <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+          <small
+            style={{
+              color: 'var(--color-text-secondary, #718096)',
+              fontSize: '0.85em',
+              marginTop: '4px',
+              display: 'block',
+            }}
+          >
             Labels to apply to the workflow job (must be enabled in workflow template)
           </small>
         </div>
@@ -198,19 +236,23 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
 
       {/* Advanced Options */}
       {showAdvanced && (
-        <div style={{
-          padding: '15px',
-          background: 'var(--color-surface, white)',
-          borderRadius: '6px',
-          border: '2px solid var(--color-border, #e2e8f0)'
-        }}>
-          <h4 style={{
-            margin: '0 0 15px 0',
-            color: 'var(--color-text, #2d3748)',
-            fontSize: '16px',
-            borderBottom: '2px solid var(--color-border, #e2e8f0)',
-            paddingBottom: '8px'
-          }}>
+        <div
+          style={{
+            padding: '15px',
+            background: 'var(--color-surface, white)',
+            borderRadius: '6px',
+            border: '2px solid var(--color-border, #e2e8f0)',
+          }}
+        >
+          <h4
+            style={{
+              margin: '0 0 15px 0',
+              color: 'var(--color-text, #2d3748)',
+              fontSize: '16px',
+              borderBottom: '2px solid var(--color-border, #e2e8f0)',
+              paddingBottom: '8px',
+            }}
+          >
             Advanced Options
           </h4>
 
@@ -225,7 +267,13 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
                 />
                 Post Events
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Post workflow results as events
               </small>
             </div>
@@ -240,7 +288,13 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
                 />
                 Set Facts
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Set workflow results as facts
               </small>
             </div>
@@ -255,7 +309,13 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
                 />
                 Include Events
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Include matching events in extra_vars (default: true)
               </small>
             </div>
@@ -270,7 +330,13 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
                 />
                 Enable Retry
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Retry on failure
               </small>
             </div>
@@ -288,7 +354,14 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
                   min="0"
                   placeholder="0"
                 />
-                <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: 'var(--color-text-secondary, #718096)',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Number of retry attempts
                 </small>
               </div>
@@ -303,7 +376,14 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
                   min="0"
                   placeholder="0"
                 />
-                <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: 'var(--color-text-secondary, #718096)',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Delay between retries
                 </small>
               </div>
@@ -319,7 +399,14 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
               onChange={(e) => updateConfig({ ruleset: e.target.value || undefined })}
               placeholder="Leave empty to use current ruleset"
             />
-            <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+            <small
+              style={{
+                color: 'var(--color-text-secondary, #718096)',
+                fontSize: '0.85em',
+                marginTop: '4px',
+                display: 'block',
+              }}
+            >
               Ruleset for post_events and set_facts (default: current ruleset)
             </small>
           </div>
@@ -333,7 +420,14 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
               onChange={(e) => updateConfig({ var_root: e.target.value || undefined })}
               placeholder="e.g., event, facts"
             />
-            <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+            <small
+              style={{
+                color: 'var(--color-text-secondary, #718096)',
+                fontSize: '0.85em',
+                marginTop: '4px',
+                display: 'block',
+              }}
+            >
               Root variable name for events/facts
             </small>
           </div>
@@ -347,7 +441,14 @@ export const RunWorkflowTemplateEditor: React.FC<RunWorkflowTemplateEditorProps>
               onChange={(e) => updateConfig({ lock: e.target.value || undefined })}
               placeholder="e.g., my-lock-key"
             />
-            <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+            <small
+              style={{
+                color: 'var(--color-text-secondary, #718096)',
+                fontSize: '0.85em',
+                marginTop: '4px',
+                display: 'block',
+              }}
+            >
               Lock key to prevent concurrent execution
             </small>
           </div>

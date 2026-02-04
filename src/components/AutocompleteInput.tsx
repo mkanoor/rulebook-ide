@@ -23,7 +23,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   onBlur,
   placeholder,
   className = '',
-  title
+  title,
 }) => {
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -68,12 +68,12 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % suggestions.length);
+        setSelectedIndex((prev) => (prev + 1) % suggestions.length);
         break;
 
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+        setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
         break;
 
       case 'Enter':
@@ -110,7 +110,8 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       // Check if we have a partial word after a dot (e.g., "event.se")
       // But NOT a complete field (e.g., "event.severity")
       const afterDot = lastDotIndex >= 0 ? beforeCursor.substring(lastDotIndex + 1) : '';
-      const hasPartialWordAfterDot = lastDotIndex >= 0 && afterDot.length > 0 && /^\w+$/.test(afterDot);
+      const hasPartialWordAfterDot =
+        lastDotIndex >= 0 && afterDot.length > 0 && /^\w+$/.test(afterDot);
 
       if (hasRecentDot) {
         // Just typed a dot - insert after the dot
@@ -199,17 +200,26 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   const getTypeIcon = (type: AutocompleteSuggestion['type']): string => {
     switch (type) {
-      case 'variable': return '📊';
-      case 'operator': return '⚡';
-      case 'function': return '⚙️';
-      case 'keyword': return '🔤';
-      case 'value': return '💎';
-      default: return '•';
+      case 'variable':
+        return '📊';
+      case 'operator':
+        return '⚡';
+      case 'function':
+        return '⚙️';
+      case 'keyword':
+        return '🔤';
+      case 'value':
+        return '💎';
+      default:
+        return '•';
     }
   };
 
   return (
-    <div className="autocomplete-container" style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div
+      className="autocomplete-container"
+      style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}
+    >
       <input
         ref={inputRef}
         type="text"
@@ -226,17 +236,19 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       />
 
       {/* Keyboard shortcut hint badge */}
-      <span style={{
-        fontSize: '10px',
-        color: '#a0aec0',
-        backgroundColor: '#f7fafc',
-        padding: '3px 6px',
-        borderRadius: '4px',
-        border: '1px solid #e2e8f0',
-        whiteSpace: 'nowrap',
-        fontFamily: 'monospace',
-        fontWeight: 500
-      }}>
+      <span
+        style={{
+          fontSize: '10px',
+          color: '#a0aec0',
+          backgroundColor: '#f7fafc',
+          padding: '3px 6px',
+          borderRadius: '4px',
+          border: '1px solid #e2e8f0',
+          whiteSpace: 'nowrap',
+          fontFamily: 'monospace',
+          fontWeight: 500,
+        }}
+      >
         {triggerKey}
       </span>
 
@@ -256,7 +268,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             borderRadius: '4px',
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
             zIndex: 1000,
-            marginTop: '2px'
+            marginTop: '2px',
           }}
         >
           {suggestions.slice(0, 10).map((suggestion, index) => (
@@ -270,7 +282,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                 borderBottom: '1px solid #e2e8f0',
                 display: 'flex',
                 alignItems: 'start',
-                gap: '8px'
+                gap: '8px',
               }}
               onMouseDown={(e) => {
                 e.preventDefault(); // Prevent blur
@@ -282,69 +294,83 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                 {getTypeIcon(suggestion.type)}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontWeight: 500,
-                  fontSize: '14px',
-                  color: '#2d3748',
-                  fontFamily: 'monospace'
-                }}>
+                <div
+                  style={{
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: '#2d3748',
+                    fontFamily: 'monospace',
+                  }}
+                >
                   {suggestion.displayText}
                 </div>
-                <div style={{
-                  fontSize: '12px',
-                  color: '#718096',
-                  marginTop: '2px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#718096',
+                    marginTop: '2px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {suggestion.description}
                 </div>
               </div>
-              <div style={{
-                fontSize: '10px',
-                color: '#a0aec0',
-                padding: '2px 6px',
-                backgroundColor: '#edf2f7',
-                borderRadius: '3px',
-                fontWeight: 500,
-                textTransform: 'uppercase'
-              }}>
+              <div
+                style={{
+                  fontSize: '10px',
+                  color: '#a0aec0',
+                  padding: '2px 6px',
+                  backgroundColor: '#edf2f7',
+                  borderRadius: '3px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase',
+                }}
+              >
                 {suggestion.type}
               </div>
             </div>
           ))}
           {suggestions.length > 10 && (
-            <div style={{
-              padding: '8px 12px',
-              fontSize: '12px',
-              color: '#a0aec0',
-              textAlign: 'center',
-              fontStyle: 'italic'
-            }}>
+            <div
+              style={{
+                padding: '8px 12px',
+                fontSize: '12px',
+                color: '#a0aec0',
+                textAlign: 'center',
+                fontStyle: 'italic',
+              }}
+            >
               + {suggestions.length - 10} more... (keep typing to filter)
             </div>
           )}
-          <div style={{
-            padding: '6px 12px',
-            fontSize: '11px',
-            color: '#a0aec0',
-            backgroundColor: '#f7fafc',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '12px'
-          }}>
+          <div
+            style={{
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#a0aec0',
+              backgroundColor: '#f7fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '12px',
+            }}
+          >
             <span>↑↓ Navigate</span>
             <span>⏎ Tab Select</span>
             <span>Esc Close</span>
-            <span style={{
-              fontWeight: 600,
-              color: '#667eea',
-              backgroundColor: '#ebf4ff',
-              padding: '2px 6px',
-              borderRadius: '3px'
-            }}>{triggerKey}</span>
+            <span
+              style={{
+                fontWeight: 600,
+                color: '#667eea',
+                backgroundColor: '#ebf4ff',
+                padding: '2px 6px',
+                borderRadius: '3px',
+              }}
+            >
+              {triggerKey}
+            </span>
           </div>
         </div>
       )}

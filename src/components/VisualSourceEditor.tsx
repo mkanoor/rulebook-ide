@@ -23,11 +23,7 @@ export const VisualSourceEditor: React.FC<VisualSourceEditorProps> = ({
         <div className="properties-content">
           <h3>Source Properties</h3>
           {content}
-          <button
-            className="btn btn-danger"
-            onClick={onDelete}
-            style={{ marginTop: '20px' }}
-          >
+          <button className="btn btn-danger" onClick={onDelete} style={{ marginTop: '20px' }}>
             Delete Source
           </button>
         </div>

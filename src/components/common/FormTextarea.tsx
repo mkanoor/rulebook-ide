@@ -23,12 +23,10 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
   rows = 4,
   error,
   disabled,
-  style
+  style,
 }) => (
   <div className="form-group">
-    <label className={`form-label ${required ? 'form-label-required' : ''}`}>
-      {label}
-    </label>
+    <label className={`form-label ${required ? 'form-label-required' : ''}`}>{label}</label>
     <textarea
       className="form-textarea"
       value={value}
@@ -39,7 +37,10 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
       style={error ? { borderColor: '#fc8181', borderWidth: '2px', ...style } : style}
     />
     {error && (
-      <div className="error-message" style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}>
+      <div
+        className="error-message"
+        style={{ color: '#e53e3e', fontSize: '12px', marginTop: '4px' }}
+      >
         {error}
       </div>
     )}

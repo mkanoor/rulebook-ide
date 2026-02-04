@@ -15,7 +15,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   footer,
-  size = 'default'
+  size = 'default',
 }) => {
   if (!isOpen) return null;
 
@@ -27,10 +27,7 @@ export const Modal: React.FC<ModalProps> = ({
       >
         <div className="modal-header">
           <h2>{title}</h2>
-          <button
-            className="btn btn-small btn-outline"
-            onClick={onClose}
-          >
+          <button className="btn btn-small btn-outline" onClick={onClose}>
             ✕
           </button>
         </div>

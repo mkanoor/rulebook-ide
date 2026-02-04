@@ -30,12 +30,7 @@ export interface Rule {
   throttle?: Throttle;
 }
 
-export type Condition =
-  | string
-  | boolean
-  | AllCondition
-  | AnyCondition
-  | NotAllCondition;
+export type Condition = string | boolean | AllCondition | AnyCondition | NotAllCondition;
 
 export interface AllCondition {
   all: string[];

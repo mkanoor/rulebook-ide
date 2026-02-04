@@ -27,10 +27,7 @@ interface RunJobTemplateEditorProps {
   onChange: (action: RunJobTemplateAction) => void;
 }
 
-export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
-  action,
-  onChange,
-}) => {
+export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({ action, onChange }) => {
   const config = action.run_job_template;
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [labelsText, setLabelsText] = useState(config.labels?.join(', ') || '');
@@ -71,19 +68,23 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       {/* Required Fields */}
-      <div style={{
-        padding: '15px',
-        background: 'var(--color-surface, white)',
-        borderRadius: '6px',
-        border: '2px solid var(--color-border, #e2e8f0)'
-      }}>
-        <h4 style={{
-          margin: '0 0 15px 0',
-          color: 'var(--color-text, #2d3748)',
-          fontSize: '16px',
-          borderBottom: '2px solid var(--color-border, #e2e8f0)',
-          paddingBottom: '8px'
-        }}>
+      <div
+        style={{
+          padding: '15px',
+          background: 'var(--color-surface, white)',
+          borderRadius: '6px',
+          border: '2px solid var(--color-border, #e2e8f0)',
+        }}
+      >
+        <h4
+          style={{
+            margin: '0 0 15px 0',
+            color: 'var(--color-text, #2d3748)',
+            fontSize: '16px',
+            borderBottom: '2px solid var(--color-border, #e2e8f0)',
+            paddingBottom: '8px',
+          }}
+        >
           Required Fields
         </h4>
 
@@ -111,19 +112,23 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
       </div>
 
       {/* Job Arguments */}
-      <div style={{
-        padding: '15px',
-        background: 'var(--color-surface, white)',
-        borderRadius: '6px',
-        border: '2px solid var(--color-border, #e2e8f0)'
-      }}>
-        <h4 style={{
-          margin: '0 0 15px 0',
-          color: 'var(--color-text, #2d3748)',
-          fontSize: '16px',
-          borderBottom: '2px solid var(--color-border, #e2e8f0)',
-          paddingBottom: '8px'
-        }}>
+      <div
+        style={{
+          padding: '15px',
+          background: 'var(--color-surface, white)',
+          borderRadius: '6px',
+          border: '2px solid var(--color-border, #e2e8f0)',
+        }}
+      >
+        <h4
+          style={{
+            margin: '0 0 15px 0',
+            color: 'var(--color-text, #2d3748)',
+            fontSize: '16px',
+            borderBottom: '2px solid var(--color-border, #e2e8f0)',
+            paddingBottom: '8px',
+          }}
+        >
           Job Arguments
         </h4>
 
@@ -136,7 +141,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
             onChange={(e) => updateJobArgs({ limit: e.target.value || undefined })}
             placeholder="e.g., webservers:dbservers"
           />
-          <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+          <small
+            style={{
+              color: 'var(--color-text-secondary, #718096)',
+              fontSize: '0.85em',
+              marginTop: '4px',
+              display: 'block',
+            }}
+          >
             Pattern to limit which hosts the job runs on
           </small>
         </div>
@@ -145,7 +157,11 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
           <label className="form-label">Extra Variables (JSON)</label>
           <textarea
             className="form-textarea"
-            value={config.job_args?.extra_vars ? JSON.stringify(config.job_args.extra_vars, null, 2) : '{}'}
+            value={
+              config.job_args?.extra_vars
+                ? JSON.stringify(config.job_args.extra_vars, null, 2)
+                : '{}'
+            }
             onChange={(e) => {
               try {
                 const parsed = JSON.parse(e.target.value);
@@ -158,26 +174,37 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
             placeholder='{\n  "key": "value"\n}'
             style={{ fontFamily: 'monospace', fontSize: '13px' }}
           />
-          <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+          <small
+            style={{
+              color: 'var(--color-text-secondary, #718096)',
+              fontSize: '0.85em',
+              marginTop: '4px',
+              display: 'block',
+            }}
+          >
             Additional variables to pass to the job template
           </small>
         </div>
       </div>
 
       {/* Labels */}
-      <div style={{
-        padding: '15px',
-        background: 'var(--color-surface, white)',
-        borderRadius: '6px',
-        border: '2px solid var(--color-border, #e2e8f0)'
-      }}>
-        <h4 style={{
-          margin: '0 0 15px 0',
-          color: 'var(--color-text, #2d3748)',
-          fontSize: '16px',
-          borderBottom: '2px solid var(--color-border, #e2e8f0)',
-          paddingBottom: '8px'
-        }}>
+      <div
+        style={{
+          padding: '15px',
+          background: 'var(--color-surface, white)',
+          borderRadius: '6px',
+          border: '2px solid var(--color-border, #e2e8f0)',
+        }}
+      >
+        <h4
+          style={{
+            margin: '0 0 15px 0',
+            color: 'var(--color-text, #2d3748)',
+            fontSize: '16px',
+            borderBottom: '2px solid var(--color-border, #e2e8f0)',
+            paddingBottom: '8px',
+          }}
+        >
           Labels
         </h4>
 
@@ -190,7 +217,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
             onChange={(e) => handleLabelsChange(e.target.value)}
             placeholder="e.g., production, critical, network"
           />
-          <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+          <small
+            style={{
+              color: 'var(--color-text-secondary, #718096)',
+              fontSize: '0.85em',
+              marginTop: '4px',
+              display: 'block',
+            }}
+          >
             Labels to apply to the job (must be enabled in job template)
           </small>
         </div>
@@ -208,19 +242,23 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
 
       {/* Advanced Options */}
       {showAdvanced && (
-        <div style={{
-          padding: '15px',
-          background: 'var(--color-surface, white)',
-          borderRadius: '6px',
-          border: '2px solid var(--color-border, #e2e8f0)'
-        }}>
-          <h4 style={{
-            margin: '0 0 15px 0',
-            color: 'var(--color-text, #2d3748)',
-            fontSize: '16px',
-            borderBottom: '2px solid var(--color-border, #e2e8f0)',
-            paddingBottom: '8px'
-          }}>
+        <div
+          style={{
+            padding: '15px',
+            background: 'var(--color-surface, white)',
+            borderRadius: '6px',
+            border: '2px solid var(--color-border, #e2e8f0)',
+          }}
+        >
+          <h4
+            style={{
+              margin: '0 0 15px 0',
+              color: 'var(--color-text, #2d3748)',
+              fontSize: '16px',
+              borderBottom: '2px solid var(--color-border, #e2e8f0)',
+              paddingBottom: '8px',
+            }}
+          >
             Advanced Options
           </h4>
 
@@ -235,7 +273,13 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
                 />
                 Post Events
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Post job results as events
               </small>
             </div>
@@ -250,7 +294,13 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
                 />
                 Set Facts
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Set job results as facts
               </small>
             </div>
@@ -265,7 +315,13 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
                 />
                 Include Events
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Include matching events in extra_vars (default: true)
               </small>
             </div>
@@ -280,7 +336,13 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
                 />
                 Enable Retry
               </label>
-              <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', display: 'block' }}>
+              <small
+                style={{
+                  color: 'var(--color-text-secondary, #718096)',
+                  fontSize: '0.85em',
+                  display: 'block',
+                }}
+              >
                 Retry on failure
               </small>
             </div>
@@ -298,7 +360,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
                   min="0"
                   placeholder="0"
                 />
-                <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: 'var(--color-text-secondary, #718096)',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Number of retry attempts
                 </small>
               </div>
@@ -313,7 +382,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
                   min="0"
                   placeholder="0"
                 />
-                <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+                <small
+                  style={{
+                    color: 'var(--color-text-secondary, #718096)',
+                    fontSize: '0.85em',
+                    marginTop: '4px',
+                    display: 'block',
+                  }}
+                >
                   Delay between retries
                 </small>
               </div>
@@ -329,7 +405,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
               onChange={(e) => updateConfig({ ruleset: e.target.value || undefined })}
               placeholder="Leave empty to use current ruleset"
             />
-            <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+            <small
+              style={{
+                color: 'var(--color-text-secondary, #718096)',
+                fontSize: '0.85em',
+                marginTop: '4px',
+                display: 'block',
+              }}
+            >
               Ruleset for post_events and set_facts (default: current ruleset)
             </small>
           </div>
@@ -343,7 +426,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
               onChange={(e) => updateConfig({ var_root: e.target.value || undefined })}
               placeholder="e.g., event, facts"
             />
-            <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+            <small
+              style={{
+                color: 'var(--color-text-secondary, #718096)',
+                fontSize: '0.85em',
+                marginTop: '4px',
+                display: 'block',
+              }}
+            >
               Root variable name for events/facts
             </small>
           </div>
@@ -357,7 +447,14 @@ export const RunJobTemplateEditor: React.FC<RunJobTemplateEditorProps> = ({
               onChange={(e) => updateConfig({ lock: e.target.value || undefined })}
               placeholder="e.g., my-lock-key"
             />
-            <small style={{ color: 'var(--color-text-secondary, #718096)', fontSize: '0.85em', marginTop: '4px', display: 'block' }}>
+            <small
+              style={{
+                color: 'var(--color-text-secondary, #718096)',
+                fontSize: '0.85em',
+                marginTop: '4px',
+                display: 'block',
+              }}
+            >
               Lock key to prevent concurrent execution
             </small>
           </div>

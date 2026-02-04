@@ -22,12 +22,10 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   options,
   required,
   hint,
-  disabled
+  disabled,
 }) => (
   <div className="form-group">
-    <label className={`form-label ${required ? 'form-label-required' : ''}`}>
-      {label}
-    </label>
+    <label className={`form-label ${required ? 'form-label-required' : ''}`}>{label}</label>
     <select
       className="form-select"
       value={value}

@@ -13,10 +13,17 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
   checked,
   onChange,
   hint,
-  disabled
+  disabled,
 }) => (
   <div className="form-group">
-    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: disabled ? 'default' : 'pointer' }}>
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        cursor: disabled ? 'default' : 'pointer',
+      }}
+    >
       <input
         type="checkbox"
         className="form-checkbox"
@@ -28,7 +35,15 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
       <span>{label}</span>
     </label>
     {hint && (
-      <small style={{ color: '#718096', fontSize: '0.85em', marginTop: '4px', display: 'block', marginLeft: '24px' }}>
+      <small
+        style={{
+          color: '#718096',
+          fontSize: '0.85em',
+          marginTop: '4px',
+          display: 'block',
+          marginLeft: '24px',
+        }}
+      >
         {hint}
       </small>
     )}

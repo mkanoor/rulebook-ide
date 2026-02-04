@@ -38,17 +38,17 @@ export function validateAction(action: unknown): ValidationError[] {
 
   // Map action types to schema definitions
   const schemaMap: Record<string, string> = {
-    'run_playbook': 'run-playbook-action',
-    'run_module': 'run-module-action',
-    'run_job_template': 'run-job-template-action',
-    'run_workflow_template': 'run-workflow-template-action',
-    'post_event': 'post-event-action',
-    'set_fact': 'set-fact-action',
-    'retract_fact': 'retract-fact-action',
-    'print_event': 'print-event-action',
-    'debug': 'debug-action',
-    'none': 'none-action',
-    'shutdown': 'shutdown-action',
+    run_playbook: 'run-playbook-action',
+    run_module: 'run-module-action',
+    run_job_template: 'run-job-template-action',
+    run_workflow_template: 'run-workflow-template-action',
+    post_event: 'post-event-action',
+    set_fact: 'set-fact-action',
+    retract_fact: 'retract-fact-action',
+    print_event: 'print-event-action',
+    debug: 'debug-action',
+    none: 'none-action',
+    shutdown: 'shutdown-action',
   };
 
   const schemaKey = schemaMap[actionType];
@@ -176,7 +176,7 @@ export function validateJsonSchema(schema: unknown): { isValid: boolean; errors:
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 

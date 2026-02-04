@@ -25,12 +25,10 @@ export const FormInput: React.FC<FormInputProps> = ({
   disabled,
   min,
   max,
-  step
+  step,
 }) => (
   <div className="form-group">
-    <label className={`form-label ${required ? 'form-label-required' : ''}`}>
-      {label}
-    </label>
+    <label className={`form-label ${required ? 'form-label-required' : ''}`}>{label}</label>
     <input
       type={type}
       className="form-input"

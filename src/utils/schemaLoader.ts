@@ -117,7 +117,7 @@ export async function getAllEventFilterSchemas(): Promise<Record<string, JsonSch
     'insert_meta_info',
     'json_filter',
     'noop',
-    'normalize_keys'
+    'normalize_keys',
   ];
   const schemas: Record<string, JsonSchema> = {};
 

@@ -154,9 +154,7 @@ export function formatConditionErrors(errors: ConditionValidationError[]): strin
  * Creates a user-friendly summary of condition validation errors
  */
 export function getConditionErrorSummary(errors: ConditionValidationError[]): string {
-  const ruleCount = new Set(
-    errors.map(e => `${e.rulesetIndex}-${e.ruleIndex}`)
-  ).size;
+  const ruleCount = new Set(errors.map((e) => `${e.rulesetIndex}-${e.ruleIndex}`)).size;
 
   if (errors.length === 1) {
     return `1 invalid condition found in 1 rule`;

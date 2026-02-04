@@ -22,67 +22,76 @@ export function useSchemaLoader(options: UseSchemaLoaderOptions = {}) {
   /**
    * Load schema from a URL or file path
    */
-  const loadFromUrl = useCallback(async (url: string): Promise<SchemaLoadResult | null> => {
-    setLoading(true);
-    setSchemaError(null);
+  const loadFromUrl = useCallback(
+    async (url: string): Promise<SchemaLoadResult | null> => {
+      setLoading(true);
+      setSchemaError(null);
 
-    const result = await loadAndProcessSchemaFromUrl(url);
+      const result = await loadAndProcessSchemaFromUrl(url);
 
-    if (isSchemaLoadError(result)) {
-      setSchemaError(result.error);
+      if (isSchemaLoadError(result)) {
+        setSchemaError(result.error);
+        setLoading(false);
+        options.onError?.(result.error);
+        return null;
+      }
+
+      setLoadedSchema(result.schema);
       setLoading(false);
-      options.onError?.(result.error);
-      return null;
-    }
-
-    setLoadedSchema(result.schema);
-    setLoading(false);
-    options.onSchemaLoaded?.(result);
-    return result;
-  }, [options]);
+      options.onSchemaLoaded?.(result);
+      return result;
+    },
+    [options]
+  );
 
   /**
    * Load schema from a File object
    */
-  const loadFromFile = useCallback(async (file: File): Promise<SchemaLoadResult | null> => {
-    console.log('useSchemaLoader: Loading file:', file.name);
-    setLoading(true);
-    setSchemaError(null);
+  const loadFromFile = useCallback(
+    async (file: File): Promise<SchemaLoadResult | null> => {
+      console.log('useSchemaLoader: Loading file:', file.name);
+      setLoading(true);
+      setSchemaError(null);
 
-    const result = await loadAndProcessSchemaFromFile(file);
+      const result = await loadAndProcessSchemaFromFile(file);
 
-    if (isSchemaLoadError(result)) {
-      console.error('useSchemaLoader: Schema load error:', result.error);
-      setSchemaError(result.error);
+      if (isSchemaLoadError(result)) {
+        console.error('useSchemaLoader: Schema load error:', result.error);
+        setSchemaError(result.error);
+        setLoading(false);
+        options.onError?.(result.error);
+        return null;
+      }
+
+      console.log('useSchemaLoader: Schema loaded successfully:', result.schema.title);
+      // Update the URL to show the filename
+      setSchemaUrl(file.name);
+      setLoadedSchema(result.schema);
       setLoading(false);
-      options.onError?.(result.error);
-      return null;
-    }
-
-    console.log('useSchemaLoader: Schema loaded successfully:', result.schema.title);
-    // Update the URL to show the filename
-    setSchemaUrl(file.name);
-    setLoadedSchema(result.schema);
-    setLoading(false);
-    console.log('useSchemaLoader: Calling onSchemaLoaded callback');
-    options.onSchemaLoaded?.(result);
-    return result;
-  }, [options]);
+      console.log('useSchemaLoader: Calling onSchemaLoaded callback');
+      options.onSchemaLoaded?.(result);
+      return result;
+    },
+    [options]
+  );
 
   /**
    * Handle file input change event
    */
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>): Promise<SchemaLoadResult | null> => {
-    const file = event.target.files?.[0];
-    if (!file) return null;
+  const handleFileSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>): Promise<SchemaLoadResult | null> => {
+      const file = event.target.files?.[0];
+      if (!file) return null;
 
-    const result = await loadFromFile(file);
+      const result = await loadFromFile(file);
 
-    // Reset the input so the same file can be selected again
-    event.target.value = '';
+      // Reset the input so the same file can be selected again
+      event.target.value = '';
 
-    return result;
-  }, [loadFromFile]);
+      return result;
+    },
+    [loadFromFile]
+  );
 
   /**
    * Open the file picker dialog

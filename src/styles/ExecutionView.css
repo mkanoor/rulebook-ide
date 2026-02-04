@@ -67,7 +67,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -230,7 +231,8 @@
 }
 
 @keyframes blink {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -287,7 +289,7 @@
   border-left: 3px solid var(--color-info, #4299e1);
 }
 
-.event-item:has(.event-type:contains("Action")) {
+.event-item:has(.event-type:contains('Action')) {
   border-left-color: var(--color-warning, var(--color-warning, #f59e0b));
   border-left-width: 4px;
 }

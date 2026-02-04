@@ -3,7 +3,11 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 20px;
-  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-primary-dark, #764ba2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary, #667eea) 0%,
+    var(--color-primary-dark, #764ba2) 100%
+  );
   color: white;
   border-top: 2px solid var(--color-primary-dark, #5568d3);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
@@ -149,7 +153,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

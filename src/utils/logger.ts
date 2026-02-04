@@ -17,7 +17,7 @@ export const LogLevel = {
   NONE: 4,
 } as const;
 
-export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
+export type LogLevel = (typeof LogLevel)[keyof typeof LogLevel];
 
 class Logger {
   private currentLevel: LogLevel = LogLevel.INFO;
@@ -34,7 +34,9 @@ class Logger {
   setLogLevel(level: LogLevel): void {
     this.currentLevel = level;
     this.saveLogLevel();
-    const levelName = Object.keys(LogLevel).find(key => LogLevel[key as keyof typeof LogLevel] === level) || level;
+    const levelName =
+      Object.keys(LogLevel).find((key) => LogLevel[key as keyof typeof LogLevel] === level) ||
+      level;
     this.info(`Log level set to: ${levelName}`);
   }
 
@@ -49,7 +51,11 @@ class Logger {
    * Get the current log level as a string
    */
   getLogLevelString(): string {
-    return Object.keys(LogLevel).find(key => LogLevel[key as keyof typeof LogLevel] === this.currentLevel) || String(this.currentLevel);
+    return (
+      Object.keys(LogLevel).find(
+        (key) => LogLevel[key as keyof typeof LogLevel] === this.currentLevel
+      ) || String(this.currentLevel)
+    );
   }
 
   /**
