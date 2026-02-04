@@ -283,16 +283,19 @@ export function extractVariables(condition: string): string[] {
   function traverse(node: unknown) {
     if (!node || typeof node !== 'object') return;
 
-    if (node.type === 'Identifier') {
-      variables.push(node.value);
+    const nodeObj = node as Record<string, unknown>;
+
+    if (nodeObj.type === 'Identifier' && typeof nodeObj.value === 'string') {
+      variables.push(nodeObj.value);
     }
 
-    for (const key in node) {
+    for (const key in nodeObj) {
       if (key !== 'type') {
-        if (Array.isArray(node[key])) {
-          node[key].forEach(traverse);
-        } else if (typeof node[key] === 'object') {
-          traverse(node[key]);
+        const value = nodeObj[key];
+        if (Array.isArray(value)) {
+          value.forEach(traverse);
+        } else if (typeof value === 'object') {
+          traverse(value);
         }
       }
     }

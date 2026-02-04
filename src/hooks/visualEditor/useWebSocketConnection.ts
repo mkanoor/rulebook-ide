@@ -12,12 +12,14 @@ import {
   setCachedCollectionList,
 } from '../../utils/configCache';
 import type { ServerSettings } from './useServerSettings';
+import type { AnsibleVersionInfo, AnsibleCollection } from '../../components/VisualEditor';
+import type { RulesetStats } from '../../components/Footer';
 
 export interface WebSocketCallbacks {
-  onVersionInfoReceived?: (version: string, versionInfo: unknown) => void;
-  onCollectionListReceived?: (collections: unknown[]) => void;
+  onVersionInfoReceived?: (version: string, versionInfo: AnsibleVersionInfo) => void;
+  onCollectionListReceived?: (collections: AnsibleCollection[]) => void;
   onWebhookReceived?: (payload: unknown) => void;
-  onStatsChange?: (stats: Map<string, unknown>) => void;
+  onStatsChange?: (stats: Map<string, RulesetStats>) => void;
 }
 
 export interface WebSocketHandlers {

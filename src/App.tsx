@@ -10,7 +10,7 @@ import {
 } from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
 import { HelpModal } from './components/HelpModal';
-import { Footer } from './components/Footer';
+import { Footer, type RulesetStats } from './components/Footer';
 import { Modal } from './components/common/Modal';
 import { themes, defaultTheme, getThemeById, applyTheme, type Theme } from './themes';
 import { validateRulesetArray, formatValidationErrors } from './utils/schemaValidator';
@@ -82,7 +82,7 @@ function App() {
   const [jsonPathPrefix, setJsonPathPrefix] = useState('event');
   const [unreadWebhooks, setUnreadWebhooks] = useState(0);
   const [hasNewWebhook, setHasNewWebhook] = useState(false);
-  const [rulesetStats, setRulesetStats] = useState<Map<string, unknown>>(new Map());
+  const [rulesetStats, setRulesetStats] = useState<Map<string, RulesetStats>>(new Map());
 
   // Confirmation modal state
   const [confirmationModal, setConfirmationModal] = useState<{

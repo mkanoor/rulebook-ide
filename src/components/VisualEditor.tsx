@@ -28,6 +28,7 @@ import {
   type ServerSettings,
   type RuleTrigger,
 } from '../hooks/visualEditor';
+import type { RulesetStats } from './Footer';
 import '../styles/VisualEditor.css';
 
 export interface AnsibleVersionInfo {
@@ -54,7 +55,7 @@ interface VisualEditorProps {
   onWebhookReceived?: (payload: unknown) => void;
   onVersionInfoReceived?: (version: string, versionInfo: AnsibleVersionInfo) => void;
   onCollectionListReceived?: (collections: AnsibleCollection[]) => void;
-  onStatsChange?: (stats: Map<string, unknown>) => void;
+  onStatsChange?: (stats: Map<string, RulesetStats>) => void;
 }
 
 export interface ExecutionState {

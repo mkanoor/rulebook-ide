@@ -103,7 +103,7 @@ describe('errorHandler', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // Mock production environment
-      vi.stubEnv('PROD', 'true');
+      vi.stubEnv('PROD', true);
 
       const error = new Error('Test error in production');
       errorHandler.log(error);

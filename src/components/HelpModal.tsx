@@ -122,9 +122,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               .then(({ svg }) => {
                 element.innerHTML = svg;
               })
-              .catch((_error) => {
+              .catch((error: Error | null) => {
                 console.error('Mermaid rendering error:', error);
-                element.innerHTML = `<pre style="color: red;">Error rendering diagram: ${error.message}</pre>`;
+                element.innerHTML = `<pre style="color: red;">Error rendering diagram: ${error?.message || 'Unknown error'}</pre>`;
               });
           }
         });

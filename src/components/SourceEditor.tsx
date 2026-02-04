@@ -79,13 +79,12 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
     }
 
     // Build new source object
-    const { name: _name, filters: _filters } = source;
-    const newSource: unknown = {};
-    if (name) newSource.name = name;
+    const newSource: Record<string, unknown> = {};
+    if (source.name) newSource.name = source.name;
     if (newType) newSource[newType] = args;
-    if (filters && filters.length > 0) newSource.filters = filters;
+    if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
 
-    onChange(index, newSource);
+    onChange(index, newSource as Source);
   };
 
   const handleSourceArgsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -96,13 +95,12 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
       const parsed = JSON.parse(value);
 
       // Build new source object
-      const { name: _name, filters: _filters } = source;
-      const newSource: unknown = {};
-      if (name) newSource.name = name;
+      const newSource: Record<string, unknown> = {};
+      if (source.name) newSource.name = source.name;
       if (sourceType) newSource[sourceType] = parsed;
-      if (filters && filters.length > 0) newSource.filters = filters;
+      if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
 
-      onChange(index, newSource);
+      onChange(index, newSource as Source);
       setSourceArgsError(null);
     } catch {
       // Invalid JSON, show error but keep the text

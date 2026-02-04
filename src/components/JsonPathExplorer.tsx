@@ -47,7 +47,9 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({
                 if (content && 'json' in content) {
                   let value: unknown = content.json;
                   for (const key of selection.path) {
-                    value = value[key];
+                    if (value && typeof value === 'object') {
+                      value = (value as Record<string, unknown>)[key];
+                    }
                   }
                   setSelectedValue(value);
                 }
@@ -77,7 +79,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({
     if (editorRef.current && initialJson) {
       try {
         editorRef.current.set({ json: initialJson });
-      } catch {
+      } catch (error) {
         console.error('Error updating JSON editor:', error);
       }
     }
@@ -140,7 +142,7 @@ export const JsonPathExplorer: React.FC<JsonPathExplorerProps> = ({
         if (editorRef.current) {
           editorRef.current.set({ json });
         }
-      } catch {
+      } catch (error) {
         alert('Failed to parse file: ' + (error as Error).message);
       }
     };

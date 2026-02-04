@@ -140,34 +140,43 @@ export function validateJsonSchema(schema: unknown): { isValid: boolean; errors:
     return { isValid: false, errors };
   }
 
+  const schemaObj = schema as Record<string, unknown>;
+
   // Check for required $schema field
-  if (!schema.$schema) {
+  if (!('$schema' in schemaObj)) {
     errors.push('Schema must have a $schema property');
   }
 
   // Check for type
-  if (!schema.type) {
+  if (!('type' in schemaObj)) {
     errors.push('Schema must have a type property');
   }
 
   // Check for properties if type is object
-  if (schema.type === 'object' && !schema.properties) {
+  if (schemaObj.type === 'object' && !('properties' in schemaObj)) {
     errors.push('Object schema must have a properties field');
   }
 
   // Validate properties structure
-  if (schema.properties && typeof schema.properties !== 'object') {
+  if ('properties' in schemaObj && typeof schemaObj.properties !== 'object') {
     errors.push('Properties must be an object');
   }
 
   // Basic validation of property definitions
-  if (schema.properties) {
-    for (const [key, prop] of Object.entries(schema.properties)) {
-      if (typeof prop !== 'object') {
+  if ('properties' in schemaObj && schemaObj.properties) {
+    const properties = schemaObj.properties as Record<string, unknown>;
+    for (const [key, prop] of Object.entries(properties)) {
+      if (typeof prop !== 'object' || prop === null) {
         errors.push(`Property '${key}' must be an object`);
       } else {
-        const propObj = prop as unknown;
-        if (!propObj.type && !propObj.oneOf && !propObj.anyOf && !propObj.allOf && !propObj.$ref) {
+        const propObj = prop as Record<string, unknown>;
+        if (
+          !('type' in propObj) &&
+          !('oneOf' in propObj) &&
+          !('anyOf' in propObj) &&
+          !('allOf' in propObj) &&
+          !('$ref' in propObj)
+        ) {
           errors.push(`Property '${key}' must have a type or schema reference`);
         }
       }

@@ -165,7 +165,9 @@ export function convertRulesetSources(
  * Convert all sources in all rulesets to the specified format
  */
 export function convertAllSources(rulesets: unknown[], targetFormat: SourceNameFormat): unknown[] {
-  return rulesets.map((ruleset) => convertRulesetSources(ruleset, targetFormat));
+  return rulesets.map((ruleset) =>
+    convertRulesetSources(ruleset as Record<string, unknown>, targetFormat)
+  );
 }
 
 /**

@@ -56,15 +56,15 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       console.log(`${logPrefix}: sourceArgs updated:`, mergedArgs);
 
       // Update the source object
-      const newSource: unknown = {};
+      const newSource: Record<string, unknown> = {};
       if (source.name) newSource.name = source.name;
       if (customSourceType) {
         // Remove source_type from the args before storing
-        const { source_type: _source_type, ...cleanArgs } = mergedArgs as unknown;
+        const { source_type: _source_type, ...cleanArgs } = mergedArgs as Record<string, unknown>;
         newSource[customSourceType] = cleanArgs;
       }
       if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
-      onChange(newSource);
+      onChange(newSource as Source);
       console.log(`${logPrefix}: source updated`);
     },
   });
@@ -106,7 +106,9 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       const args = rest[type];
       console.log(`${logPrefix}: Found type:`, type, 'args:', args);
       setSelectedSourceType(type);
-      setSourceArgs(typeof args === 'object' && args !== null ? args : {});
+      setSourceArgs(
+        typeof args === 'object' && args !== null ? (args as Record<string, unknown>) : {}
+      );
 
       // Only auto-load schema if we don't already have a manually-loaded custom schema
       // If currentSchema exists and we're in custom mode with the same type, skip auto-load
@@ -178,11 +180,11 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
         setSourceArgs(defaultArgs);
 
         // Update the source object
-        const newSource: unknown = {};
+        const newSource: Record<string, unknown> = {};
         if (source.name) newSource.name = source.name;
         newSource[sourceType] = defaultArgs;
         if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
-        onChange(newSource);
+        onChange(newSource as Source);
       }
     });
   };
@@ -198,10 +200,10 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
     schemaLoader.clearSchema();
 
     // Clear the source object to prevent useEffect from auto-loading the old source type
-    const newSource: unknown = {};
+    const newSource: Record<string, unknown> = {};
     if (source.name) newSource.name = source.name;
     if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
-    onChange(newSource);
+    onChange(newSource as Source);
 
     console.log(
       `${logPrefix}: Custom source state set - isCustomSource=true, showSelector=false, source cleared`
@@ -224,11 +226,11 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
     }
 
     // Update the source object
-    const newSource: unknown = {};
+    const newSource: Record<string, unknown> = {};
     if (source.name) newSource.name = source.name;
     if (newType) newSource[newType] = args;
     if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
-    onChange(newSource);
+    onChange(newSource as Source);
   };
 
   const handleCustomSourceArgsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -240,11 +242,11 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
       setCustomSourceArgsError(null);
 
       // Update the source object
-      const newSource: unknown = {};
+      const newSource: Record<string, unknown> = {};
       if (source.name) newSource.name = source.name;
       if (customSourceType) newSource[customSourceType] = parsed;
       if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
-      onChange(newSource);
+      onChange(newSource as Source);
     } catch {
       setCustomSourceArgsError('Invalid JSON format');
     }
@@ -257,12 +259,12 @@ export const SourceEditorBase: React.FC<SourceEditorBaseProps> = ({
     const { source_type: _source_type, ...cleanArgs } = newArgs;
 
     // Update the source object
-    const newSource: unknown = {};
+    const newSource: Record<string, unknown> = {};
     if (source.name) newSource.name = source.name;
     if (selectedSourceType) newSource[selectedSourceType] = cleanArgs;
     if (source.filters && source.filters.length > 0) newSource.filters = source.filters;
 
-    onChange(newSource);
+    onChange(newSource as Source);
   };
 
   const handleFiltersChange = (newFilters: Array<Record<string, unknown>>) => {

@@ -137,7 +137,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulesets as Ruleset[], 'new');
+      const converted = convertAllSources(rulesets as Ruleset[], 'new') as Ruleset[];
 
       expect(converted[0]?.sources?.[0]).toHaveProperty('eda.builtin.webhook');
       expect(converted[0]?.sources?.[1]).toHaveProperty('eda.builtin.range');
@@ -152,7 +152,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulesets as Ruleset[], 'legacy');
+      const converted = convertAllSources(rulesets as Ruleset[], 'legacy') as Ruleset[];
 
       expect(converted[0]?.sources?.[0]).toHaveProperty('ansible.eda.webhook');
       expect(converted[0]?.sources?.[0]).not.toHaveProperty('eda.builtin.webhook');
@@ -173,7 +173,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulesets as Ruleset[], 'new');
+      const converted = convertAllSources(rulesets as Ruleset[], 'new') as Ruleset[];
 
       expect(converted).toHaveLength(2);
       expect(converted[0]?.sources).toHaveLength(2);
@@ -196,7 +196,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulesets as Ruleset[], 'new');
+      const converted = convertAllSources(rulesets as Ruleset[], 'new') as Ruleset[];
       const source = converted[0]?.sources?.[0] as unknown;
 
       expect((source as Record<string, unknown>)['eda.builtin.webhook']).toEqual({
@@ -217,7 +217,9 @@ describe('sourceNameConverter', () => {
 
       expect(converted[0]).toHaveProperty('eda.builtin.normalize_keys');
       expect(converted[1]).toHaveProperty('eda.builtin.json_filter');
-      expect(converted[1]['eda.builtin.json_filter']).toEqual({ some: 'config' });
+      expect((converted[1] as Record<string, unknown>)['eda.builtin.json_filter']).toEqual({
+        some: 'config',
+      });
     });
 
     it('should convert filter names to legacy format', () => {
@@ -247,7 +249,9 @@ describe('sourceNameConverter', () => {
 
       const converted = convertSourceObject(source, 'legacy');
 
-      expect(converted.filters[0]).toHaveProperty('ansible.eda.normalize_keys');
+      expect((converted.filters as Array<Record<string, unknown>>)[0]).toHaveProperty(
+        'ansible.eda.normalize_keys'
+      );
     });
 
     it('should handle non-array filters', () => {
@@ -272,7 +276,9 @@ describe('sourceNameConverter', () => {
 
       const converted = convertRulesetSources(ruleset, 'new');
 
-      expect(converted.sources[0]).toHaveProperty('eda.builtin.webhook');
+      expect((converted.sources as Array<Record<string, unknown>>)[0]).toHaveProperty(
+        'eda.builtin.webhook'
+      );
     });
 
     it('should return ruleset unchanged if no sources array', () => {
@@ -401,7 +407,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulebooksFromYaml as Ruleset[], 'legacy');
+      const converted = convertAllSources(rulebooksFromYaml as Ruleset[], 'legacy') as Ruleset[];
 
       // Should have normalized and converted to legacy format
       expect(converted[0]?.sources?.[0]).toHaveProperty('ansible.eda.range');
@@ -416,7 +422,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulebooksFromYaml as Ruleset[], 'new');
+      const converted = convertAllSources(rulebooksFromYaml as Ruleset[], 'new') as Ruleset[];
 
       // Should have normalized to ansible.eda.range first, then converted to new format
       expect(converted[0]?.sources?.[0]).toHaveProperty('eda.builtin.range');
@@ -434,7 +440,7 @@ describe('sourceNameConverter', () => {
         },
       ];
 
-      const converted = convertAllSources(rulebooksFromYaml as Ruleset[], 'legacy');
+      const converted = convertAllSources(rulebooksFromYaml as Ruleset[], 'legacy') as Ruleset[];
 
       expect(converted[0]?.sources?.[0]).toHaveProperty('ansible.eda.range');
       expect(converted[0]?.sources?.[1]).toHaveProperty('custom.collection.source');

@@ -1,12 +1,21 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import './Footer.css';
 
+export interface RulesetStats {
+  eventsProcessed?: number;
+  eventsMatched?: number;
+  eventsSuppressed?: number;
+  lastEventReceivedAt?: string;
+  lastRuleFiredAt?: string;
+  lastRuleFired?: string;
+}
+
 interface FooterProps {
   isConnected: boolean;
   isRunning: boolean;
   rulesetCount: number;
   ruleCount: number;
-  rulesetStats: Map<string, unknown>;
+  rulesetStats: Map<string, RulesetStats>;
 }
 
 export const Footer: React.FC<FooterProps> = ({

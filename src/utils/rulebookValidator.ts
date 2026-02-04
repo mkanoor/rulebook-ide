@@ -55,8 +55,8 @@ function validateConditionObject(
     return [];
   } else if (condType === 'any' || condType === 'all' || condType === 'not_all') {
     // Complex condition with multiple sub-conditions
-    const condObj = condition as unknown;
-    const condArray: string[] = condObj[condType];
+    const condObj = condition as unknown as Record<string, unknown>;
+    const condArray: string[] = condObj[condType] as string[];
 
     if (condArray && Array.isArray(condArray)) {
       condArray.forEach((cond, index) => {

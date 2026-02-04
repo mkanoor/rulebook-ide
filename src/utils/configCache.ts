@@ -5,14 +5,16 @@
  * to avoid redundant fetches when reconnecting with same settings
  */
 
+import type { AnsibleVersionInfo, AnsibleCollection } from '../components/VisualEditor';
+
 interface CachedVersionInfo {
   version: string;
-  versionInfo: unknown;
+  versionInfo: AnsibleVersionInfo;
   timestamp: number;
 }
 
 interface CachedCollectionList {
-  collections: unknown[];
+  collections: AnsibleCollection[];
   timestamp: number;
 }
 
@@ -77,7 +79,7 @@ function isCacheValid(timestamp: number): boolean {
  */
 export function getCachedVersionInfo(
   configHash: string
-): { version: string; versionInfo: unknown } | null {
+): { version: string; versionInfo: AnsibleVersionInfo } | null {
   const cache = loadCache();
   const cached = cache.versions[configHash];
 
@@ -98,7 +100,7 @@ export function getCachedVersionInfo(
 export function setCachedVersionInfo(
   configHash: string,
   version: string,
-  versionInfo: unknown
+  versionInfo: AnsibleVersionInfo
 ): void {
   const cache = loadCache();
   cache.versions[configHash] = {
@@ -113,7 +115,7 @@ export function setCachedVersionInfo(
 /**
  * Get cached collection list
  */
-export function getCachedCollectionList(configHash: string): unknown[] | null {
+export function getCachedCollectionList(configHash: string): AnsibleCollection[] | null {
   const cache = loadCache();
   const cached = cache.collections[configHash];
 
@@ -130,7 +132,10 @@ export function getCachedCollectionList(configHash: string): unknown[] | null {
 /**
  * Cache collection list
  */
-export function setCachedCollectionList(configHash: string, collections: unknown[]): void {
+export function setCachedCollectionList(
+  configHash: string,
+  collections: AnsibleCollection[]
+): void {
   const cache = loadCache();
   cache.collections[configHash] = {
     collections,

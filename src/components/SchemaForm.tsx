@@ -44,8 +44,9 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
     if (oneOf && oneOf.length > 0) {
       let oneOfValid = false;
       for (const option of oneOf) {
-        if (option.required && Array.isArray(option.required)) {
-          const hasAllFields = option.required.every((fieldName: string) => {
+        const opt = option as { required?: string[] };
+        if (opt.required && Array.isArray(opt.required)) {
+          const hasAllFields = opt.required.every((fieldName: string) => {
             const fieldValue = formValue[fieldName];
             return fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
           });
@@ -57,7 +58,10 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
       }
       if (!oneOfValid && oneOf.length > 0) {
         const requiredOptions = oneOf
-          .map((opt: { required?: string[] }) => opt.required?.join(' or '))
+          .map((opt: unknown) => {
+            const option = opt as { required?: string[] };
+            return option.required?.join(' or ');
+          })
           .filter(Boolean)
           .join(', or ');
         if (requiredOptions) {
@@ -117,7 +121,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
           )}
           <select
             className="form-input"
-            value={fieldValue}
+            value={typeof fieldValue === 'string' ? fieldValue : ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             style={{ borderColor: fieldError ? '#fc8181' : undefined }}
           >
@@ -190,7 +194,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
             <input
               type="number"
               className="form-input"
-              value={fieldValue}
+              value={typeof fieldValue === 'number' ? fieldValue : ''}
               onChange={(e) =>
                 handleFieldChange(
                   fieldName,
@@ -216,7 +220,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
 
       case 'array':
         // For array of strings
-        if (prop.items?.type === 'string') {
+        if ((prop.items as { type?: string })?.type === 'string') {
           const arrayValue = Array.isArray(fieldValue) ? fieldValue : [];
           return (
             <div key={fieldName} className="form-group">
@@ -395,7 +399,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
             <input
               type="text"
               className="form-input"
-              value={fieldValue}
+              value={typeof fieldValue === 'string' ? fieldValue : ''}
               onChange={(e) => handleFieldChange(fieldName, e.target.value)}
               style={{ borderColor: fieldError ? '#fc8181' : undefined }}
             />

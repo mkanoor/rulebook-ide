@@ -2,6 +2,7 @@
  * Hook for managing execution state (running, events, triggered rules)
  */
 import { useState, useCallback, useRef } from 'react';
+import type { RulesetStats } from '../../components/Footer';
 
 export interface ExecutionEvent {
   type: string;
@@ -24,7 +25,7 @@ export const useExecutionState = () => {
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [events, setEvents] = useState<ExecutionEvent[]>([]);
   const [triggeredRules, setTriggeredRules] = useState<Map<string, RuleTrigger>>(new Map());
-  const [rulesetStats, setRulesetStats] = useState<Map<string, unknown>>(new Map());
+  const [rulesetStats, setRulesetStats] = useState<Map<string, RulesetStats>>(new Map());
   const [executionSummary, setExecutionSummary] = useState({
     rulesTriggered: 0,
     eventsProcessed: 0,
