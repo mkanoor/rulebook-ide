@@ -13,6 +13,12 @@ export default defineConfig({
     pool: 'threads',
     // Use different environments based on test file location
     environmentMatchGlobs: [['server/**', 'node']],
+    // Force inline these problematic ES modules for Node 18 compatibility
+    server: {
+      deps: {
+        inline: ['@exodus/bytes', 'html-encoding-sniffer'],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
