@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    // Use threads pool for better ES module compatibility in CI
+    pool: 'threads',
     // Use different environments based on test file location
     environmentMatchGlobs: [['server/**', 'node']],
     coverage: {
