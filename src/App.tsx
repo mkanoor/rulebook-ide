@@ -17,6 +17,23 @@ import {
 } from './utils/rulebookValidator';
 import './App.css';
 
+interface AnsibleVersionInfo {
+  version?: string;
+  executableLocation?: string;
+  droolsJpyVersion?: string;
+  javaVersion?: string;
+  javaHome?: string;
+  ansibleCoreVersion?: string;
+  pythonVersion?: string;
+  pythonExecutable?: string;
+  platform?: string;
+}
+
+interface AnsibleCollection {
+  name?: string;
+  version?: string;
+}
+
 function App() {
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('rulebook-ide-theme');
@@ -24,8 +41,8 @@ function App() {
   });
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [ansibleVersion, setAnsibleVersion] = useState<string>('v1.0.0');
-  const [ansibleVersionInfo, setAnsibleVersionInfo] = useState<unknown>(null);
-  const [collectionList, setCollectionList] = useState<unknown[]>([]);
+  const [ansibleVersionInfo, setAnsibleVersionInfo] = useState<AnsibleVersionInfo | null>(null);
+  const [collectionList, setCollectionList] = useState<AnsibleCollection[]>([]);
   const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -292,7 +309,8 @@ function App() {
         // Use File System Access API if available
         if ('showSaveFilePicker' in window) {
           try {
-            const handle = await (window as unknown).showSaveFilePicker({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const handle = await (window as any).showSaveFilePicker({
               suggestedName: currentFilename || 'rulebook.yml',
               types: [
                 {
@@ -390,7 +408,7 @@ function App() {
         // Convert imported source names to the current preferred format
         // This ensures internal consistency regardless of the format of the imported file
         const sourceNameFormat = getCurrentSourceNameFormat();
-        const convertedRulesets = convertAllSources(parsed, sourceNameFormat);
+        const convertedRulesets = convertAllSources(parsed, sourceNameFormat) as Ruleset[];
 
         setRulesets(convertedRulesets);
         setCurrentFilename(file.name);
@@ -585,12 +603,12 @@ function App() {
     }
   };
 
-  const handleVersionInfoReceived = (version: string, versionInfo: unknown) => {
+  const handleVersionInfoReceived = (version: string, versionInfo: AnsibleVersionInfo) => {
     setAnsibleVersion(version);
     setAnsibleVersionInfo(versionInfo);
   };
 
-  const handleCollectionListReceived = (collections: unknown[]) => {
+  const handleCollectionListReceived = (collections: AnsibleCollection[]) => {
     setCollectionList(collections);
   };
 
