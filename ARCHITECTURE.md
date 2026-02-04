@@ -57,6 +57,189 @@ graph TB
     style NG fill:#1f1e37
 ```
 
+## Dual WebSocket Architecture
+
+### Overview
+
+The server acts as an **intelligent intermediary** between the UI and ansible-rulebook, maintaining **two separate WebSocket connections**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ansible-rulebook        TypeScript Server        UI (Browser) │
+│     (Python)             (WebSocket Hub)           (React)      │
+│                                                                 │
+│  ┌──────────┐            ┌──────────┐            ┌──────────┐  │
+│  │          │   WS #1    │          │   WS #2    │          │  │
+│  │  Worker  │◄──────────►│  Server  │◄──────────►│    UI    │  │
+│  │Connection│ (Worker)   │  (Hub)   │   (UI)     │  Client  │  │
+│  │          │            │          │            │          │  │
+│  └──────────┘            └──────────┘            └──────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### WebSocket #1: ansible-rulebook → Server (Worker Connection)
+
+**Connection Type:** `'worker'`
+
+**ansible-rulebook sends:**
+
+- `Worker` - Initial registration with activation_id
+- `Job` - Job started/completed events
+- `AnsibleEvent` - Events from Ansible execution
+- `ProcessedEvent` - Events processed by rule engine
+- `Action` - Actions executed by rules
+- `Shutdown` - Worker shutting down gracefully
+- `SessionStats` - Heartbeat with execution statistics
+
+**Example raw message from ansible-rulebook:**
+
+```json
+{
+  "type": "Action",
+  "activation_id": "abc-123",
+  "ruleset": "my_ruleset",
+  "rule": "my_rule",
+  "action": "debug",
+  "matching_events": {...}
+}
+```
+
+### WebSocket #2: Server → UI (UI Connection)
+
+**Connection Type:** `'ui'`
+
+**UI receives transformed messages:**
+
+- `registered` - UI registration confirmed
+- `execution_started` - Execution started with command
+- `worker_connected` - Worker WebSocket connected
+- `rulebook_event` - **Wrapped event from ansible-rulebook**
+- `session_stats` - Stats from worker
+- `process_output` - stdout/stderr from process
+- `process_exited` - Process exit code
+
+**Example transformed message to UI:**
+
+```json
+{
+  "type": "rulebook_event",
+  "executionId": "abc-123",
+  "event": {
+    "type": "Action",
+    "activation_id": "abc-123",
+    "ruleset": "my_ruleset",
+    "rule": "my_rule",
+    "action": "debug",
+    "matching_events": {...}
+  }
+}
+```
+
+### Server Processing & Transformation
+
+The server **does NOT directly forward** worker messages to the UI. Instead, it:
+
+#### 1. **Wraps Events**
+
+```typescript
+// server/server.ts:998-1003
+broadcastToUI({
+  type: 'rulebook_event', // Wrapped type
+  executionId: activationId,
+  event: data, // Original event nested inside
+});
+```
+
+#### 2. **Adds Context & Metadata**
+
+- `executionId` - Associates event with specific execution
+- Server-side timestamps
+- Execution state tracking
+
+#### 3. **Maintains Event History**
+
+```typescript
+// server/server.ts:992-995
+execution.events.push({
+  type: data.type,
+  data: data,
+  timestamp: new Date(),
+});
+```
+
+#### 4. **Broadcasts to Multiple Clients**
+
+```typescript
+// server/server.ts:1661-1667
+export function broadcastToUI(message: Record<string, unknown>): void {
+  clients.forEach((client) => {
+    if (client.type === 'ui' && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(JSON.stringify(message));
+    }
+  });
+}
+```
+
+#### 5. **Filters by Connection Type**
+
+- Only sends `rulebook_event` to UI clients (not back to workers)
+- Routes messages based on `client.type` (`'ui'` vs `'worker'`)
+
+#### 6. **Captures Process I/O**
+
+```typescript
+// server/server.ts:1915-1924
+ansibleProcess.stdout.on('data', (data) => {
+  broadcastToUI({
+    type: 'process_output',
+    executionId,
+    stream: 'stdout',
+    data: output,
+  });
+});
+```
+
+### Why This Architecture?
+
+**Decoupling**
+
+- UI doesn't need ansible-rulebook's WebSocket URL/credentials
+- ansible-rulebook doesn't need to know about UI clients
+
+**Multiple UIs**
+
+- Server can broadcast to multiple browser tabs/windows simultaneously
+- All UIs stay synchronized
+
+**State Management**
+
+- Server maintains execution history and current state
+- Reconnecting UIs can retrieve state from server
+
+**Error Handling**
+
+- Server detects worker disconnections and notifies UI
+- Handles worker crashes gracefully
+
+**Security**
+
+- Server controls what data gets exposed to UI
+- Can filter/sanitize sensitive information
+
+**Process Management**
+
+- Server spawns/monitors ansible-rulebook process
+- Captures stdout/stderr separate from WebSocket events
+- Manages process lifecycle independent of WebSocket
+
+**Observability**
+
+- All events flow through single point for logging
+- Server-side timestamps for accurate timing
+- Event correlation across multiple executions
+
 ## Component Interactions
 
 ### 1. Startup Flow
@@ -187,6 +370,7 @@ Intercept HTTP Server (Port 8080)
 ## Key Features
 
 ### Single Port Architecture
+
 - **Port 5555** handles everything:
   - HTTP requests (Vite dev server or static files)
   - WebSocket connections (UI and ansible-rulebook workers)
@@ -195,6 +379,7 @@ Intercept HTTP Server (Port 8080)
 ### WebSocket Message Types
 
 **From UI → Server:**
+
 - `register_ui` - Register UI client
 - `start_execution` - Start ansible-rulebook
 - `stop_execution` - Stop running execution
@@ -206,6 +391,7 @@ Intercept HTTP Server (Port 8080)
 - `heartbeat` - Keep connection alive
 
 **From ansible-rulebook → Server:**
+
 - `Worker` - Register worker connection
 - `Job` - Job started/completed
 - `AnsibleEvent` - Events from Ansible
@@ -215,6 +401,7 @@ Intercept HTTP Server (Port 8080)
 - `SessionStats` - Heartbeat with stats
 
 **From Server → UI:**
+
 - `registered` - Registration confirmed
 - `execution_started` - Execution started
 - `execution_stopped` - Execution stopped
@@ -272,12 +459,14 @@ rulebook-ide/
 ## Development vs Production
 
 ### Development Mode (`npm run dev`)
+
 - Vite middleware provides HMR
 - Source maps enabled
 - Fast refresh for React components
 - Detailed logging
 
 ### Production Mode (`npm run build && npm start`)
+
 - Static files served from `dist/`
 - Optimized bundles
 - Minified assets

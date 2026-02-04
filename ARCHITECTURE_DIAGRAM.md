@@ -62,17 +62,20 @@ This diagram shows the architecture of the Rulebook IDE, a web-based development
 ### Key Components
 
 **Frontend (React + TypeScript)**
+
 - Visual editors for rulesets, rules, actions, and event sources
 - Monaco Editor for YAML editing
 - JSON Editor for source configuration
 
 **Backend Server (Express + Node.js)**
+
 - WebSocket Server for real-time bidirectional communication
 - Process Manager for Ansible Rulebook lifecycle management
 - Tunnel Manager for ngrok tunnel creation and management
 - Webhook Handler for forwarding external webhooks
 
 **External Services**
+
 - Ansible Rulebook running as a separate process
 - ngrok for creating cloud tunnels to receive webhooks
 
@@ -85,4 +88,26 @@ This diagram shows the architecture of the Rulebook IDE, a web-based development
 5. Webhooks forwarded to Ansible Rulebook
 6. Real-time events stream back through WebSocket to frontend
 
-For detailed documentation, see [architecture.md](./architecture.md)
+### Dual WebSocket Architecture
+
+**Important:** The system uses **two separate WebSocket connections**:
+
+1. **WebSocket #1 (Worker):** `ansible-rulebook` ↔ Server
+   - Worker registration and events
+   - Job, Action, ProcessedEvent messages
+   - SessionStats heartbeats
+
+2. **WebSocket #2 (UI):** Server ↔ Browser UI
+   - Transformed and wrapped events
+   - Process output (stdout/stderr)
+   - Execution control messages
+
+**The server acts as an intelligent intermediary:**
+
+- Does NOT directly forward worker messages to UI
+- Wraps events in `rulebook_event` envelope
+- Adds metadata (executionId, timestamps)
+- Broadcasts to multiple UI clients
+- Maintains event history
+
+For detailed documentation on the dual WebSocket architecture, see [ARCHITECTURE.md - Dual WebSocket Architecture](./ARCHITECTURE.md#dual-websocket-architecture)
