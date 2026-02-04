@@ -97,15 +97,38 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
           let detectedPort: number | null = null;
 
-          if (webhookConfig.port) {
+          if (
+            webhookConfig &&
+            typeof webhookConfig === 'object' &&
+            'port' in webhookConfig &&
+            typeof webhookConfig.port === 'number'
+          ) {
             detectedPort = webhookConfig.port;
-          } else if (webhookConfig.args && webhookConfig.args.port) {
-            detectedPort = webhookConfig.args.port;
-          } else if (typeof webhookConfig === 'object') {
+          } else if (
+            webhookConfig &&
+            typeof webhookConfig === 'object' &&
+            'args' in webhookConfig
+          ) {
+            const args = webhookConfig.args as Record<string, unknown>;
+            if (
+              args &&
+              typeof args === 'object' &&
+              'port' in args &&
+              typeof args.port === 'number'
+            ) {
+              detectedPort = args.port;
+            }
+          } else if (typeof webhookConfig === 'object' && webhookConfig) {
             // Look for port in any nested object
             for (const key in webhookConfig) {
-              if (typeof webhookConfig[key] === 'object' && webhookConfig[key].port) {
-                detectedPort = webhookConfig[key].port;
+              const nestedObj = webhookConfig[key];
+              if (
+                nestedObj &&
+                typeof nestedObj === 'object' &&
+                'port' in nestedObj &&
+                typeof (nestedObj as Record<string, unknown>).port === 'number'
+              ) {
+                detectedPort = (nestedObj as Record<string, unknown>).port as number;
                 break;
               }
             }
@@ -348,7 +371,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         // Parse YAML
         extraVarsObj = yaml.load(extraVars) as object;
       }
-    } catch {
+    } catch (error) {
       addEvent(
         'Error',
         `Invalid ${extraVarsFormat.toUpperCase()} in extra vars: ${(error as Error).message}`
@@ -475,7 +498,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
 
         // Convert to formatted JSON string for the textarea
         setWebhookPayload(JSON.stringify(jsonObj, null, 2));
-      } catch {
+      } catch (error) {
         addEvent('Error', 'Failed to parse file: ' + (error as Error).message);
       }
     };
