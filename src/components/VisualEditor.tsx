@@ -30,13 +30,30 @@ import {
 } from '../hooks/visualEditor';
 import '../styles/VisualEditor.css';
 
+export interface AnsibleVersionInfo {
+  version?: string;
+  executableLocation?: string;
+  droolsJpyVersion?: string;
+  javaVersion?: string;
+  javaHome?: string;
+  ansibleCoreVersion?: string;
+  pythonVersion?: string;
+  pythonExecutable?: string;
+  platform?: string;
+}
+
+export interface AnsibleCollection {
+  name?: string;
+  version?: string;
+}
+
 interface VisualEditorProps {
   rulesets: Ruleset[];
   onRulesetsChange: (rulesets: Ruleset[]) => void;
   onExecutionStateChange?: (state: ExecutionState) => void;
   onWebhookReceived?: (payload: unknown) => void;
-  onVersionInfoReceived?: (version: string, versionInfo: unknown) => void;
-  onCollectionListReceived?: (collections: unknown[]) => void;
+  onVersionInfoReceived?: (version: string, versionInfo: AnsibleVersionInfo) => void;
+  onCollectionListReceived?: (collections: AnsibleCollection[]) => void;
   onStatsChange?: (stats: Map<string, unknown>) => void;
 }
 

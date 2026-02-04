@@ -1,7 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as yaml from 'js-yaml';
 import type { Ruleset } from './types/rulebook';
-import { VisualEditor, type VisualEditorRef, type ExecutionState } from './components/VisualEditor';
+import {
+  VisualEditor,
+  type VisualEditorRef,
+  type ExecutionState,
+  type AnsibleVersionInfo,
+  type AnsibleCollection,
+} from './components/VisualEditor';
 import { JsonPathExplorer } from './components/JsonPathExplorer';
 import { HelpModal } from './components/HelpModal';
 import { Footer } from './components/Footer';
@@ -16,23 +22,6 @@ import {
   getFirstInvalidConditionLocation,
 } from './utils/rulebookValidator';
 import './App.css';
-
-interface AnsibleVersionInfo {
-  version?: string;
-  executableLocation?: string;
-  droolsJpyVersion?: string;
-  javaVersion?: string;
-  javaHome?: string;
-  ansibleCoreVersion?: string;
-  pythonVersion?: string;
-  pythonExecutable?: string;
-  platform?: string;
-}
-
-interface AnsibleCollection {
-  name?: string;
-  version?: string;
-}
 
 function App() {
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => {

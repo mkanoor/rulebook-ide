@@ -91,8 +91,8 @@ EDA_CONTROLLER_SSL_VERIFY=`);
         if (isWebhook) {
           // Try to extract port from various possible locations
           const webhookConfig =
-            (source as unknown)['ansible.eda.webhook'] ||
-            (source as unknown)['eda.builtin.webhook'] ||
+            (source as Record<string, unknown>)['ansible.eda.webhook'] ||
+            (source as Record<string, unknown>)['eda.builtin.webhook'] ||
             source;
 
           let detectedPort: number | null = null;
@@ -228,12 +228,12 @@ EDA_CONTROLLER_SSL_VERIFY=`);
             default:
               console.log('Unknown message type:', message.type);
           }
-        } catch {
+        } catch (error) {
           console.error('Error parsing message:', error);
         }
       };
 
-      ws.onerror = (_error) => {
+      ws.onerror = (error) => {
         console.error('WebSocket error:', error);
         addEvent('Error', 'WebSocket connection error');
       };
@@ -245,7 +245,7 @@ EDA_CONTROLLER_SSL_VERIFY=`);
       };
 
       wsRef.current = ws;
-    } catch {
+    } catch (error) {
       console.error('Failed to connect:', error);
       addEvent('Error', `Failed to connect: ${error}`);
     }

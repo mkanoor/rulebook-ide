@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Action } from '../types/rulebook';
+import type { Action, RunJobTemplateAction, RunWorkflowTemplateAction } from '../types/rulebook';
 import { getActionType } from '../types/rulebook';
 import { RunJobTemplateEditor } from './RunJobTemplateEditor';
 import { RunWorkflowTemplateEditor } from './RunWorkflowTemplateEditor';
@@ -186,7 +186,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         <div className="form-group">
           {currentType === 'run_job_template' && (
             <RunJobTemplateEditor
-              action={action as unknown}
+              action={action as RunJobTemplateAction}
               onChange={(newAction) => {
                 setActionJson(JSON.stringify(newAction, null, 2));
                 onChange(index, newAction as Action);
@@ -195,7 +195,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
           )}
           {currentType === 'run_workflow_template' && (
             <RunWorkflowTemplateEditor
-              action={action as unknown}
+              action={action as RunWorkflowTemplateAction}
               onChange={(newAction) => {
                 setActionJson(JSON.stringify(newAction, null, 2));
                 onChange(index, newAction as Action);
