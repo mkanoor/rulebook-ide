@@ -32,7 +32,7 @@ export const handleStartExecution: MessageHandler = async (ws, data, clientId, c
     rulebook: data.rulebook as string,
     extraVars: data.extraVars as Record<string, unknown>,
     envVars: (data.envVars as Record<string, string>) || {},
-    executionMode: (data.executionMode as ExecutionMode) || 'custom',
+    executionMode: (data.executionMode as ExecutionMode) || 'container',
     containerImage: (data.containerImage as string) || 'quay.io/ansible/ansible-rulebook:main',
     ansibleRulebookPath: (data.ansibleRulebookPath as string) || 'ansible-rulebook',
     workingDirectory: (data.workingDirectory as string) || '',

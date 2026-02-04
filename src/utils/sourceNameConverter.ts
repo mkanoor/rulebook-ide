@@ -97,12 +97,13 @@ export function convertSourceName(sourceName: string, targetFormat: SourceNameFo
  * Convert filter names in a filters array to the specified format
  */
 export function convertFilterArray(filters: unknown[], targetFormat: SourceNameFormat): unknown[] {
-  return filters.map(filter => {
+  return filters.map((filter) => {
     const converted: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(filter as Record<string, unknown>)) {
-      // Convert the filter name (key) to the target format
-      const convertedKey = convertSourceName(key, targetFormat);
+      // Normalize the filter name first, then convert to target format
+      const normalizedKey = normalizeSourceName(key);
+      const convertedKey = convertSourceName(normalizedKey, targetFormat);
       converted[convertedKey] = value;
     }
 
@@ -113,7 +114,10 @@ export function convertFilterArray(filters: unknown[], targetFormat: SourceNameF
 /**
  * Convert all source names in a source object to the specified format
  */
-export function convertSourceObject(sourceObj: Record<string, unknown>, targetFormat: SourceNameFormat): Record<string, unknown> {
+export function convertSourceObject(
+  sourceObj: Record<string, unknown>,
+  targetFormat: SourceNameFormat
+): Record<string, unknown> {
   const converted: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(sourceObj)) {
@@ -128,8 +132,9 @@ export function convertSourceObject(sourceObj: Record<string, unknown>, targetFo
         converted[key] = value;
       }
     } else {
-      // This is a source type key - convert it
-      const convertedKey = convertSourceName(key, targetFormat);
+      // This is a source type key - normalize it first, then convert it
+      const normalizedKey = normalizeSourceName(key);
+      const convertedKey = convertSourceName(normalizedKey, targetFormat);
       converted[convertedKey] = value;
     }
   }
@@ -140,14 +145,19 @@ export function convertSourceObject(sourceObj: Record<string, unknown>, targetFo
 /**
  * Convert all sources in a ruleset to the specified format
  */
-export function convertRulesetSources(ruleset: Record<string, unknown>, targetFormat: SourceNameFormat): Record<string, unknown> {
+export function convertRulesetSources(
+  ruleset: Record<string, unknown>,
+  targetFormat: SourceNameFormat
+): Record<string, unknown> {
   if (!ruleset.sources || !Array.isArray(ruleset.sources)) {
     return ruleset;
   }
 
   return {
     ...ruleset,
-    sources: ruleset.sources.map((source: Record<string, unknown>) => convertSourceObject(source, targetFormat)),
+    sources: ruleset.sources.map((source: Record<string, unknown>) =>
+      convertSourceObject(source, targetFormat)
+    ),
   };
 }
 
@@ -155,7 +165,7 @@ export function convertRulesetSources(ruleset: Record<string, unknown>, targetFo
  * Convert all sources in all rulesets to the specified format
  */
 export function convertAllSources(rulesets: unknown[], targetFormat: SourceNameFormat): unknown[] {
-  return rulesets.map(ruleset => convertRulesetSources(ruleset, targetFormat));
+  return rulesets.map((ruleset) => convertRulesetSources(ruleset, targetFormat));
 }
 
 /**
@@ -179,4 +189,19 @@ export function getSourceDisplayName(sourceName: string): string {
     return sourceName.replace('ansible.eda.', '');
   }
   return sourceName;
+}
+
+/**
+ * Normalize a source name by adding the ansible.eda prefix if it's a simple name
+ * Simple names are those without dots (e.g., "range" -> "ansible.eda.range")
+ * This ensures backward compatibility with ansible-rulebook which expects fully qualified names
+ */
+export function normalizeSourceName(sourceName: string): string {
+  // If already has a namespace (contains a dot), return as-is
+  if (sourceName.includes('.')) {
+    return sourceName;
+  }
+
+  // Add ansible.eda prefix for simple names
+  return `ansible.eda.${sourceName}`;
 }

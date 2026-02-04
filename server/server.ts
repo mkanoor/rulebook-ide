@@ -916,7 +916,7 @@ wss.on('connection', (ws: WebSocket) => {
             rulebook: data.rulebook,
             extraVars: data.extraVars,
             envVars: data.envVars || {},
-            executionMode: data.executionMode || 'custom',
+            executionMode: data.executionMode || 'container',
             containerImage: data.containerImage || 'quay.io/ansible/ansible-rulebook:main',
             ansibleRulebookPath: data.ansibleRulebookPath || 'ansible-rulebook',
             workingDirectory: data.workingDirectory || '',
@@ -1097,7 +1097,7 @@ wss.on('connection', (ws: WebSocket) => {
 
         case 'check_prerequisites': {
           // Check if required dependencies are installed for the execution mode
-          const modeToCheck = data.executionMode || 'custom';
+          const modeToCheck = data.executionMode || 'container';
           console.log(`Checking prerequisites for execution mode: ${modeToCheck}`);
 
           const prereqResult = await checkExecutionModePrerequisites(modeToCheck);
@@ -1140,7 +1140,7 @@ wss.on('connection', (ws: WebSocket) => {
           break;
 
         case 'get_ansible_version': {
-          const executionMode = data.executionMode || 'custom';
+          const executionMode = data.executionMode || 'container';
           const containerImage = data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
           const ansiblePath =
             data.ansibleRulebookPath || process.env.ANSIBLE_RULEBOOK_PATH || 'ansible-rulebook';
@@ -1292,7 +1292,7 @@ wss.on('connection', (ws: WebSocket) => {
         }
 
         case 'get_collection_list': {
-          const collectionExecutionMode = data.executionMode || 'custom';
+          const collectionExecutionMode = data.executionMode || 'container';
           const collectionContainerImage =
             data.containerImage || 'quay.io/ansible/ansible-rulebook:main';
           const collectionAnsiblePath =

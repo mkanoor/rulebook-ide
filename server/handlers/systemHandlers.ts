@@ -32,7 +32,7 @@ export const handleCheckBinary: MessageHandler = async (ws, data) => {
  * Handle prerequisites check request
  */
 export const handleCheckPrerequisites: MessageHandler = async (ws, data) => {
-  const executionMode = (data.executionMode as ExecutionMode) || 'custom';
+  const executionMode = (data.executionMode as ExecutionMode) || 'container';
 
   const result = await checkExecutionModePrerequisites(executionMode);
 
@@ -52,7 +52,7 @@ export const handleCheckPrerequisites: MessageHandler = async (ws, data) => {
  */
 export const handleGetAnsibleVersion: MessageHandler = (ws, data) => {
   const ansibleRulebookPath = (data.ansibleRulebookPath as string) || 'ansible-rulebook';
-  const executionMode = (data.executionMode as ExecutionMode) || 'custom';
+  const executionMode = (data.executionMode as ExecutionMode) || 'container';
   const containerImage = (data.containerImage as string) || '';
 
   let command: string;
@@ -126,7 +126,7 @@ export const handleGetAnsibleVersion: MessageHandler = (ws, data) => {
  */
 export const handleGetCollectionList: MessageHandler = (ws, data) => {
   const ansibleRulebookPath = (data.ansibleRulebookPath as string) || 'ansible-rulebook';
-  const executionMode = (data.executionMode as ExecutionMode) || 'custom';
+  const executionMode = (data.executionMode as ExecutionMode) || 'container';
   const containerImage = (data.containerImage as string) || '';
 
   let command: string;

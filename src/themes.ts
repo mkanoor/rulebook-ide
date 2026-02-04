@@ -1483,7 +1483,7 @@ export const themes: Theme[] = [
   },
 ];
 
-export const defaultTheme = themes[0]; // Peach Fuzz 2024
+export const defaultTheme = themes.find((theme) => theme.id === 'nord') || themes[0]; // Nord
 
 export function getThemeById(id: string): Theme {
   return themes.find((theme) => theme.id === id) || defaultTheme;

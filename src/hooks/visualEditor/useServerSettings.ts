@@ -22,7 +22,7 @@ export interface ServerSettings {
 const DEFAULT_SETTINGS: ServerSettings = {
   wsUrl: 'ws://localhost',
   wsPort: 5555,
-  executionMode: 'custom',
+  executionMode: 'container',
   containerImage: 'quay.io/ansible/ansible-rulebook:main',
   ansibleRulebookPath: 'ansible-rulebook',
   workingDirectory: '',

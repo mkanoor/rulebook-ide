@@ -71,10 +71,28 @@ export const useWebSocketConnection = (
 
   const connectWebSocket = useCallback(() => {
     try {
+      // Clean up any existing connection first
+      if (wsRef.current) {
+        const existingWs = wsRef.current;
+        if (
+          existingWs.readyState === WebSocket.OPEN ||
+          existingWs.readyState === WebSocket.CONNECTING
+        ) {
+          console.log('WebSocket already connected or connecting, skipping...');
+          return;
+        }
+        // Close any closed/closing connections
+        if (existingWs.readyState !== WebSocket.CLOSED) {
+          existingWs.close();
+        }
+      }
+
       const wsUrl = `${serverSettings.wsUrl}:${serverSettings.wsPort}`;
+      console.log(`Attempting to connect to WebSocket at ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
+        console.log(`WebSocket connected successfully to ${wsUrl}`);
         handlers.setIsConnected(true);
         ws.send(JSON.stringify({ type: 'register_ui' }));
 
@@ -547,13 +565,22 @@ export const useWebSocketConnection = (
         }
       };
 
-      ws.onerror = () => {
-        handlers.addEvent('Error', 'WebSocket connection error');
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        const errorMessage = `WebSocket connection error. Please ensure the server is running at ${wsUrl}`;
+        handlers.addEvent('Error', errorMessage);
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         handlers.setIsConnected(false);
         handlers.setIsRunning(false);
+
+        // Log close reason for debugging
+        if (event.code !== 1000) {
+          console.warn(
+            `WebSocket closed with code ${event.code}: ${event.reason || 'No reason provided'}`
+          );
+        }
       };
 
       wsRef.current = ws;
@@ -580,12 +607,44 @@ export const useWebSocketConnection = (
 
   // Auto-connect on mount
   useEffect(() => {
-    connectWebSocket();
+    let isCleanedUp = false;
+
+    // Small delay to avoid React Strict Mode double-mount issues
+    const timeoutId = setTimeout(() => {
+      if (!isCleanedUp) {
+        connectWebSocket();
+      }
+    }, 0);
 
     // Cleanup on unmount
     return () => {
+      isCleanedUp = true;
+      clearTimeout(timeoutId);
+
       if (wsRef.current) {
-        wsRef.current.close();
+        const ws = wsRef.current;
+        // Only close if the connection is open
+        // Don't close CONNECTING state to avoid the error in Strict Mode
+        if (ws.readyState === WebSocket.OPEN) {
+          console.log('Cleaning up WebSocket connection');
+          // Remove event listeners before closing
+          ws.onopen = null;
+          ws.onmessage = null;
+          ws.onerror = null;
+          ws.onclose = null;
+
+          // Close the connection
+          ws.close();
+          wsRef.current = null;
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          // For CONNECTING state, just remove the handlers to prevent errors
+          // but let it finish connecting (or fail naturally)
+          console.log('WebSocket is connecting, removing handlers only');
+          ws.onopen = null;
+          ws.onmessage = null;
+          ws.onerror = null;
+          ws.onclose = null;
+        }
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
