@@ -18,7 +18,7 @@
     "test:coverage": "vitest --coverage",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
-    "type-check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "type-check": "tsc -b && tsc -p tsconfig.server.json --noEmit",
     "prepare": "husky"
   },
   "lint-staged": {
